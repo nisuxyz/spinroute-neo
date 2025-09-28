@@ -1,0 +1,151 @@
+{
+  "name": "microservices-blog",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "minikube:start": "minikube start --mount --mount-string ~:/host-home --driver=podman",
+    "minikube:stop": "minikube stop",
+    "minikube:delete": "minikube delete",
+    "minikube:enable:ingress": "minikube addons enable ingress && minikube addons enable ingress-dns",
+    "minikube:namespace:create": "minikube kubectl -- create namespace microservices-blog",
+    "minikube:namespace:delete": "minikube kubectl -- delete namespace microservices-blog",
+    "minikube:namespace:set-current": "minikube kubectl -- config set-context --current --namespace=microservices-blog",
+    "keycloak:update-ingress": "(cd services/keycloak && bun run update:ingress)",
+    "keycloak:urls": "(cd services/keycloak && bun run get:urls)",
+    "k8s:bootstrap": "bun run minikube:start && bun run k8s:namespace:create && bun run k8s:namespace:set-current && bun run minikube:enable:ingress && bun run keycloak:update-ingress && bun run keycloak:urls",
+    "k8s:init": "bun run minikube:start && bun run k8s:namespace:set-current && bun run minikube:enable:ingress && bun run keycloak:update-ingress && bun run keycloak:urls",
+    "version": "bun -p \"require('./package.json').version\"",
+    "version:gateway": "bun -p \"require('./services/api-gateway/package.json').version\"",
+    "version:posts-service": "bun -p \"require('./services/posts-service/package.json').version\"",
+    "version:frontend": "bun -p \"require('./frontend/package.json').version\"",
+    "k8s:build:gateway": "minikube ssh -- \"cd /host-mount/services/api-gateway && sudo docker build -f Containerfile -t api-gateway:$(bun run version:gateway) .\"",
+    "k8s:build:gateway:dev": "minikube ssh -- \"cd /host-mount/services/api-gateway && sudo docker build -f Containerfile.dev -t api-gateway:dev .\"",
+    "k8s:build:posts-service": "minikube ssh -- \"cd /host-mount/services/posts-service && sudo docker build -f Containerfile -t posts-service:$(bun run version:posts-service) .\"",
+    "k8s:build:posts-service:dev": "minikube ssh -- \"cd /host-mount/services/posts-service && sudo docker build -f Containerfile.dev -t posts-service:dev .\"",
+    "k8s:build:frontend": "minikube ssh -- \"cd /host-mount/frontend && sudo docker build -f Containerfile -t frontend:$(bun run version:frontend) .\"",
+    "k8s:build:frontend:dev": "minikube ssh -- \"cd /host-mount/frontend && sudo docker build -f Containerfile.dev -t frontend:dev .\"",
+    "k8s:apply:local": "minikube kubectl -- apply -k ./k8s/overlays/local",
+    "k8s:apply:local:dry": "minikube kubectl -- kustomize ./k8s/overlays/local",
+    "k8s:delete:local": "minikube kubectl -- delete -k ./k8s/overlays/local",
+    "k8s:ingress": "minikube kubectl -- get ingress",
+    "k8s:ingress:watch": "minikube kubectl -- get ingress -w",
+    "k8s:pods": "minikube kubectl -- get pods",
+    "k8s:pods:watch": "minikube kubectl -- get pods -w",
+    "k8s:services": "minikube kubectl -- get services",
+    "k8s:services:watch": "minikube kubectl -- get services -w",
+    "k8s:logs": "minikube kubectl -- logs -l app=microservices-blog -f",
+    "k8s:exec:gateway": "minikube kubectl -- exec -it deploy/gateway-service -- /bin/sh",
+    "k8s:exec:posts-service": "minikube kubectl -- exec -it deploy/posts-service -- /bin/sh",
+    "k8s:exec:frontend": "minikube kubectl -- exec -it deploy/frontend -- /bin/sh",
+    "k8s:restart:gateway": "minikube kubectl -- rollout restart -n microservices-blog deploy/gateway-service",
+    "k8s:restart:posts-service": "minikube kubectl -- rollout restart -n microservices-blog deploy/posts-service",
+    "k8s:restart:frontend": "minikube kubectl -- rollout restart -n microservices-blog deploy/frontend"
+  },
+  "workspaces": {
+    "packages": [
+      "services/*",
+      "backend*",
+      "frontend*",
+      "shared"
+    ],
+    "catalogs": {
+      "angular": {
+        "@angular/common": "^20.2.0",
+        "@angular/compiler": "^20.2.0",
+        "@angular/core": "^20.2.0",
+        "@angular/forms": "^20.2.0",
+        "@angular/platform-browser": "^20.2.0",
+        "@angular/router": "^20.2.0",
+        "rxjs": "~7.8.0",
+        "tslib": "^2.3.0",
+        "zone.js": "~0.15.0"
+      },
+      "angular:dev": {
+        "@angular/build": "^20.2.0",
+        "@angular/cli": "^20.2.0",
+        "@angular/compiler-cli": "^20.2.0",
+        "@types/jasmine": "~5.1.0",
+        "jasmine-core": "~5.9.0",
+        "karma": "~6.4.0",
+        "karma-chrome-launcher": "~3.2.0",
+        "karma-coverage": "~2.2.0",
+        "karma-jasmine": "~5.1.0",
+        "karma-jasmine-html-reporter": "~2.1.0",
+        "typescript": "~5.9.2"
+      },
+      "nestjs": {
+        "@nestjs/common": "^11.0.1",
+        "@nestjs/core": "^11.0.1",
+        "@nestjs/microservices": "^11.1.6",
+        "@nestjs/platform-express": "^11.0.1",
+        "jest-mock-extended": "^4.0.0",
+        "reflect-metadata": "^0.2.2",
+        "rxjs": "^7.8.1"
+      },
+      "nestjs:prisma": {
+        "nestjs-prisma": "^0.25.0"
+      },
+      "nestjs:dev": {
+        "@eslint/eslintrc": "^3.2.0",
+        "@eslint/js": "^9.18.0",
+        "@nestjs/cli": "^11.0.0",
+        "@nestjs/schematics": "^11.0.0",
+        "@nestjs/testing": "^11.0.1",
+        "@types/express": "^5.0.0",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^22.10.7",
+        "@types/supertest": "^6.0.2",
+        "eslint": "^9.18.0",
+        "eslint-config-prettier": "^10.0.1",
+        "eslint-plugin-prettier": "^5.2.2",
+        "globals": "^16.0.0",
+        "jest": "^30.0.0",
+        "prettier": "^3.4.2",
+        "source-map-support": "^0.5.21",
+        "supertest": "^7.0.0",
+        "ts-jest": "^29.2.5",
+        "ts-loader": "^9.5.2",
+        "ts-node": "^10.9.2",
+        "tsconfig-paths": "^4.2.0",
+        "typescript": "^5.7.3",
+        "typescript-eslint": "^8.20.0"
+      },
+      "prisma": {
+        "@prisma/client": "latest",
+        "prisma": "latest"
+      },
+      "astro": {
+        "astro": "^5.13.10"
+      },
+      "supabase": {
+        "@supabase/ssr": "^0.5.2",
+        "@supabase/supabase-js": "^2.47.10"
+      },
+      "supabase-dev": {},
+      "hono": {
+        "hono": "^4.9.7",
+        "@hono/node-server": "^1.12.2"
+      },
+      "hono-dev": {
+        "@hono/vite-build": "^1.1.0",
+        "@hono/vite-dev-server": "^0.17.0",
+        "vite": "^5.4.2"
+      }
+    },
+    "trustedDependencies": [
+      "@nestjs/core",
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "better-sqlite3",
+      "esbuild",
+      "lmdb",
+      "msgpackr-extract",
+      "prisma",
+      "unrs-resolver"
+    ],
+    "dependencies": {
+      "@angular/build": "^20.3.0"
+    }
+  }
+}

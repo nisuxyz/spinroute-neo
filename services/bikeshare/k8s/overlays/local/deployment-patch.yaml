@@ -1,0 +1,48 @@
+# This patch modifies the base deployment for local development
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: microservices-blog
+  name: api-gateway
+spec:
+  selector:
+    matchLabels:
+      app: microservices-blog
+      service: api-gateway
+  template:
+    spec:
+      containers:
+      - name: api-gateway
+        # Use the dev container that expects code at /app
+        image: api-gateway:dev
+        imagePullPolicy: Never  # Don't try to pull, use local build
+        
+        # Override command for development with hot reload
+        workingDir: /app/services/api-gateway-hono
+        command: ["bun", "run", "start:dev"]
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        # Mount the entire service directory into the container
+        volumeMounts:
+        - name: code
+          mountPath: /app
+        
+        # # Instead of hardcoding environment variables, reference the ConfigMap
+        # envFrom:
+        # - secretRef:
+        #     name: api-gateway-secrets  # Kustomize will update this to include the hash
+
+      # Define the volume that maps to your local filesystem
+      volumes:
+      - name: code
+        hostPath:
+          # Path relative to where you run kubectl/docker-compose
+          path: /host-mount
+          type: Directory

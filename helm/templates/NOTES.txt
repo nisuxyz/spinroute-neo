@@ -1,0 +1,76 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.host }}{{ .Values.ingress.frontend.path }}
+{{- else if contains "NodePort" .Values.frontend.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Values.global.namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ .Values.frontend.name }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Values.global.namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.frontend.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Values.global.namespace }} svc -w {{ .Values.frontend.name }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Values.global.namespace }} {{ .Values.frontend.name }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.frontend.service.port }}
+{{- else if contains "ClusterIP" .Values.frontend.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Values.global.namespace }} -l "app={{ .Values.frontend.name }},release={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Values.global.namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Values.global.namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Services deployed:
+   - Frontend: {{ .Values.frontend.name }}
+   {{- if .Values.backend.enabled }}
+   - API Gateway: {{ .Values.backend.name }}
+   {{- end }}
+   {{- if .Values.database.enabled }}
+   - PostgreSQL Database: {{ .Values.database.name }}
+   {{- end }}
+   {{- range .Values.microservices }}
+   {{- if .enabled }}
+   - {{ .name | title }} Service: {{ .name }}-service
+   {{- end }}
+   {{- end }}
+
+3. Check the status of your deployment:
+   kubectl get all -n {{ .Values.global.namespace }}
+
+4. To access services directly:
+   {{- if .Values.backend.enabled }}
+   # API Gateway
+   kubectl port-forward -n {{ .Values.global.namespace }} svc/{{ .Values.backend.name }} 3000:80
+   {{- end }}
+   
+   # Frontend
+   kubectl port-forward -n {{ .Values.global.namespace }} svc/{{ .Values.frontend.name }} 4321:80
+
+   {{- if .Values.database.enabled }}
+   # PostgreSQL Database
+   kubectl port-forward -n {{ .Values.global.namespace }} svc/{{ .Values.database.name }} 5432:{{ .Values.database.port }}
+   # Connect with: psql -h localhost -p 5432 -U {{ .Values.database.auth.username }} -d {{ .Values.database.auth.database }}
+   {{- end }}
+
+   {{- range .Values.microservices }}
+   {{- if .enabled }}
+   # {{ .name | title }} Service
+   kubectl port-forward -n {{ $.Values.global.namespace }} svc/{{ .name }}-service {{ .port }}:80
+   {{- end }}
+   {{- end }}
+
+5. View logs:
+   # All services
+   kubectl logs -n {{ .Values.global.namespace }} -l "release={{ .Release.Name }}" --tail=100 -f
+
+   {{- if .Values.backend.enabled }}
+   # API Gateway
+   kubectl logs -n {{ .Values.global.namespace }} -l "app={{ .Values.backend.name }}" --tail=100 -f
+   {{- end }}
+
+   # Frontend
+   kubectl logs -n {{ .Values.global.namespace }} -l "app={{ .Values.frontend.name }}" --tail=100 -f
+
+   {{- range .Values.microservices }}
+   {{- if .enabled }}
+   # {{ .name | title }} Service
+   kubectl logs -n {{ $.Values.global.namespace }} -l "app={{ .name }}-service" --tail=100 -f
+   {{- end }}
+   {{- end }}

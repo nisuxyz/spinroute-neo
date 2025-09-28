@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Start with the base configuration
+resources:
+- ../../base
+
+# Apply our local development patch
+patches:
+- path: deployment-patch.yaml
+  target:
+    kind: Deployment
+    name: api-gateway
+
+# replace with labels because commonLabels is deprecated
+labels:
+- includeSelectors: true
+  pairs:
+    environment: local
+    variant: local-dev
+
+# secretGenerator:
+# - name: api-gateway-secrets
+#   envs:
+#   - .env

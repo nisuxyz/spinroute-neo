@@ -1,0 +1,207 @@
+# Global configuration
+global:
+  namespace: microservices-platform
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+  
+# API Gateway (Backend) Configuration
+backend:
+  enabled: true
+  name: api-gateway
+  image:
+    repository: api-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 2
+  port: 3000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  env:
+    - name: NODE_ENV
+      value: "production"
+    - name: PORT
+      value: "3000"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+# Frontend Configuration
+frontend:
+  enabled: true
+  name: frontend
+  image:
+    repository: frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 2
+  port: 80
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+
+# Microservices Configuration
+microservices:
+  - name: bikeshare
+    enabled: true
+    image:
+      repository: bikeshare-service
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicas: 1
+    port: 3000
+    resources:
+      limits:
+        cpu: 300m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    env:
+      - name: NODE_ENV
+        value: "production"
+      - name: PORT
+        value: "3000"
+      - name: SERVICE_NAME
+        value: "bikeshare"
+
+  - name: fleet
+    enabled: true
+    image:
+      repository: fleet-service
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicas: 1
+    port: 3000
+    resources:
+      limits:
+        cpu: 300m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    env:
+      - name: NODE_ENV
+        value: "production"
+      - name: PORT
+        value: "3000"
+      - name: SERVICE_NAME
+        value: "fleet"
+
+  - name: journey
+    enabled: true
+    image:
+      repository: journey-service
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicas: 1
+    port: 3000
+    resources:
+      limits:
+        cpu: 300m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    env:
+      - name: NODE_ENV
+        value: "production"
+      - name: PORT
+        value: "3000"
+      - name: SERVICE_NAME
+        value: "journey"
+
+  - name: routing
+    enabled: true
+    image:
+      repository: routing-service
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicas: 1
+    port: 3000
+    resources:
+      limits:
+        cpu: 300m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    env:
+      - name: NODE_ENV
+        value: "production"
+      - name: PORT
+        value: "3000"
+      - name: SERVICE_NAME
+        value: "routing"
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx  # or your preferred ingress class
+  host: microservices.local
+  tls:
+    enabled: false
+    secretName: tls-secret
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  
+  # Frontend routing
+  frontend:
+    path: /
+    pathType: Prefix
+    
+  # Backend API routing
+  backend:
+    path: /api
+    pathType: Prefix
+
+# Database Configuration (if needed)
+database:
+  enabled: true
+  name: postgres
+  image:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 5432
+  auth:
+    database: microservices_db
+    username: postgres
+    password: postgres_password
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+# Service Monitor for Prometheus (optional)
+serviceMonitor:
+  enabled: false
+  
+# Horizontal Pod Autoscaler
+hpa:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
