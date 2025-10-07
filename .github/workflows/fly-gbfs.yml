@@ -1,4 +1,4 @@
-name: Fly Deploy: gbfs-service
+name: "Fly Deploy: gbfs-service"
 on:
   push:
     branches:
