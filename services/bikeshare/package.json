@@ -4,11 +4,7 @@
     "start": "bun run src/index.ts",
     "start:dev": "bun run --watch src/index.ts",
     "start:dev:hot": "bun run --hot src/index.ts",
-    "drizzle:generate": "bunx drizzle-kit generate && sed -i 's/\"gis.geography\"/gis.geography/g' ./migrations/*.sql",
-    "drizzle:migrate": "bunx drizzle-kit migrate",
-    "drizzle:pull": "bunx drizzle-kit pull",
-    "drizzle:push": "bunx drizzle-kit push",
-    "drizzle:studio": "bunx drizzle-kit studio",
+    "supabase:gen": "supabase gen types typescript --project-id ${SUPABASE_PROJECT_ID} --schema bikeshare > lib/db.types.ts",
     "container:build": "podman build -f Containerfile.prod -t bikeshare-service:latest .",
     "container:build:dev": "podman build -f Containerfile.dev -t bikeshare-service:dev .",
     "container:dev": "podman run -p 3000:3000 bikeshare-service:dev",
@@ -31,12 +27,14 @@
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.57.4",
+    "@supabase/supabase-js": "^2.74.0",
     "better-auth": "^1.3.7",
     "dotenv": "^17.2.1",
     "drizzle-orm": "^0.44.4",
     "hono": "^4.9.4",
-    "shared-utils": "workspace:*"
+    "prisma": "^6.16.3",
+    "shared-utils": "workspace:*",
+    "supabase": "^2.48.3"
   },
   "devDependencies": {
     "@better-auth/cli": "^1.3.7",
