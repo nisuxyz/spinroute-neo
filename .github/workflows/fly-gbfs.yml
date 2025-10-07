@@ -4,6 +4,7 @@ on:
     branches:
       - release/main  # for deployments of the entire application
       - release/gbfs  # for deployments of just the gbfs service
+      - feat/init
 jobs:
   deploy:
     name: Deploy gbfs-service
