@@ -1,0 +1,11 @@
+{
+    "name": "gbfs-service",
+    "private": true,
+    "scripts": {
+        "_start": "./bin/gbfs-service",
+        "_start:dev": "go run ./cmd/gbfs-service/main.go",
+        "start:dev": "bun --env-file=.env run _start:dev",
+        "build": "go build -o ./bin/gbfs-service ./cmd/gbfs-service/main.go",
+        "start": "bun --enf-file=.env run _start"
+    }
+}

@@ -1,13 +1,12 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
+  index,
+  jsonb,
+  pgSchema,
   text,
   timestamp,
   uuid,
-  jsonb,
-  pgSchema,
-  index,
-  pgEnum,
-  boolean,
 } from "drizzle-orm/pg-core";
 
 export const routingSchema = pgSchema("routing");;

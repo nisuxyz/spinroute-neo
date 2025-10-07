@@ -9,3 +9,4 @@ pglite/
 .env.*.local
 
 .DS_Store
+/generated/prisma

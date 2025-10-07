@@ -1,0 +1,20 @@
+# fly.toml app configuration file generated for gbfs-service on 2025-10-04T16:31:08-04:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'gbfs-service'
+primary_region = 'iad'
+
+[build]
+  dockerfile = "./Containerfile"
+  [build.args]
+    GO_VERSION = '1.24.4'
+
+# [[services]]
+#   auto_stop_machines = false
+#   auto_start_machines = false
+#   min_machines_running = 1
+
+[[vm]]
+  size = 'shared-cpu-1x'
