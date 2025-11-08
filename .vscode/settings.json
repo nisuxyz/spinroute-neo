@@ -1,0 +1,11 @@
+{
+  "go.goroot": "/home/arch/.local/share/mise/installs/go/1.25.1",
+  "debug.javascript.defaultRuntimeExecutable": {
+    "pwa-node": "/home/arch/.local/share/mise/shims/node"
+  },
+  "go.alternateTools": {
+    "go": "/home/arch/.local/share/mise/shims/go",
+    "gopls": "/home/arch/.local/share/mise/shims/gopls"
+  },
+  "kiroAgent.configureMCP": "Disabled"
+}

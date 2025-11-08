@@ -1,24 +1,37 @@
-import { Hono } from 'hono'
+import { Hono } from 'hono';
 import { showRoutes } from 'hono/dev';
-import { Glob } from "bun";
+import { Glob } from 'bun';
 
-import { auth } from '../lib/auth';
+// import { auth } from '../lib/auth';
 import { healthRouter } from './health';
+import { getSupabase, supabaseMiddleware } from 'shared-utils';
+import { createSupabaseClient } from '~lib/db';
 
-const app = new Hono()
+const app = new Hono();
+app.use('*', supabaseMiddleware(createSupabaseClient));
+
+app.get('/api/user', async (c) => {
+  const supabase = getSupabase(c);
+  const { data, error } = await supabase.auth.getUser();
+  if (error) console.log('error', error);
+  if (!data?.user) {
+    return c.json({ message: 'You are not logged in.' });
+  }
+  return c.json({ message: 'You are logged in!', userId: data.user });
+});
 
 // Health check routes (must be before auth routes)
 app.route('/', healthRouter);
 
-app.get('/api/hello', (c) => {
-  return c.text('hello api-gateway')
-})
-  .on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+app.get('/hello', (c) => {
+  return c.text('hello api-gateway');
+});
+// .on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 
 async function loadRoutes() {
   // **Auto-import and register routes with + (inspired by svelte)**
   const glob = new Glob('./**/+routes.*.ts');
-  const files = glob.scanSync("./src");
+  const files = glob.scanSync('./src');
 
   // Scans the current working directory and each of its sub-directories recursively
   for (const file of files) {
@@ -36,4 +49,4 @@ await loadRoutes();
 
 showRoutes(app);
 
-export default app
+export default app;
