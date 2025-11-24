@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import StationToggleButton from './StationToggleButton';
@@ -10,6 +10,7 @@ import { useBikeshareStations } from '@/hooks/use-bikeshare-stations';
 // TypeScript interfaces for component state
 interface MainMapViewState {
   isStationsVisible: boolean;
+  useMarkerView: boolean; // Toggle between MarkerView and Layer rendering
   selectedStationId: string | null;
   selectedStationCoordinates: [number, number] | null; // [longitude, latitude]
   selectedStationName: string | null;
@@ -43,6 +44,7 @@ const MainMapView: React.FC<MainMapViewProps> = () => {
   // Component state management for station layer visibility and location
   const [mapState, setMapState] = useState<MainMapViewState>({
     isStationsVisible: false,
+    useMarkerView: true, // Start with MarkerView for better z-ordering
     selectedStationId: null,
     selectedStationCoordinates: null,
     selectedStationName: null,
@@ -268,6 +270,63 @@ const MainMapView: React.FC<MainMapViewProps> = () => {
     }));
   };
 
+  // Handler for MarkerView station press
+  const handleMarkerViewPress = (
+    stationId: string,
+    stationName: string,
+    coordinates: [number, number],
+    classicBikes: number,
+    electricBikes: number,
+    availableDocks: number,
+    availabilityStatus: string,
+  ) => {
+    console.log('MarkerView station pressed:', stationId, stationName);
+
+    setMapState((prevState) => {
+      // If same station is already selected, hide callout
+      if (prevState.selectedStationId === stationId) {
+        return {
+          ...prevState,
+          selectedStationId: null,
+          selectedStationCoordinates: null,
+          selectedStationName: null,
+          selectedStationClassicBikes: undefined,
+          selectedStationElectricBikes: undefined,
+          selectedStationAvailableDocks: undefined,
+          selectedStationAvailabilityStatus: undefined,
+        };
+      }
+
+      // Show callout for new station
+      return {
+        ...prevState,
+        selectedStationId: stationId,
+        selectedStationCoordinates: coordinates,
+        selectedStationName: stationName,
+        selectedStationClassicBikes: classicBikes,
+        selectedStationElectricBikes: electricBikes,
+        selectedStationAvailableDocks: availableDocks,
+        selectedStationAvailabilityStatus: availabilityStatus,
+      };
+    });
+  };
+
+  // Helper to get color based on bike availability
+  const getColorForBikes = (classicBikes: number, electricBikes: number): string => {
+    const totalBikes = (classicBikes || 0) + (electricBikes || 0);
+    return totalBikes > 0 ? '#22c55e' : '#6b7280'; // Green if any bikes, gray if none
+  };
+
+  // Helper to get border color based on dock availability
+  const getBorderColorForStatus = (status: string): string => {
+    return status === 'no-docks' ? '#ef4444' : '#ffffff';
+  };
+
+  // Helper to check if electric bikes are available
+  const hasElectricBikes = (electricBikes: number): boolean => {
+    return (electricBikes || 0) > 0;
+  };
+
   // Default fallback location (San Francisco downtown as example)
   const DEFAULT_LOCATION: [number, number] = [-122.4194, 37.7749]; // [longitude, latitude]
   const DEFAULT_ZOOM = 12;
@@ -454,51 +513,119 @@ const MainMapView: React.FC<MainMapViewProps> = () => {
           />
         )}
 
-        {/* Images component for pin assets */}
-        <Mapbox.Images
-          images={{
-            pinLight: require('../assets/images/parking-icon-lightmode.png'),
-            pinDark: require('../assets/images/parking-icon-darkmode.png'),
-          }}
-        />
-
-        {/* Conditional rendering of station layer based on toggle state */}
-        {mapState.isStationsVisible && (
+        {/* Conditional rendering of station markers based on toggle state and rendering mode */}
+        {mapState.isStationsVisible && !mapState.useMarkerView && (
           <Mapbox.ShapeSource
             id="stationSource"
             shape={stationFeatureCollection}
             onPress={handleStationPress}
           >
-            <Mapbox.SymbolLayer
-              id="stationLayer"
+            {/* Outer yellow ring for electric bike availability */}
+            <Mapbox.CircleLayer
+              id="stationElectricRing"
               style={{
-                iconImage: 'pinLight',
-                iconSize: 0.03,
-                iconAnchor: 'center',
-                // textField: "Dock",
-                // textAnchor: "bottom",
-                // textRadialOffset: 1,
-                iconAllowOverlap: true,
-                // Color-coded styling based on availability status
-                iconColor: '#ef4444',
-                // [
-                //   "case",
-                //   ["==", ["get", "availabilityStatus"], "full"],
-                //   "#22c55e", // Green for full availability (both classic and electric)
-                //   ["==", ["get", "availabilityStatus"], "classic-only"],
-                //   "#3b82f6", // Blue for classic bikes only
-                //   ["==", ["get", "availabilityStatus"], "electric-only"],
-                //   "#eab308", // Yellow for electric bikes only
-                //   ["==", ["get", "availabilityStatus"], "empty"],
-                //   "#ef4444", // Red for no bikes available (empty station with docks)
-                //   ["==", ["get", "availabilityStatus"], "no-docks"],
-                //   "#6b7280", // Gray for station full (no available docks)
-                //   "#6b7280", // Default gray for unknown status
-                // ],
+                circleRadius: 16,
+                circleColor: 'transparent',
+                circleStrokeWidth: 3,
+                circleStrokeColor: [
+                  'case',
+                  ['>', ['get', 'electricBikes'], 0],
+                  '#eab308', // Yellow ring if electric bikes available
+                  'transparent', // No ring otherwise
+                ],
+                circleStrokeOpacity: 0.8,
+                circleSortKey: ['+', ['get', 'classicBikes'], ['get', 'electricBikes']],
+              }}
+            />
+
+            {/* Main circle with bike availability */}
+            <Mapbox.CircleLayer
+              id="stationCircle"
+              style={{
+                circleRadius: 14,
+                circleColor: [
+                  'case',
+                  ['>', ['+', ['get', 'classicBikes'], ['get', 'electricBikes']], 0],
+                  '#22c55e', // Green if any bikes available
+                  '#6b7280', // Gray if no bikes
+                ],
+                circleStrokeWidth: 2,
+                circleStrokeColor: [
+                  'case',
+                  ['==', ['get', 'availabilityStatus'], 'no-docks'],
+                  '#ef4444', // Red border when no docks available
+                  '#ffffff', // White border otherwise
+                ],
+                circleSortKey: ['+', ['get', 'classicBikes'], ['get', 'electricBikes']],
+              }}
+            />
+
+            {/* Text label showing total number of bikes available */}
+            <Mapbox.SymbolLayer
+              id="stationLabel"
+              style={{
+                textField: ['to-string', ['+', ['get', 'classicBikes'], ['get', 'electricBikes']]],
+                textSize: 12,
+                textColor: '#ffffff',
+                textHaloColor: '#000000',
+                textHaloWidth: 1,
+                textAllowOverlap: true,
+                symbolSortKey: ['+', ['get', 'classicBikes'], ['get', 'electricBikes']], // Match circle sort order
               }}
             />
           </Mapbox.ShapeSource>
         )}
+
+        {/* MarkerView-based rendering for proper z-ordering (slower with many markers) */}
+        {mapState.isStationsVisible &&
+          mapState.useMarkerView &&
+          stationFeatureCollection.features.map((feature) => {
+            const { id, message, classicBikes, electricBikes, availableDocks, availabilityStatus } =
+              feature.properties;
+            const coordinates = feature.geometry.coordinates as [number, number];
+            const totalBikes = (classicBikes || 0) + (electricBikes || 0);
+            const color = getColorForBikes(classicBikes || 0, electricBikes || 0);
+            const borderColor = getBorderColorForStatus(availabilityStatus);
+            const showElectricRing = hasElectricBikes(electricBikes || 0);
+
+            return (
+              <Mapbox.MarkerView
+                key={id}
+                id={`station-${id}`}
+                coordinate={coordinates}
+                anchor={{ x: 0.5, y: 0.5 }}
+                allowOverlap={true}
+                allowOverlapWithPuck={true}
+              >
+                <View style={styles.markerWrapper}>
+                  {/* Yellow ring for electric bikes */}
+                  {showElectricRing && <View style={styles.electricRing} />}
+
+                  {/* Main marker circle */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    style={[
+                      styles.markerContainer,
+                      { backgroundColor: color, borderColor: borderColor },
+                    ]}
+                    onPress={() =>
+                      handleMarkerViewPress(
+                        id,
+                        message,
+                        coordinates,
+                        classicBikes,
+                        electricBikes,
+                        availableDocks,
+                        availabilityStatus,
+                      )
+                    }
+                  >
+                    <Text style={styles.markerText}>{String(totalBikes)}</Text>
+                  </TouchableOpacity>
+                </View>
+              </Mapbox.MarkerView>
+            );
+          })}
 
         {/* Station callout - positioned above selected pin (requirement 4.2) */}
         {mapState.selectedStationId &&
@@ -527,6 +654,18 @@ const MainMapView: React.FC<MainMapViewProps> = () => {
         isLoading={mapState.isStationDataLoading || isStationDataFetching}
         onToggle={toggleStationVisibility}
       />
+
+      {/* Rendering mode toggle (dev tool) */}
+      {mapState.isStationsVisible && (
+        <TouchableOpacity
+          style={styles.renderModeToggle}
+          onPress={() => setMapState((prev) => ({ ...prev, useMarkerView: !prev.useMarkerView }))}
+        >
+          <Text style={styles.renderModeText}>
+            {mapState.useMarkerView ? 'MarkerView' : 'Layers'}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -537,6 +676,58 @@ const styles = StyleSheet.create({
   },
   mapView: {
     flex: 1, // Full screen map view
+  },
+  markerWrapper: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  electricRing: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: '#eab308',
+    opacity: 0.8,
+  },
+  markerContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  markerText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2,
+  },
+  renderModeToggle: {
+    position: 'absolute',
+    top: 60,
+    right: 16,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  renderModeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#000000',
   },
 });
 
