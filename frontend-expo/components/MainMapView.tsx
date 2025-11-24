@@ -7,6 +7,9 @@ import StationCallout from './StationCallout';
 import { useSupabase } from '@/hooks/use-supabase';
 import { useBikeshareStations } from '@/hooks/use-bikeshare-stations';
 
+// Feature flags
+const ENABLE_LAYER_RENDERING_TOGGLE = false; // Set to true to enable layer-based rendering option
+
 // TypeScript interfaces for component state
 interface MainMapViewState {
   isStationsVisible: boolean;
@@ -44,7 +47,7 @@ const MainMapView: React.FC<MainMapViewProps> = () => {
   // Component state management for station layer visibility and location
   const [mapState, setMapState] = useState<MainMapViewState>({
     isStationsVisible: false,
-    useMarkerView: true, // Start with MarkerView for better z-ordering
+    useMarkerView: true, // MarkerView is default (better z-ordering)
     selectedStationId: null,
     selectedStationCoordinates: null,
     selectedStationName: null,
@@ -655,8 +658,8 @@ const MainMapView: React.FC<MainMapViewProps> = () => {
         onToggle={toggleStationVisibility}
       />
 
-      {/* Rendering mode toggle (dev tool) */}
-      {mapState.isStationsVisible && (
+      {/* Rendering mode toggle (dev tool) - only visible when feature flag enabled */}
+      {ENABLE_LAYER_RENDERING_TOGGLE && mapState.isStationsVisible && (
         <TouchableOpacity
           style={styles.renderModeToggle}
           onPress={() => setMapState((prev) => ({ ...prev, useMarkerView: !prev.useMarkerView }))}
