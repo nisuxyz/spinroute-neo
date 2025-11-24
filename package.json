@@ -122,5 +122,8 @@
   "trustedDependencies": [
     "@parcel/watcher",
     "unrs-resolver"
-  ]
+  ],
+  "devDependencies": {
+    "@biomejs/biome": "2.3.7"
+  }
 }
