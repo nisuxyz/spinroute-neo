@@ -8,6 +8,7 @@ import {
   useColorScheme,
   ImageSourcePropType,
   Text,
+  Platform,
 } from 'react-native';
 import {
   MaterialIcons,
@@ -21,6 +22,7 @@ import {
 } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { Colors } from '@/constants/theme';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 
 type IconFamily =
   | 'MaterialIcons'
@@ -81,6 +83,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const useGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
   const handlePress = () => {
     if (isActive && onDeactivate) {
@@ -91,8 +94,12 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
   };
 
   // Active: solid background with button color
-  // Inactive: dark gray background with colored icon and border
-  const backgroundColor = isActive ? buttonColor : colors.buttonBackground;
+  // Inactive: glass effect (iOS 26+) or dark gray background with colored icon and border
+  const backgroundColor = isActive
+    ? buttonColor
+    : useGlass
+      ? 'transparent'
+      : colors.buttonBackground;
   const borderColor = buttonColor;
   const iconColor = isActive ? '#FFFFFF' : buttonColor;
 
@@ -128,6 +135,10 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
     }
   };
 
+  const ButtonWrapper = useGlass && !isActive ? GlassView : View;
+  const wrapperProps =
+    useGlass && !isActive ? { glassEffectStyle: 'regular' as const, isInteractive: true } : {};
+
   return (
     <TouchableOpacity
       style={[
@@ -145,7 +156,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
       accessibilityState={{ selected: isActive }}
       testID={testID}
     >
-      <View style={styles.content}>
+      <ButtonWrapper style={styles.content} {...wrapperProps}>
         {isLoading ? (
           <ActivityIndicator size="small" color={iconColor} testID={`${testID}-loading`} />
         ) : (
@@ -170,7 +181,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
             )}
           </>
         )}
-      </View>
+      </ButtonWrapper>
     </TouchableOpacity>
   );
 };
@@ -188,11 +199,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.27,
     shadowRadius: 4.65,
     shadowColor: Colors.dark.shadow,
+    overflow: 'hidden',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 12,
   },
   icon: {
     width: 24,
