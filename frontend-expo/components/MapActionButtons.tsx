@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: '100%',
     paddingTop: 100,
-    paddingBottom: 100,
+    paddingBottom: 130,
   },
   buttonGroup: {
     display: 'flex',

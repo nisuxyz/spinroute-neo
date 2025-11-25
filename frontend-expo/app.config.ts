@@ -4,6 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'spinroute-neo',
   slug: 'spinroute-neo',
+  owner: 'itsnisu',
   version: '0.0.1',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -67,6 +68,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         locationWhenInUsePermission: 'Show current location on map.',
       },
     ],
+    'expo-font',
+    'expo-web-browser',
   ],
   experiments: {
     typedRoutes: true,

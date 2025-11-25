@@ -10,6 +10,8 @@ import { useBikeshareStations } from '@/hooks/use-bikeshare-stations';
 import { useMapLocation } from '@/hooks/use-map-location';
 import { useStationVisibility } from '@/hooks/use-station-visibility';
 import { Colors } from '@/constants/theme';
+import SearchButton from './SearchButton';
+import SearchSheet from './SearchSheet';
 
 // Feature flags
 const ENABLE_LAYER_RENDERING_TOGGLE = false;
@@ -61,6 +63,7 @@ const MainMapView: React.FC = () => {
   const [is3DMode, setIs3DMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
+  const [isSearchSheetVisible, setIsSearchSheetVisible] = useState(false);
 
   const handleRegionIsChanging = (regionFeature: any) => {
     if (regionFeature?.properties?.isUserInteraction && isStationsVisible) {
@@ -289,6 +292,9 @@ const MainMapView: React.FC = () => {
           <Text style={styles.renderModeText}>{useMarkerView ? 'MarkerView' : 'Layers'}</Text>
         </TouchableOpacity>
       )}
+
+      <SearchButton onPress={() => setIsSearchSheetVisible(true)} />
+      <SearchSheet visible={isSearchSheetVisible} onClose={() => setIsSearchSheetVisible(false)} />
     </View>
   );
 };

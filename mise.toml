@@ -2,3 +2,4 @@
 biome = "latest"
 bun = "latest"
 flyctl = "latest"
+node = "20"
