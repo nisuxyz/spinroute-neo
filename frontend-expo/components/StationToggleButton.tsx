@@ -14,13 +14,13 @@ const StationToggleButton: React.FC<StationToggleButtonProps> = ({
 }) => {
   // Define custom colors for the station toggle button
   const DARK_GREY = '#2A2A2A';
+  const LIGHT_GREY = '#9A9A9A';
   const ELECTRIC_PURPLE = '#8B5CF6'; // Lilac/electric purple
-  const WHITE = '#FFFFFF';
 
   // Button styling based on state
   const buttonBackgroundColor = DARK_GREY;
-  const buttonBorderColor = isStationsVisible ? ELECTRIC_PURPLE : 'transparent';
-  const buttonIconColor = isStationsVisible ? ELECTRIC_PURPLE : WHITE;
+  const buttonBorderColor = ELECTRIC_PURPLE;
+  const buttonIconColor = isStationsVisible ? ELECTRIC_PURPLE : LIGHT_GREY;
 
   return (
     <TouchableOpacity
@@ -29,7 +29,7 @@ const StationToggleButton: React.FC<StationToggleButtonProps> = ({
         {
           backgroundColor: buttonBackgroundColor,
           borderColor: buttonBorderColor,
-          borderWidth: isStationsVisible ? 2 : 0,
+          borderWidth: 2,
         },
       ]}
       onPress={onToggle}
@@ -57,10 +57,10 @@ const StationToggleButton: React.FC<StationToggleButtonProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 20, // Bottom margin
-    right: 20, // Right margin
-    width: 56, // Standard FAB size (minimum 44pt touch target)
-    height: 56,
+    top: 100, // Bottom margin
+    right: 10, // Right margin
+    width: 48, // Standard FAB size (minimum 44pt touch target)
+    height: 48,
     borderRadius: 12, // Rounded corners instead of circular
     elevation: 6, // Android shadow
     shadowOffset: {
@@ -78,9 +78,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   icon: {
-    width: 24,
-    height: 24,
+    width: 36,
+    height: 36,
     resizeMode: 'contain',
+    marginTop: 16, // Shift up to visually center the pin shape
   },
 });
 
