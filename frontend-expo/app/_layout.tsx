@@ -5,18 +5,32 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Mapbox from '@rnmapbox/maps';
+import { useEffect } from 'react';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-console.log({ env: process.env });
 // Mapbox.setWellKnownTileServer("https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json");
-Mapbox.setAccessToken(process.env.MAPBOX_TOKEN!);
-Mapbox.setTelemetryEnabled(false);
+// Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!);
+// Mapbox.setTelemetryEnabled(false);
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    // Initialize the map view
+    console.log({ env: process.env, token: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN });
+    Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!);
+    Mapbox.setTelemetryEnabled(false);
+    // Mapbox.setAccessToken('YOUR_MAPBOX_ACCESS_TOKEN');
+    // const mapboxMap = new Mapbox({
+    //   style: 'mapbox://styles/mapbox/streets-v11',
+    //   center: [-122.084051, 37.385348],
+    //   zoom: 12,
+    // });
+    // setMap(mapboxMap);
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

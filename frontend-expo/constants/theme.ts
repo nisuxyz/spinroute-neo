@@ -5,8 +5,10 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+export const tintColorLight = '#0a7ea4';
+export const tintColorDark = '#fff';
+export const electricPurple = '#8B5CF6';
+export const darkGray = '#2A2A2A';
 
 export const Colors = {
   light: {
@@ -16,6 +18,27 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
+    // Station colors
+    stationAvailable: '#22c55e', // Green - bikes available
+    stationEmpty: '#6b7280', // Gray - no bikes
+    stationElectric: '#eab308', // Yellow - electric bikes indicator
+    stationNoDocks: '#ef4444', // Red - no docks available
+    stationBorder: '#ffffff', // White border
+    stationText: '#ffffff', // White text on markers
+    stationTextShadow: '#000000', // Black text shadow
+    // Button colors
+    buttonBackground: '#ffffff',
+    buttonBorder: electricPurple, // Electric purple
+    buttonIcon: electricPurple,
+    buttonIconInactive: '#9A9A9A',
+    // Callout colors
+    calloutBackground: '#ffffff',
+    calloutText: '#000000',
+    calloutTextSecondary: '#333333',
+    // Map colors
+    locationPuck: '#14b8a6', // Teal
+    // Shadow
+    shadow: '#000000',
   },
   dark: {
     text: '#ECEDEE',
@@ -24,6 +47,27 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+    // Station colors
+    stationAvailable: '#22c55e', // Green - bikes available
+    stationEmpty: '#6b7280', // Gray - no bikes
+    stationElectric: '#eab308', // Yellow - electric bikes indicator
+    stationNoDocks: '#ef4444', // Red - no docks available
+    stationBorder: '#ffffff', // White border
+    stationText: '#ffffff', // White text on markers
+    stationTextShadow: '#000000', // Black text shadow
+    // Button colors
+    buttonBackground: darkGray, // Dark grey
+    buttonBorder: electricPurple, // Electric purple
+    buttonIcon: electricPurple,
+    buttonIconInactive: '#9A9A9A',
+    // Callout colors
+    calloutBackground: '#1f1f1f',
+    calloutText: '#ffffff',
+    calloutTextSecondary: '#cccccc',
+    // Map colors
+    locationPuck: '#14b8a6', // Teal
+    // Shadow
+    shadow: '#000000',
   },
 };
 

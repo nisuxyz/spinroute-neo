@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
+import { Colors } from '@/constants/theme';
 
 interface StationMarkerProps {
   id: string;
@@ -21,10 +22,14 @@ const StationMarker: React.FC<StationMarkerProps> = ({
   availabilityStatus,
   onPress,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   const totalBikes = (classicBikes || 0) + (electricBikes || 0);
   const hasElectric = (electricBikes || 0) > 0;
-  const backgroundColor = totalBikes > 0 ? '#22c55e' : '#6b7280';
-  const borderColor = availabilityStatus === 'no-docks' ? '#ef4444' : '#ffffff';
+  const backgroundColor = totalBikes > 0 ? colors.stationAvailable : colors.stationEmpty;
+  const borderColor =
+    availabilityStatus === 'no-docks' ? colors.stationNoDocks : colors.stationBorder;
 
   return (
     <Mapbox.MarkerView
@@ -61,7 +66,7 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 3,
-    borderColor: '#eab308',
+    borderColor: Colors.light.stationElectric,
     opacity: 0.8,
   },
   markerContainer: {
@@ -75,9 +80,9 @@ const styles = StyleSheet.create({
   markerText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: Colors.light.stationText,
     textAlign: 'center',
-    textShadowColor: '#000000',
+    textShadowColor: Colors.light.stationTextShadow,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 2,
   },

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, useColorScheme, Alert } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
-import StationToggleButton from './StationToggleButton';
+import MapActionButtons from './MapActionButtons';
 import StationCallout from './StationCallout';
 import StationMarker from './StationMarker';
 import StationLayers from './StationLayers';
@@ -9,6 +9,7 @@ import { useSupabase } from '@/hooks/use-supabase';
 import { useBikeshareStations } from '@/hooks/use-bikeshare-stations';
 import { useMapLocation } from '@/hooks/use-map-location';
 import { useStationVisibility } from '@/hooks/use-station-visibility';
+import { Colors } from '@/constants/theme';
 
 // Feature flags
 const ENABLE_LAYER_RENDERING_TOGGLE = false;
@@ -30,7 +31,10 @@ interface SelectedStation {
 
 const MainMapView: React.FC = () => {
   const mapRef = useRef<Mapbox.MapView>(null);
+  const cameraRef = useRef<Mapbox.Camera>(null);
   const supabase = useSupabase('bikeshare');
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   const {
     updateStationList,
@@ -54,6 +58,9 @@ const MainMapView: React.FC = () => {
 
   const [selectedStation, setSelectedStation] = useState<SelectedStation | null>(null);
   const [useMarkerView, setUseMarkerView] = useState(true);
+  const [is3DMode, setIs3DMode] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isRecentering, setIsRecentering] = useState(false);
 
   const handleRegionIsChanging = (regionFeature: any) => {
     if (regionFeature?.properties?.isUserInteraction && isStationsVisible) {
@@ -123,31 +130,67 @@ const MainMapView: React.FC = () => {
     setSelectedStation(null);
   };
 
+  const handleRecenter = () => {
+    if (!userLocation) {
+      Alert.alert('Location unavailable', 'Unable to get your current location');
+      return;
+    }
+
+    setIsRecentering(true);
+    cameraRef.current?.setCamera({
+      centerCoordinate: userLocation,
+      zoomLevel: USER_LOCATION_ZOOM,
+      animationDuration: 1000,
+    });
+    setTimeout(() => setIsRecentering(false), 1000);
+  };
+
+  const handleToggle3D = () => {
+    const newMode = !is3DMode;
+    setIs3DMode(newMode);
+    cameraRef.current?.setCamera({
+      pitch: newMode ? 60 : 0,
+      animationDuration: 500,
+    });
+  };
+
+  const handleOpenSettings = () => {
+    Alert.alert('Settings', 'Settings screen coming soon');
+  };
+
+  const handleOpenBikeManagement = () => {
+    Alert.alert('Bike Management', 'Bike management screen coming soon');
+  };
+
+  const handleOpenRecordedTrips = () => {
+    Alert.alert('Recorded Trips', 'Recorded trips screen coming soon');
+  };
+
+  const handleStartRecording = () => {
+    setIsRecording(true);
+    Alert.alert('Recording Started', 'Your trip is now being recorded');
+  };
+
+  const handleStopRecording = () => {
+    setIsRecording(false);
+    Alert.alert('Recording Stopped', 'Your trip has been saved');
+  };
+
   return (
     <View style={styles.container}>
       <Mapbox.MapView
         ref={mapRef}
         style={styles.mapView}
+        styleURL={'mapbox://styles/nisargj95/cm9nzzm2y00ji01s6crnj1bag'}
         onRegionIsChanging={handleRegionIsChanging}
         onPress={handleMapPress}
       >
         <Mapbox.Camera
+          ref={cameraRef}
           centerCoordinate={userLocation || DEFAULT_LOCATION}
           zoomLevel={userLocation ? USER_LOCATION_ZOOM : DEFAULT_ZOOM}
           animationDuration={1000}
         />
-
-        {locationPermissionGranted && (
-          <Mapbox.LocationPuck
-            puckBearing="heading"
-            puckBearingEnabled={true}
-            pulsing={{
-              isEnabled: true,
-              color: 'teal',
-              radius: 30.0,
-            }}
-          />
-        )}
 
         {isStationsVisible && !useMarkerView && (
           <StationLayers
@@ -204,12 +247,34 @@ const MainMapView: React.FC = () => {
             />
           </Mapbox.MarkerView>
         )}
+
+        {locationPermissionGranted && (
+          <Mapbox.LocationPuck
+            puckBearing="heading"
+            puckBearingEnabled={true}
+            pulsing={{
+              isEnabled: true,
+              color: colors.locationPuck,
+              radius: 30.0,
+            }}
+          />
+        )}
       </Mapbox.MapView>
 
-      <StationToggleButton
+      <MapActionButtons
+        onRecenter={handleRecenter}
+        isRecentering={isRecentering}
+        is3DMode={is3DMode}
+        onToggle3D={handleToggle3D}
+        onOpenSettings={handleOpenSettings}
+        onOpenBikeManagement={handleOpenBikeManagement}
+        onOpenRecordedTrips={handleOpenRecordedTrips}
+        isRecording={isRecording}
+        onStartRecording={handleStartRecording}
+        onStopRecording={handleStopRecording}
         isStationsVisible={isStationsVisible}
-        isLoading={isStationDataLoading || isStationDataFetching}
-        onToggle={toggleStationVisibility}
+        isStationsLoading={isStationDataLoading || isStationDataFetching}
+        onToggleStations={toggleStationVisibility}
       />
 
       {ENABLE_LAYER_RENDERING_TOGGLE && isStationsVisible && (
@@ -235,11 +300,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 60,
     right: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.light.buttonBackground,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: Colors.light.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
@@ -248,7 +313,7 @@ const styles = StyleSheet.create({
   renderModeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#000000',
+    color: Colors.light.calloutText,
   },
 });
 

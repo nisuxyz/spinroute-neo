@@ -1,6 +1,8 @@
 import React from 'react';
+import { useColorScheme } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import type { FeatureCollection } from 'geojson';
+import { Colors } from '@/constants/theme';
 
 interface StationLayersProps {
   stationFeatureCollection: FeatureCollection;
@@ -11,6 +13,9 @@ const StationLayers: React.FC<StationLayersProps> = ({
   stationFeatureCollection,
   onStationPress,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   return (
     <Mapbox.ShapeSource
       id="stationSource"
@@ -24,7 +29,12 @@ const StationLayers: React.FC<StationLayersProps> = ({
           circleRadius: 16,
           circleColor: 'transparent',
           circleStrokeWidth: 3,
-          circleStrokeColor: ['case', ['>', ['get', 'electricBikes'], 0], '#eab308', 'transparent'],
+          circleStrokeColor: [
+            'case',
+            ['>', ['get', 'electricBikes'], 0],
+            colors.stationElectric,
+            'transparent',
+          ],
           circleStrokeOpacity: 0.8,
           circleSortKey: ['+', ['get', 'classicBikes'], ['get', 'electricBikes']],
         }}
@@ -38,15 +48,15 @@ const StationLayers: React.FC<StationLayersProps> = ({
           circleColor: [
             'case',
             ['>', ['+', ['get', 'classicBikes'], ['get', 'electricBikes']], 0],
-            '#22c55e',
-            '#6b7280',
+            colors.stationAvailable,
+            colors.stationEmpty,
           ],
           circleStrokeWidth: 2,
           circleStrokeColor: [
             'case',
             ['==', ['get', 'availabilityStatus'], 'no-docks'],
-            '#ef4444',
-            '#ffffff',
+            colors.stationNoDocks,
+            colors.stationBorder,
           ],
           circleSortKey: ['+', ['get', 'classicBikes'], ['get', 'electricBikes']],
         }}
@@ -58,8 +68,8 @@ const StationLayers: React.FC<StationLayersProps> = ({
         style={{
           textField: ['to-string', ['+', ['get', 'classicBikes'], ['get', 'electricBikes']]],
           textSize: 12,
-          textColor: '#ffffff',
-          textHaloColor: '#000000',
+          textColor: colors.stationText,
+          textHaloColor: colors.stationTextShadow,
           textHaloWidth: 1,
           textAllowOverlap: true,
           symbolSortKey: ['+', ['get', 'classicBikes'], ['get', 'electricBikes']],

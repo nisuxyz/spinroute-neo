@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { Colors } from '@/constants/theme';
 
 interface StationCalloutProps {
   stationName: string;
@@ -16,18 +17,26 @@ const StationCallout: React.FC<StationCalloutProps> = ({
   availableDocks,
   onClose,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const formatVehicleCount = (count: number | undefined, label: string): string => {
     return count !== undefined ? `${label}: ${count}` : `${label}: Data unavailable`;
   };
 
   return (
     <TouchableOpacity style={styles.container} onPress={onClose} activeOpacity={0.8}>
-      <View style={styles.callout}>
-        <Text style={styles.stationName}>{stationName}</Text>
+      <View style={[styles.callout, { backgroundColor: colors.calloutBackground }]}>
+        <Text style={[styles.stationName, { color: colors.calloutText }]}>{stationName}</Text>
         <View style={styles.vehicleInfo}>
-          <Text style={styles.vehicleCount}>{formatVehicleCount(classicBikes, 'Classic')}</Text>
-          <Text style={styles.vehicleCount}>{formatVehicleCount(electricBikes, 'Electric')}</Text>
-          <Text style={styles.vehicleCount}>{formatVehicleCount(availableDocks, 'Docks')}</Text>
+          <Text style={[styles.vehicleCount, { color: colors.calloutTextSecondary }]}>
+            {formatVehicleCount(classicBikes, 'Classic')}
+          </Text>
+          <Text style={[styles.vehicleCount, { color: colors.calloutTextSecondary }]}>
+            {formatVehicleCount(electricBikes, 'Electric')}
+          </Text>
+          <Text style={[styles.vehicleCount, { color: colors.calloutTextSecondary }]}>
+            {formatVehicleCount(availableDocks, 'Docks')}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -40,11 +49,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   callout: {
-    backgroundColor: 'white',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    shadowColor: '#000',
+    shadowColor: Colors.light.shadow,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -57,7 +65,6 @@ const styles = StyleSheet.create({
   },
   stationName: {
     fontSize: 16, // Minimum 16pt font size for accessibility (requirement 4.4)
-    color: 'black', // Black text for contrast (requirement 4.1)
     textAlign: 'center', // Center-aligned text (requirement 4.5)
     fontWeight: '600',
     marginBottom: 8, // Spacing between station name and vehicle info
@@ -68,7 +75,6 @@ const styles = StyleSheet.create({
   },
   vehicleCount: {
     fontSize: 14,
-    color: '#333',
     textAlign: 'center',
     fontWeight: '400',
   },
