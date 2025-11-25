@@ -18,7 +18,6 @@ import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
-import { useAuth } from '@/hooks/use-auth';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = SCREEN_HEIGHT * 0.9;
@@ -41,7 +40,6 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
-  const { user } = useAuth();
   const { bikes, loading, error, createBike, updateBike, deleteBike } = useBikes();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -143,46 +141,6 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
       },
     ]);
   };
-
-  if (!user) {
-    return (
-      <Modal
-        visible={visible}
-        transparent
-        animationType="slide"
-        onRequestClose={onClose}
-        statusBarTranslucent
-      >
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.overlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.sheetContainer, { height: SHEET_HEIGHT }]}>
-                <GlassContainer
-                  style={[
-                    styles.glassSheet,
-                    !hasGlassEffect && { backgroundColor: colors.buttonBackground },
-                  ]}
-                  {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
-                >
-                  <View style={styles.header}>
-                    <Text style={[styles.title, { color: colors.text }]}>Bike Management</Text>
-                    <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                      <MaterialIcons name="close" size={28} color={colors.text} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.content}>
-                    <Text style={[styles.placeholder, { color: colors.text + '80' }]}>
-                      Please sign in to manage your bikes
-                    </Text>
-                  </View>
-                </GlassContainer>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-    );
-  }
 
   return (
     <Modal
