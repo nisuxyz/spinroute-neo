@@ -5,14 +5,9 @@ WORKDIR /app
 
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json bun.lock ./
-COPY drizzle.config.ts ./
-COPY drizzle ./drizzle
 
 # Install app dependencies
 RUN bun install
-
-RUN bunx drizzle-kit generate
-# RUN bunx drizzle-kit migrate
 
 COPY lib ./lib
 COPY src ./src
@@ -24,4 +19,4 @@ WORKDIR /app
 COPY --from=builder /app ./
 
 EXPOSE 3000
-CMD [ "bunx", "drizzle-kit", "migrate", "&&", "bun", "run", "start" ]
+CMD [ "bun", "run", "start" ]
