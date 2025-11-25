@@ -184,6 +184,10 @@ const MainMapView: React.FC = () => {
         styleURL={'mapbox://styles/nisargj95/cm9nzzm2y00ji01s6crnj1bag'}
         onRegionIsChanging={handleRegionIsChanging}
         onPress={handleMapPress}
+        compassEnabled={true}
+        compassPosition={{ right: 14, top: 2 }}
+        logoPosition={{ left: 20, bottom: -16 }}
+        attributionPosition={{ right: 12, bottom: -16 }}
       >
         <Mapbox.Camera
           ref={cameraRef}
