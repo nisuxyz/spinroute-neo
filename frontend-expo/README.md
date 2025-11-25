@@ -10,7 +10,19 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up environment variables
+
+   Copy `.env.example` to `.env` and fill in your credentials:
+   ```bash
+   cp .env.example .env
+   ```
+
+   Required variables:
+   - `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN`: Your Mapbox access token
+   - `EXPO_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+   - `EXPO_PUBLIC_SUPABASE_KEY`: Your Supabase anon/public key
+
+3. Start the app
 
    ```bash
    npx expo start
@@ -34,6 +46,35 @@ npm run reset-project
 ```
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+
+## Authentication
+
+The app uses **Supabase Authentication with auth gating** - users must sign in before accessing the app.
+
+### Architecture
+
+- **Auth Context**: `hooks/use-auth.tsx` - Provides authentication state and methods
+- **Auth Screen**: `app/auth.tsx` - Dedicated sign in/sign up screen
+- **Auth Gating**: `app/_layout.tsx` - Redirects based on auth state
+- **User Profile**: `components/UserProfileSection.tsx` - Profile management in settings
+
+### Features
+
+- ✅ Authentication gating (must sign in to access app)
+- ✅ Email/password sign up and sign in
+- ✅ Persistent sessions using expo-sqlite localStorage
+- ✅ Auto-refresh tokens
+- ✅ Automatic navigation based on auth state
+- ✅ User profile display in settings
+- ✅ Sign out functionality
+
+### User Flow
+
+1. **First Launch**: App opens to authentication screen
+2. **Sign Up/Sign In**: Create account or sign in with existing credentials
+3. **Access App**: After authentication, full app access is granted
+4. **Session Persistence**: Stay signed in across app restarts
+5. **Sign Out**: Access profile in settings to sign out
 
 ## Learn more
 
