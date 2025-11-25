@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, useColorScheme, Alert } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
+import { useRouter } from 'expo-router';
 import MapActionButtons from './MapActionButtons';
 import StationCallout from './StationCallout';
 import StationMarker from './StationMarker';
@@ -12,6 +13,8 @@ import { useStationVisibility } from '@/hooks/use-station-visibility';
 import { Colors } from '@/constants/theme';
 import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
+import BikeManagementSheet from './BikeManagementSheet';
+import RecordedTripsSheet from './RecordedTripsSheet';
 
 // Feature flags
 const ENABLE_LAYER_RENDERING_TOGGLE = false;
@@ -34,6 +37,7 @@ interface SelectedStation {
 const MainMapView: React.FC = () => {
   const mapRef = useRef<Mapbox.MapView>(null);
   const cameraRef = useRef<Mapbox.Camera>(null);
+  const router = useRouter();
   const supabase = useSupabase('bikeshare');
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -64,6 +68,8 @@ const MainMapView: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
   const [isSearchSheetVisible, setIsSearchSheetVisible] = useState(false);
+  const [isBikeManagementSheetVisible, setIsBikeManagementSheetVisible] = useState(false);
+  const [isRecordedTripsSheetVisible, setIsRecordedTripsSheetVisible] = useState(false);
 
   const handleRegionIsChanging = (regionFeature: any) => {
     if (regionFeature?.properties?.isUserInteraction && isStationsVisible) {
@@ -158,15 +164,15 @@ const MainMapView: React.FC = () => {
   };
 
   const handleOpenSettings = () => {
-    Alert.alert('Settings', 'Settings screen coming soon');
+    router.push('/settings');
   };
 
   const handleOpenBikeManagement = () => {
-    Alert.alert('Bike Management', 'Bike management screen coming soon');
+    setIsBikeManagementSheetVisible(true);
   };
 
   const handleOpenRecordedTrips = () => {
-    Alert.alert('Recorded Trips', 'Recorded trips screen coming soon');
+    setIsRecordedTripsSheetVisible(true);
   };
 
   const handleStartRecording = () => {
@@ -295,6 +301,14 @@ const MainMapView: React.FC = () => {
 
       <SearchButton onPress={() => setIsSearchSheetVisible(true)} />
       <SearchSheet visible={isSearchSheetVisible} onClose={() => setIsSearchSheetVisible(false)} />
+      <BikeManagementSheet
+        visible={isBikeManagementSheetVisible}
+        onClose={() => setIsBikeManagementSheetVisible(false)}
+      />
+      <RecordedTripsSheet
+        visible={isRecordedTripsSheetVisible}
+        onClose={() => setIsRecordedTripsSheetVisible(false)}
+      />
     </View>
   );
 };
