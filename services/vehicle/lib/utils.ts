@@ -29,9 +29,9 @@ export function convertDistance(
 }
 
 /**
- * Convert mileage values in object
+ * Convert kilometrage values in object
  */
-export function convertMileageInObject<T extends Record<string, any>>(
+export function convertKilometrageInObject<T extends Record<string, any>>(
   obj: T,
   fields: string[],
   toUnit: 'km' | 'mi',

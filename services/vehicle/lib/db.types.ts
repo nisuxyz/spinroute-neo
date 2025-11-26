@@ -51,6 +51,44 @@ export type Database = {
   };
   vehicles: {
     Tables: {
+      kilometrage_log: {
+        Row: {
+          bike_id: string;
+          created_at: string;
+          distance: number;
+          id: string;
+          logged_at: string;
+          notes: string | null;
+          user_id: string;
+        };
+        Insert: {
+          bike_id: string;
+          created_at?: string;
+          distance: number;
+          id?: string;
+          logged_at?: string;
+          notes?: string | null;
+          user_id: string;
+        };
+        Update: {
+          bike_id?: string;
+          created_at?: string;
+          distance?: number;
+          id?: string;
+          logged_at?: string;
+          notes?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'mileage_log_bike_id_fkey';
+            columns: ['bike_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_bike';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       maintenance_record: {
         Row: {
           bike_id: string | null;
@@ -104,44 +142,6 @@ export type Database = {
             columns: ['part_id'];
             isOneToOne: false;
             referencedRelation: 'user_part';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      mileage_log: {
-        Row: {
-          bike_id: string;
-          created_at: string;
-          distance: number;
-          id: string;
-          logged_at: string;
-          notes: string | null;
-          user_id: string;
-        };
-        Insert: {
-          bike_id: string;
-          created_at?: string;
-          distance: number;
-          id?: string;
-          logged_at?: string;
-          notes?: string | null;
-          user_id: string;
-        };
-        Update: {
-          bike_id?: string;
-          created_at?: string;
-          distance?: number;
-          id?: string;
-          logged_at?: string;
-          notes?: string | null;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'mileage_log_bike_id_fkey';
-            columns: ['bike_id'];
-            isOneToOne: false;
-            referencedRelation: 'user_bike';
             referencedColumns: ['id'];
           },
         ];
@@ -226,11 +226,12 @@ export type Database = {
           brand: string | null;
           created_at: string;
           id: string;
+          is_active: boolean;
           metadata: Json | null;
           model: string | null;
           name: string;
           purchase_date: string | null;
-          total_mileage: number;
+          total_kilometrage: number;
           type: Database['vehicles']['Enums']['bike_type'];
           updated_at: string;
           user_id: string;
@@ -239,11 +240,12 @@ export type Database = {
           brand?: string | null;
           created_at?: string;
           id?: string;
+          is_active?: boolean;
           metadata?: Json | null;
           model?: string | null;
           name: string;
           purchase_date?: string | null;
-          total_mileage?: number;
+          total_kilometrage?: number;
           type: Database['vehicles']['Enums']['bike_type'];
           updated_at?: string;
           user_id: string;
@@ -252,11 +254,12 @@ export type Database = {
           brand?: string | null;
           created_at?: string;
           id?: string;
+          is_active?: boolean;
           metadata?: Json | null;
           model?: string | null;
           name?: string;
           purchase_date?: string | null;
-          total_mileage?: number;
+          total_kilometrage?: number;
           type?: Database['vehicles']['Enums']['bike_type'];
           updated_at?: string;
           user_id?: string;
@@ -272,7 +275,7 @@ export type Database = {
           model: string | null;
           name: string;
           purchase_date: string | null;
-          total_mileage: number;
+          total_kilometrage: number;
           type: Database['vehicles']['Enums']['part_type'];
           updated_at: string;
           user_id: string;
@@ -285,7 +288,7 @@ export type Database = {
           model?: string | null;
           name: string;
           purchase_date?: string | null;
-          total_mileage?: number;
+          total_kilometrage?: number;
           type: Database['vehicles']['Enums']['part_type'];
           updated_at?: string;
           user_id: string;
@@ -298,7 +301,7 @@ export type Database = {
           model?: string | null;
           name?: string;
           purchase_date?: string | null;
-          total_mileage?: number;
+          total_kilometrage?: number;
           type?: Database['vehicles']['Enums']['part_type'];
           updated_at?: string;
           user_id?: string;

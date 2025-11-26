@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, useColorScheme, Alert } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 import MapActionButtons from './MapActionButtons';
 import StationCallout from './StationCallout';
 import StationMarker from './StationMarker';
@@ -15,6 +16,7 @@ import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
 import BikeManagementSheet from './BikeManagementSheet';
 import RecordedTripsSheet from './RecordedTripsSheet';
+import LocationCard from './LocationCard';
 
 // Feature flags
 const ENABLE_LAYER_RENDERING_TOGGLE = false;
@@ -70,6 +72,14 @@ const MainMapView: React.FC = () => {
   const [isSearchSheetVisible, setIsSearchSheetVisible] = useState(false);
   const [isBikeManagementSheetVisible, setIsBikeManagementSheetVisible] = useState(false);
   const [isRecordedTripsSheetVisible, setIsRecordedTripsSheetVisible] = useState(false);
+  const [searchedLocation, setSearchedLocation] = useState<{
+    name: string;
+    display_name: string;
+    lat: number;
+    lon: number;
+    type: string;
+    mapbox_id: string;
+  } | null>(null);
 
   const handleRegionIsChanging = (regionFeature: any) => {
     if (regionFeature?.properties?.isUserInteraction && isStationsVisible) {
@@ -272,6 +282,20 @@ const MainMapView: React.FC = () => {
             }}
           />
         )}
+
+        {searchedLocation && (
+          <Mapbox.MarkerView
+            id="searchedLocation"
+            coordinate={[searchedLocation.lon, searchedLocation.lat]}
+            anchor={{ x: 0.5, y: 1 }}
+          >
+            <View style={styles.searchPinContainer}>
+              <View style={[styles.searchPin, { backgroundColor: colors.locationPuck }]}>
+                <MaterialIcons name="place" size={32} color="white" />
+              </View>
+            </View>
+          </Mapbox.MarkerView>
+        )}
       </Mapbox.MapView>
 
       <MapActionButtons
@@ -299,8 +323,22 @@ const MainMapView: React.FC = () => {
         </TouchableOpacity>
       )}
 
+      {searchedLocation && (
+        <LocationCard location={searchedLocation} onClose={() => setSearchedLocation(null)} />
+      )}
       <SearchButton onPress={() => setIsSearchSheetVisible(true)} />
-      <SearchSheet visible={isSearchSheetVisible} onClose={() => setIsSearchSheetVisible(false)} />
+      <SearchSheet
+        visible={isSearchSheetVisible}
+        onClose={() => setIsSearchSheetVisible(false)}
+        onSelectLocation={(location) => {
+          setSearchedLocation(location);
+          cameraRef.current?.setCamera({
+            centerCoordinate: [location.lon, location.lat],
+            zoomLevel: 15,
+            animationDuration: 1000,
+          });
+        }}
+      />
       <BikeManagementSheet
         visible={isBikeManagementSheetVisible}
         onClose={() => setIsBikeManagementSheetVisible(false)}
@@ -338,6 +376,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: Colors.light.calloutText,
+  },
+  searchPinContainer: {
+    alignItems: 'center',
+  },
+  searchPin: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
 

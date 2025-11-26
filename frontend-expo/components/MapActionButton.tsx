@@ -23,6 +23,7 @@ import {
 import type { ComponentProps } from 'react';
 import { Colors } from '@/constants/theme';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { lightenColor } from '@/utils/lighten-color';
 
 type IconFamily =
   | 'MaterialIcons'
@@ -95,13 +96,16 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
 
   // Active: solid background with button color
   // Inactive: glass effect (iOS 26+) or dark gray background with colored icon and border
+  const buttonAccentColor = lightenColor(buttonColor, 100);
   const backgroundColor = isActive
     ? buttonColor
     : useGlass
       ? 'transparent'
       : colors.buttonBackground;
   const borderColor = buttonColor;
-  const iconColor = isActive ? '#FFFFFF' : buttonColor;
+  const borderWidth = isActive ? 0 : useGlass ? 0 : 2;
+  // const iconColor = isActive ? '#FFFFFF' : buttonColor;
+  const iconColor = isActive ? buttonAccentColor : buttonColor;
 
   const renderIcon = () => {
     if (!iconName) return null;
@@ -146,7 +150,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
         {
           backgroundColor,
           borderColor,
-          borderWidth: 2,
+          borderWidth,
         },
       ]}
       onPress={handlePress}

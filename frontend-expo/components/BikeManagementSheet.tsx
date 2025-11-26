@@ -40,7 +40,17 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
-  const { bikes, loading, error, createBike, updateBike, deleteBike } = useBikes();
+  const {
+    bikes,
+    activeBike,
+    loading,
+    error,
+    createBike,
+    updateBike,
+    deleteBike,
+    setActiveBike,
+    deactivateBike,
+  } = useBikes();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingBike, setEditingBike] = useState<string | null>(null);
@@ -65,7 +75,7 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
       type: formData.type,
       brand: formData.brand.trim() || undefined,
       model: formData.model.trim() || undefined,
-      initial_mileage: formData.initial_mileage ? parseFloat(formData.initial_mileage) : 0,
+      initial_kilometrage: formData.initial_mileage ? parseFloat(formData.initial_mileage) : 0,
       unit: 'mi',
     });
 
@@ -140,6 +150,20 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
         onPress: () => deleteBike(id),
       },
     ]);
+  };
+
+  const handleToggleActive = async (bike: any) => {
+    if (bike.is_active) {
+      const success = await deactivateBike(bike.id);
+      if (success) {
+        Alert.alert('Success', `"${bike.name}" is no longer your active bike`);
+      }
+    } else {
+      const success = await setActiveBike(bike.id);
+      if (success) {
+        Alert.alert('Success', `"${bike.name}" is now your active bike`);
+      }
+    }
   };
 
   return (
@@ -308,13 +332,32 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
                     bikes.map((bike) => (
                       <View
                         key={bike.id}
-                        style={[styles.bikeCard, { backgroundColor: colors.background + '40' }]}
+                        style={[
+                          styles.bikeCard,
+                          {
+                            backgroundColor: colors.background + '40',
+                            borderWidth: bike.is_active ? 2 : 0,
+                            borderColor: bike.is_active ? colors.buttonBorder : 'transparent',
+                          },
+                        ]}
                       >
                         <View style={styles.bikeHeader}>
                           <View style={styles.bikeInfo}>
-                            <Text style={[styles.bikeName, { color: colors.text }]}>
-                              {bike.name}
-                            </Text>
+                            <View style={styles.bikeNameRow}>
+                              <Text style={[styles.bikeName, { color: colors.text }]}>
+                                {bike.name}
+                              </Text>
+                              {bike.is_active && (
+                                <View
+                                  style={[
+                                    styles.activeBadge,
+                                    { backgroundColor: colors.buttonBorder },
+                                  ]}
+                                >
+                                  <Text style={styles.activeBadgeText}>Active</Text>
+                                </View>
+                              )}
+                            </View>
                             <Text style={[styles.bikeType, { color: colors.icon }]}>
                               {BIKE_TYPES.find((t) => t.value === bike.type)?.label || bike.type}
                             </Text>
@@ -339,11 +382,35 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
                             {[bike.brand, bike.model].filter(Boolean).join(' ')}
                           </Text>
                         )}
-                        <View style={styles.mileageContainer}>
-                          <MaterialIcons name="speed" size={16} color={colors.icon} />
-                          <Text style={[styles.mileageText, { color: colors.text }]}>
-                            {bike.total_mileage.toFixed(1)} miles
-                          </Text>
+                        <View style={styles.bikeFooter}>
+                          <View style={styles.mileageContainer}>
+                            <MaterialIcons name="speed" size={16} color={colors.icon} />
+                            <Text style={[styles.mileageText, { color: colors.text }]}>
+                              {bike.total_kilometrage?.toFixed(1) || '0.0'} miles
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            style={[
+                              styles.activeToggle,
+                              {
+                                backgroundColor: bike.is_active
+                                  ? colors.buttonBorder + '20'
+                                  : 'transparent',
+                                borderColor: colors.buttonBorder,
+                              },
+                            ]}
+                            onPress={() => handleToggleActive(bike)}
+                            disabled={loading}
+                          >
+                            <MaterialIcons
+                              name={bike.is_active ? 'star' : 'star-outline'}
+                              size={18}
+                              color={colors.buttonIcon}
+                            />
+                            <Text style={[styles.activeToggleText, { color: colors.buttonIcon }]}>
+                              {bike.is_active ? 'Active' : 'Set Active'}
+                            </Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
                     ))
@@ -514,10 +581,26 @@ const styles = StyleSheet.create({
   bikeInfo: {
     flex: 1,
   },
+  bikeNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   bikeName: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 4,
+  },
+  activeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  activeBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   bikeType: {
     fontSize: 14,
@@ -538,6 +621,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 8,
   },
+  bikeFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   mileageContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -546,6 +635,19 @@ const styles = StyleSheet.create({
   mileageText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  activeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  activeToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

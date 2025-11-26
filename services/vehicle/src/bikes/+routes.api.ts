@@ -5,7 +5,7 @@ import {
   validateUnit,
   validatePositiveNumber,
   milesToKm,
-  convertMileageInObject,
+  convertKilometrageInObject,
   verifyOwnership,
   errorResponse,
 } from '../../lib/utils';
@@ -28,7 +28,7 @@ router.post('/', async (c) => {
     }
 
     const body = await c.req.json();
-    const { name, type, brand, model, purchase_date, initial_mileage, unit, metadata } = body;
+    const { name, type, brand, model, purchase_date, initial_kilometrage, unit, metadata } = body;
 
     // Validate required fields
     if (!name || !type) {
@@ -50,18 +50,18 @@ router.post('/', async (c) => {
       );
     }
 
-    // Validate and convert initial mileage if provided
-    let mileageInKm = 0;
-    if (initial_mileage !== undefined && initial_mileage !== null) {
-      if (!validatePositiveNumber(initial_mileage) && initial_mileage !== 0) {
+    // Validate and convert initial kilometrage if provided
+    let kilometrageInKm = 0;
+    if (initial_kilometrage !== undefined && initial_kilometrage !== null) {
+      if (!validatePositiveNumber(initial_kilometrage) && initial_kilometrage !== 0) {
         return c.json(
-          errorResponse('validation_error', 'Initial mileage must be a non-negative number'),
+          errorResponse('validation_error', 'Initial kilometrage must be a non-negative number'),
           400,
         );
       }
 
-      const mileageUnit = unit || 'km';
-      if (!validateUnit(mileageUnit)) {
+      const distanceUnit = unit || 'km';
+      if (!validateUnit(distanceUnit)) {
         return c.json(
           errorResponse('validation_error', 'Invalid unit', {
             validUnits: ['km', 'mi'],
@@ -70,7 +70,8 @@ router.post('/', async (c) => {
         );
       }
 
-      mileageInKm = mileageUnit === 'mi' ? milesToKm(initial_mileage) : initial_mileage;
+      kilometrageInKm =
+        distanceUnit === 'mi' ? milesToKm(initial_kilometrage) : initial_kilometrage;
     }
 
     const supabase = getSupabase(c);
@@ -86,7 +87,7 @@ router.post('/', async (c) => {
         brand: brand || null,
         model: model || null,
         purchase_date: purchase_date || null,
-        total_mileage: mileageInKm,
+        total_kilometrage: kilometrageInKm,
         metadata: metadata || null,
       })
       .select()
@@ -97,10 +98,10 @@ router.post('/', async (c) => {
       return c.json(errorResponse('database_error', 'Failed to create bike'), 500);
     }
 
-    // Convert mileage for response if needed
+    // Convert kilometrage for response if needed
     const responseUnit = unit || 'km';
     const responseBike = validateUnit(responseUnit)
-      ? convertMileageInObject(bike, ['total_mileage'], responseUnit)
+      ? convertKilometrageInObject(bike, ['total_kilometrage'], responseUnit)
       : bike;
 
     return c.json(responseBike, 201);
@@ -177,14 +178,224 @@ router.get('/', async (c) => {
       }
     }
 
-    // Convert mileage for response
+    // Convert kilometrage for response
     const responseBikes = bikesWithParts.map((bike) =>
-      convertMileageInObject(bike, ['total_mileage'], unit),
+      convertKilometrageInObject(bike, ['total_kilometrage'], unit),
     );
 
     return c.json(responseBikes);
   } catch (error) {
     console.error('Error in GET /api/bikes:', error);
+    return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
+  }
+});
+
+/**
+ * GET /api/bikes/active - Get user's active bike
+ */
+router.get('/active', async (c) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json(errorResponse('unauthorized', 'Authentication required'), 401);
+    }
+
+    const unit = c.req.query('unit') || 'km';
+
+    if (!validateUnit(unit)) {
+      return c.json(
+        errorResponse('validation_error', 'Invalid unit', {
+          validUnits: ['km', 'mi'],
+        }),
+        400,
+      );
+    }
+
+    const supabase = getSupabase(c);
+
+    // Query for active bike
+    const { data: bike, error } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching active bike:', error);
+      return c.json(errorResponse('database_error', 'Failed to fetch active bike'), 500);
+    }
+
+    // If no active bike, return null
+    if (!bike) {
+      return c.json(null);
+    }
+
+    // Fetch installed parts for the active bike
+    const { data: installations, error: installError } = await supabase
+      .schema('vehicles')
+      .from('part_installation')
+      .select('*, user_part(*)')
+      .eq('bike_id', bike.id)
+      .is('removed_at', null);
+
+    if (installError) {
+      console.error('Error fetching installations:', installError);
+    }
+
+    const installedParts = installations?.map((inst) => inst.user_part) || [];
+
+    // Convert kilometrage for response
+    const responseBike = convertKilometrageInObject(
+      { ...bike, installed_parts: installedParts },
+      ['total_kilometrage'],
+      unit,
+    );
+
+    return c.json(responseBike);
+  } catch (error) {
+    console.error('Error in GET /api/bikes/active:', error);
+    return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
+  }
+});
+
+/**
+ * POST /api/bikes/:id/set-active - Set bike as active
+ */
+router.post('/:id/set-active', async (c) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json(errorResponse('unauthorized', 'Authentication required'), 401);
+    }
+
+    const bikeId = c.req.param('id');
+    const supabase = getSupabase(c);
+
+    // Fetch bike to verify ownership
+    const { data: existingBike, error: fetchError } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .select('user_id, is_active')
+      .eq('id', bikeId)
+      .single();
+
+    if (fetchError || !existingBike) {
+      return c.json(errorResponse('not_found', 'Bike not found'), 404);
+    }
+
+    // Verify ownership
+    try {
+      verifyOwnership(existingBike.user_id, user.id);
+    } catch {
+      return c.json(
+        errorResponse('forbidden', 'You do not have permission to access this resource'),
+        403,
+      );
+    }
+
+    // If already active, return success
+    if (existingBike.is_active) {
+      const { data: bike } = await supabase
+        .schema('vehicles')
+        .from('user_bike')
+        .select('*')
+        .eq('id', bikeId)
+        .single();
+      return c.json(bike);
+    }
+
+    // Deactivate all user's bikes
+    const { error: deactivateError } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .update({ is_active: false })
+      .eq('user_id', user.id);
+
+    if (deactivateError) {
+      console.error('Error deactivating bikes:', deactivateError);
+      return c.json(errorResponse('database_error', 'Failed to deactivate bikes'), 500);
+    }
+
+    // Set this bike as active
+    const { data: updatedBike, error: updateError } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .eq('id', bikeId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error setting active bike:', updateError);
+      return c.json(errorResponse('database_error', 'Failed to set active bike'), 500);
+    }
+
+    return c.json(updatedBike);
+  } catch (error) {
+    console.error('Error in POST /api/bikes/:id/set-active:', error);
+    return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
+  }
+});
+
+/**
+ * POST /api/bikes/:id/deactivate - Deactivate bike
+ */
+router.post('/:id/deactivate', async (c) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json(errorResponse('unauthorized', 'Authentication required'), 401);
+    }
+
+    const bikeId = c.req.param('id');
+    const supabase = getSupabase(c);
+
+    // Fetch bike to verify ownership and active status
+    const { data: existingBike, error: fetchError } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .select('user_id, is_active')
+      .eq('id', bikeId)
+      .single();
+
+    if (fetchError || !existingBike) {
+      return c.json(errorResponse('not_found', 'Bike not found'), 404);
+    }
+
+    // Verify ownership
+    try {
+      verifyOwnership(existingBike.user_id, user.id);
+    } catch {
+      return c.json(
+        errorResponse('forbidden', 'You do not have permission to access this resource'),
+        403,
+      );
+    }
+
+    // Check if bike is currently active
+    if (!existingBike.is_active) {
+      return c.json(errorResponse('validation_error', 'Bike is not currently active'), 400);
+    }
+
+    // Deactivate the bike
+    const { data: updatedBike, error: updateError } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', bikeId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error deactivating bike:', updateError);
+      return c.json(errorResponse('database_error', 'Failed to deactivate bike'), 500);
+    }
+
+    return c.json(updatedBike);
+  } catch (error) {
+    console.error('Error in POST /api/bikes/:id/deactivate:', error);
     return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
   }
 });
@@ -249,10 +460,10 @@ router.get('/:id', async (c) => {
 
     const installedParts = installations?.map((inst) => inst.user_part) || [];
 
-    // Convert mileage for response
-    const responseBike = convertMileageInObject(
+    // Convert kilometrage for response
+    const responseBike = convertKilometrageInObject(
       { ...bike, installed_parts: installedParts },
-      ['total_mileage'],
+      ['total_kilometrage'],
       unit,
     );
 
@@ -394,6 +605,270 @@ router.delete('/:id', async (c) => {
     return c.body(null, 204);
   } catch (error) {
     console.error('Error in DELETE /api/bikes/:id:', error);
+    return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
+  }
+});
+
+/**
+ * POST /api/bikes/:id/kilometrage - Log distance for bike
+ */
+router.post('/:id/kilometrage', async (c) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json(errorResponse('unauthorized', 'Authentication required'), 401);
+    }
+
+    const bikeId = c.req.param('id');
+    const body = await c.req.json();
+    const { distance, unit, logged_at, notes } = body;
+
+    // Validate required fields
+    if (distance === undefined || distance === null) {
+      return c.json(errorResponse('validation_error', 'Missing required field: distance'), 400);
+    }
+
+    // Validate distance > 0
+    if (!validatePositiveNumber(distance)) {
+      return c.json(
+        errorResponse('validation_error', 'Distance must be a positive number greater than 0'),
+        400,
+      );
+    }
+
+    // Validate unit parameter
+    const distanceUnit = unit || 'km';
+    if (!validateUnit(distanceUnit)) {
+      return c.json(
+        errorResponse('validation_error', 'Invalid unit', {
+          validUnits: ['km', 'mi'],
+        }),
+        400,
+      );
+    }
+
+    // Convert distance to km for storage
+    const distanceInKm = distanceUnit === 'mi' ? milesToKm(distance) : distance;
+
+    const supabase = getSupabase(c);
+
+    // Fetch bike to verify ownership
+    const { data: existingBike, error: fetchError } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .select('user_id, total_kilometrage')
+      .eq('id', bikeId)
+      .single();
+
+    if (fetchError || !existingBike) {
+      return c.json(errorResponse('not_found', 'Bike not found'), 404);
+    }
+
+    // Verify ownership
+    try {
+      verifyOwnership(existingBike.user_id, user.id);
+    } catch {
+      return c.json(
+        errorResponse('forbidden', 'You do not have permission to access this resource'),
+        403,
+      );
+    }
+
+    // Increment bike total_kilometrage
+    const newBikeTotalKm = existingBike.total_kilometrage + distanceInKm;
+    const { data: updatedBike, error: updateBikeError } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .update({
+        total_kilometrage: newBikeTotalKm,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', bikeId)
+      .select()
+      .single();
+
+    if (updateBikeError) {
+      console.error('Error updating bike kilometrage:', updateBikeError);
+      return c.json(errorResponse('database_error', 'Failed to update bike kilometrage'), 500);
+    }
+
+    // Create kilometrage_log entry
+    const loggedAtTimestamp = logged_at || new Date().toISOString();
+    const { error: logError } = await supabase
+      .schema('vehicles')
+      .from('kilometrage_log')
+      .insert({
+        bike_id: bikeId,
+        user_id: user.id,
+        distance: distanceInKm,
+        logged_at: loggedAtTimestamp,
+        notes: notes || null,
+      });
+
+    if (logError) {
+      console.error('Error creating kilometrage log:', logError);
+      return c.json(errorResponse('database_error', 'Failed to create kilometrage log'), 500);
+    }
+
+    // Query all active part installations (removed_at IS NULL)
+    const { data: installations, error: installError } = await supabase
+      .schema('vehicles')
+      .from('part_installation')
+      .select('part_id, user_part(id, total_kilometrage)')
+      .eq('bike_id', bikeId)
+      .is('removed_at', null);
+
+    if (installError) {
+      console.error('Error fetching part installations:', installError);
+      return c.json(errorResponse('database_error', 'Failed to fetch part installations'), 500);
+    }
+
+    // Increment total_kilometrage for each installed part
+    const affectedParts = [];
+    if (installations && installations.length > 0) {
+      for (const installation of installations) {
+        const part = installation.user_part as any;
+        if (part) {
+          const newPartTotalKm = part.total_kilometrage + distanceInKm;
+          const { data: updatedPart, error: updatePartError } = await supabase
+            .schema('vehicles')
+            .from('user_part')
+            .update({
+              total_kilometrage: newPartTotalKm,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', part.id)
+            .select()
+            .single();
+
+          if (updatePartError) {
+            console.error('Error updating part kilometrage:', updatePartError);
+            // Continue with other parts even if one fails
+          } else if (updatedPart) {
+            affectedParts.push(updatedPart);
+          }
+        }
+      }
+    }
+
+    // Convert kilometrage values based on unit parameter for response
+    const responseUnit = distanceUnit;
+    const responseBike = convertKilometrageInObject(
+      updatedBike,
+      ['total_kilometrage'],
+      responseUnit,
+    );
+    const responseParts = affectedParts.map((part) =>
+      convertKilometrageInObject(part, ['total_kilometrage'], responseUnit),
+    );
+
+    return c.json({
+      bike: responseBike,
+      affected_parts: responseParts,
+      logged_distance: responseUnit === 'mi' ? distance : distanceInKm,
+      unit: responseUnit,
+    });
+  } catch (error) {
+    console.error('Error in POST /api/bikes/:id/kilometrage:', error);
+    return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
+  }
+});
+
+/**
+ * GET /api/bikes/:id/kilometrage - Get distance history
+ */
+router.get('/:id/kilometrage', async (c) => {
+  try {
+    const user = c.get('user');
+    if (!user) {
+      return c.json(errorResponse('unauthorized', 'Authentication required'), 401);
+    }
+
+    const bikeId = c.req.param('id');
+    const unit = c.req.query('unit') || 'km';
+    const limitParam = c.req.query('limit');
+    const offsetParam = c.req.query('offset');
+
+    // Validate unit parameter
+    if (!validateUnit(unit)) {
+      return c.json(
+        errorResponse('validation_error', 'Invalid unit', {
+          validUnits: ['km', 'mi'],
+        }),
+        400,
+      );
+    }
+
+    // Parse and validate pagination parameters
+    const limit = limitParam ? Number.parseInt(limitParam, 10) : 50;
+    const offset = offsetParam ? Number.parseInt(offsetParam, 10) : 0;
+
+    if (Number.isNaN(limit) || limit < 1 || limit > 1000) {
+      return c.json(
+        errorResponse('validation_error', 'Invalid limit parameter (must be between 1 and 1000)'),
+        400,
+      );
+    }
+
+    if (Number.isNaN(offset) || offset < 0) {
+      return c.json(
+        errorResponse('validation_error', 'Invalid offset parameter (must be non-negative)'),
+        400,
+      );
+    }
+
+    const supabase = getSupabase(c);
+
+    // Fetch bike to verify ownership
+    const { data: existingBike, error: fetchError } = await supabase
+      .schema('vehicles')
+      .from('user_bike')
+      .select('user_id')
+      .eq('id', bikeId)
+      .single();
+
+    if (fetchError || !existingBike) {
+      return c.json(errorResponse('not_found', 'Bike not found'), 404);
+    }
+
+    // Verify ownership
+    try {
+      verifyOwnership(existingBike.user_id, user.id);
+    } catch {
+      return c.json(
+        errorResponse('forbidden', 'You do not have permission to access this resource'),
+        403,
+      );
+    }
+
+    // Query kilometrage_log for bike_id, ordered by logged_at DESC
+    const { data: logs, error: logsError } = await supabase
+      .schema('vehicles')
+      .from('kilometrage_log')
+      .select('*')
+      .eq('bike_id', bikeId)
+      .order('logged_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (logsError) {
+      console.error('Error fetching kilometrage logs:', logsError);
+      return c.json(errorResponse('database_error', 'Failed to fetch kilometrage history'), 500);
+    }
+
+    // Convert distances based on unit parameter
+    const responseLogs = logs.map((log) => convertKilometrageInObject(log, ['distance'], unit));
+
+    return c.json({
+      entries: responseLogs,
+      pagination: {
+        limit,
+        offset,
+        count: responseLogs.length,
+      },
+      unit,
+    });
+  } catch (error) {
+    console.error('Error in GET /api/bikes/:id/kilometrage:', error);
     return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
   }
 });
