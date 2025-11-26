@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   TouchableOpacity,
   StyleSheet,
@@ -9,6 +9,8 @@ import {
   ImageSourcePropType,
   Text,
   Platform,
+  Animated,
+  Easing,
 } from 'react-native';
 import {
   MaterialIcons,
@@ -61,6 +63,8 @@ interface MapActionButtonProps {
   text?: string;
   isActive: boolean;
   isLoading?: boolean;
+  customLoadingIcon?: boolean;
+  loadingSpinSpeed?: number;
   buttonColor: string;
   onActivate?: () => void;
   onDeactivate?: () => void;
@@ -76,6 +80,8 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
   text,
   isActive,
   isLoading = false,
+  customLoadingIcon = false,
+  loadingSpinSpeed = 1000,
   buttonColor,
   onActivate,
   onDeactivate,
@@ -85,6 +91,24 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const useGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
+  const spinValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isLoading && customLoadingIcon) {
+      const animation = Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: loadingSpinSpeed,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      );
+      animation.start();
+      return () => animation.stop();
+    } else {
+      spinValue.setValue(0);
+    }
+  }, [isLoading, customLoadingIcon, loadingSpinSpeed, spinValue]);
 
   const handlePress = () => {
     if (isActive && onDeactivate) {
@@ -107,6 +131,11 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
   // const iconColor = isActive ? '#FFFFFF' : buttonColor;
   const iconColor = isActive ? buttonAccentColor : buttonColor;
 
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   const renderIcon = () => {
     if (!iconName) return null;
 
@@ -117,26 +146,43 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
       testID: `${testID}-icon`,
     };
 
+    let IconComponent;
     switch (iconFamily) {
       case 'MaterialIcons':
-        return <MaterialIcons {...iconProps} />;
+        IconComponent = <MaterialIcons {...iconProps} />;
+        break;
       case 'MaterialCommunityIcons':
-        return <MaterialCommunityIcons {...iconProps} />;
+        IconComponent = <MaterialCommunityIcons {...iconProps} />;
+        break;
       case 'Ionicons':
-        return <Ionicons {...iconProps} />;
+        IconComponent = <Ionicons {...iconProps} />;
+        break;
       case 'FontAwesome':
-        return <FontAwesome {...iconProps} />;
+        IconComponent = <FontAwesome {...iconProps} />;
+        break;
       case 'FontAwesome5':
-        return <FontAwesome5 {...iconProps} />;
+        IconComponent = <FontAwesome5 {...iconProps} />;
+        break;
       case 'Feather':
-        return <Feather {...iconProps} />;
+        IconComponent = <Feather {...iconProps} />;
+        break;
       case 'AntDesign':
-        return <AntDesign {...iconProps} />;
+        IconComponent = <AntDesign {...iconProps} />;
+        break;
       case 'Entypo':
-        return <Entypo {...iconProps} />;
+        IconComponent = <Entypo {...iconProps} />;
+        break;
       default:
-        return <MaterialIcons {...iconProps} />;
+        IconComponent = <MaterialIcons {...iconProps} />;
     }
+
+    if (isLoading && customLoadingIcon) {
+      return (
+        <Animated.View style={{ transform: [{ rotate: spin }] }}>{IconComponent}</Animated.View>
+      );
+    }
+
+    return IconComponent;
   };
 
   const ButtonWrapper = useGlass && !isActive ? GlassView : View;
@@ -161,18 +207,26 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
       testID={testID}
     >
       <ButtonWrapper style={styles.content} {...wrapperProps}>
-        {isLoading ? (
+        {isLoading && !customLoadingIcon ? (
           <ActivityIndicator size="small" color={iconColor} testID={`${testID}-loading`} />
         ) : (
           <>
             {iconName ? (
               renderIcon()
             ) : iconImage ? (
-              <Image
-                source={iconImage}
-                style={[styles.icon, { tintColor: iconColor }]}
-                testID={`${testID}-icon`}
-              />
+              isLoading && customLoadingIcon ? (
+                <Animated.Image
+                  source={iconImage}
+                  style={[styles.icon, { tintColor: iconColor, transform: [{ rotate: spin }] }]}
+                  testID={`${testID}-icon`}
+                />
+              ) : (
+                <Image
+                  source={iconImage}
+                  style={[styles.icon, { tintColor: iconColor }]}
+                  testID={`${testID}-icon`}
+                />
+              )
             ) : iconText ? (
               <Text style={[styles.iconText, { color: iconColor }]} testID={`${testID}-icon`}>
                 {iconText}
