@@ -34,20 +34,14 @@ const BIKE_TYPES: { value: BikeType; label: string; icon: string }[] = [
   { value: 'other', label: 'Other', icon: 'two-wheeler' },
 ];
 
+import { useUserSettings } from '@/hooks/use-user-settings';
+
 const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onClose }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
-  const {
-    bikes,
-    loading,
-    error,
-    createBike,
-    updateBike,
-    deleteBike,
-    setActiveBike,
-    deactivateBike,
-  } = useBikes();
+  const { bikes, loading, error, createBike, updateBike, deleteBike } = useBikes();
+  const { settings, updateSettings, refetch: refetchSettings } = useUserSettings();
 
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['90%'], []);
@@ -181,22 +175,33 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => deleteBike(id),
+        onPress: async () => {
+          const success = await deleteBike(id);
+          if (success) {
+            // Refetch settings in case the deleted bike was active
+            await refetchSettings();
+          }
+        },
       },
     ]);
   };
 
   const handleToggleActive = async (bike: any) => {
-    if (bike.is_active) {
-      const success = await deactivateBike(bike.id);
-      if (success) {
-        Alert.alert('Success', `"${bike.name}" is no longer your active bike`);
-      }
+    const isActive = settings?.active_bike_id === bike.id;
+
+    const success = await updateSettings({
+      active_bike_id: isActive ? null : bike.id,
+    });
+
+    if (success) {
+      Alert.alert(
+        'Success',
+        isActive
+          ? `"${bike.name}" is no longer your active bike`
+          : `"${bike.name}" is now your active bike`,
+      );
     } else {
-      const success = await setActiveBike(bike.id);
-      if (success) {
-        Alert.alert('Success', `"${bike.name}" is now your active bike`);
-      }
+      Alert.alert('Error', 'Failed to update active bike');
     }
   };
 
@@ -360,86 +365,87 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
               </Text>
             </View>
           ) : (
-            bikes.map((bike) => (
-              <View
-                key={bike.id}
-                style={[
-                  styles.bikeCard,
-                  {
-                    backgroundColor: colors.background + '40',
-                    borderWidth: bike.is_active ? 2 : 0,
-                    borderColor: bike.is_active ? colors.buttonBorder : 'transparent',
-                  },
-                ]}
-              >
-                <View style={styles.bikeHeader}>
-                  <View style={styles.bikeInfo}>
-                    <View style={styles.bikeNameRow}>
-                      <Text style={[styles.bikeName, { color: colors.text }]}>{bike.name}</Text>
-                      {bike.is_active && (
-                        <View
-                          style={[styles.activeBadge, { backgroundColor: colors.buttonBorder }]}
-                        >
-                          <Text style={styles.activeBadgeText}>Active</Text>
-                        </View>
-                      )}
+            bikes.map((bike) => {
+              const isActive = settings?.active_bike_id === bike.id;
+              return (
+                <View
+                  key={bike.id}
+                  style={[
+                    styles.bikeCard,
+                    {
+                      backgroundColor: colors.background + '40',
+                      borderWidth: isActive ? 2 : 0,
+                      borderColor: isActive ? colors.buttonBorder : 'transparent',
+                    },
+                  ]}
+                >
+                  <View style={styles.bikeHeader}>
+                    <View style={styles.bikeInfo}>
+                      <View style={styles.bikeNameRow}>
+                        <Text style={[styles.bikeName, { color: colors.text }]}>{bike.name}</Text>
+                        {isActive && (
+                          <View
+                            style={[styles.activeBadge, { backgroundColor: colors.buttonBorder }]}
+                          >
+                            <Text style={styles.activeBadgeText}>Active</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.bikeType, { color: colors.icon }]}>
+                        {BIKE_TYPES.find((t) => t.value === bike.type)?.label || bike.type}
+                      </Text>
                     </View>
-                    <Text style={[styles.bikeType, { color: colors.icon }]}>
-                      {BIKE_TYPES.find((t) => t.value === bike.type)?.label || bike.type}
-                    </Text>
+                    <View style={styles.bikeActions}>
+                      <TouchableOpacity
+                        onPress={() => handleEditBike(bike)}
+                        style={styles.editButton}
+                      >
+                        <MaterialIcons name="edit" size={22} color={colors.buttonIcon} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteBike(bike.id, bike.name)}
+                        style={styles.deleteButton}
+                      >
+                        <MaterialIcons name="delete" size={22} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <View style={styles.bikeActions}>
+                  {(bike.brand || bike.model) && (
+                    <Text style={[styles.bikeDetails, { color: colors.text + '80' }]}>
+                      {[bike.brand, bike.model].filter(Boolean).join(' ')}
+                    </Text>
+                  )}
+                  <View style={styles.bikeFooter}>
+                    <View style={styles.mileageContainer}>
+                      <MaterialIcons name="speed" size={16} color={colors.icon} />
+                      <Text style={[styles.mileageText, { color: colors.text }]}>
+                        {bike.total_kilometrage?.toFixed(1) || '0.0'} miles
+                      </Text>
+                    </View>
                     <TouchableOpacity
-                      onPress={() => handleEditBike(bike)}
-                      style={styles.editButton}
+                      style={[
+                        styles.activeToggle,
+                        {
+                          backgroundColor: isActive ? colors.buttonBorder + '20' : 'transparent',
+                          borderColor: colors.buttonBorder,
+                        },
+                      ]}
+                      onPress={() => handleToggleActive(bike)}
+                      disabled={loading}
                     >
-                      <MaterialIcons name="edit" size={22} color={colors.buttonIcon} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleDeleteBike(bike.id, bike.name)}
-                      style={styles.deleteButton}
-                    >
-                      <MaterialIcons name="delete" size={22} color="#ef4444" />
+                      <MaterialIcons
+                        name={isActive ? 'star' : 'star-outline'}
+                        size={18}
+                        color={colors.buttonIcon}
+                      />
+                      <Text style={[styles.activeToggleText, { color: colors.buttonIcon }]}>
+                        {isActive ? 'Active' : 'Set Active'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
-                {(bike.brand || bike.model) && (
-                  <Text style={[styles.bikeDetails, { color: colors.text + '80' }]}>
-                    {[bike.brand, bike.model].filter(Boolean).join(' ')}
-                  </Text>
-                )}
-                <View style={styles.bikeFooter}>
-                  <View style={styles.mileageContainer}>
-                    <MaterialIcons name="speed" size={16} color={colors.icon} />
-                    <Text style={[styles.mileageText, { color: colors.text }]}>
-                      {bike.total_kilometrage?.toFixed(1) || '0.0'} miles
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.activeToggle,
-                      {
-                        backgroundColor: bike.is_active
-                          ? colors.buttonBorder + '20'
-                          : 'transparent',
-                        borderColor: colors.buttonBorder,
-                      },
-                    ]}
-                    onPress={() => handleToggleActive(bike)}
-                    disabled={loading}
-                  >
-                    <MaterialIcons
-                      name={bike.is_active ? 'star' : 'star-outline'}
-                      size={18}
-                      color={colors.buttonIcon}
-                    />
-                    <Text style={[styles.activeToggleText, { color: colors.buttonIcon }]}>
-                      {bike.is_active ? 'Active' : 'Set Active'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))
+              );
+            })
           )}
         </BottomSheetScrollView>
       </GlassContainer>

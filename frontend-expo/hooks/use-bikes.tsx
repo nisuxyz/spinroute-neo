@@ -1,22 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './use-auth';
+import type { Database } from '../supabase/types';
 
-export type BikeType = 'road' | 'mountain' | 'hybrid' | 'gravel' | 'ebike' | 'other';
-
-export interface Bike {
-  id: string;
-  user_id: string;
-  name: string;
-  type: BikeType;
-  brand?: string | null;
-  model?: string | null;
-  purchase_date?: string | null;
-  total_kilometrage: number;
-  is_active: boolean;
-  metadata?: any;
-  created_at: string;
-  updated_at: string;
-}
+export type BikeType = Database['vehicles']['Enums']['bike_type'];
+export type Bike = Database['vehicles']['Tables']['user_bike']['Row'];
 
 export interface CreateBikeInput {
   name: string;
@@ -201,87 +188,6 @@ export function useBikes() {
     }
   };
 
-  const setActiveBikeById = async (id: string): Promise<boolean> => {
-    if (!session) {
-      setError('Not authenticated');
-      return false;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes/${id}/set-active`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to set active bike');
-      }
-
-      const updatedBike = await response.json();
-
-      // Update bikes list to reflect new active status
-      setBikes((prev) =>
-        prev.map((b) => ({
-          ...b,
-          is_active: b.id === id,
-        })),
-      );
-
-      setActiveBike(updatedBike);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set active bike');
-      console.error('Error setting active bike:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deactivateBike = async (id: string): Promise<boolean> => {
-    if (!session) {
-      setError('Not authenticated');
-      return false;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes/${id}/deactivate`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to deactivate bike');
-      }
-
-      const updatedBike = await response.json();
-
-      // Update bikes list to reflect deactivated status
-      setBikes((prev) => prev.map((b) => (b.id === id ? { ...b, is_active: false } : b)));
-
-      setActiveBike(null);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to deactivate bike');
-      console.error('Error deactivating bike:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchBikes();
     fetchActiveBike();
@@ -297,7 +203,5 @@ export function useBikes() {
     createBike,
     updateBike,
     deleteBike,
-    setActiveBike: setActiveBikeById,
-    deactivateBike,
   };
 }

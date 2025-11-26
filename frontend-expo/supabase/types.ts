@@ -6,278 +6,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: '13.0.5';
   };
-  bikeshare: {
-    Tables: {
-      api_source: {
-        Row: {
-          active: boolean;
-          created_at: string;
-          discovery_url: string;
-          id: string;
-          is_gbfs: boolean;
-          name: string;
-          updated_at: string;
-        };
-        Insert: {
-          active: boolean;
-          created_at?: string;
-          discovery_url: string;
-          id?: string;
-          is_gbfs: boolean;
-          name: string;
-          updated_at?: string;
-        };
-        Update: {
-          active?: boolean;
-          created_at?: string;
-          discovery_url?: string;
-          id?: string;
-          is_gbfs?: boolean;
-          name?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      network: {
-        Row: {
-          city: string;
-          company: string;
-          country: string;
-          created_at: string;
-          fetched_at: string;
-          id: string;
-          location: unknown;
-          name: string;
-          raw_data: Json;
-          station_information_url: string;
-          station_status_url: string;
-          vehicle_status_url: string;
-        };
-        Insert: {
-          city: string;
-          company: string;
-          country: string;
-          created_at?: string;
-          fetched_at?: string;
-          id?: string;
-          location: unknown;
-          name: string;
-          raw_data: Json;
-          station_information_url: string;
-          station_status_url: string;
-          vehicle_status_url: string;
-        };
-        Update: {
-          city?: string;
-          company?: string;
-          country?: string;
-          created_at?: string;
-          fetched_at?: string;
-          id?: string;
-          location?: unknown;
-          name?: string;
-          raw_data?: Json;
-          station_information_url?: string;
-          station_status_url?: string;
-          vehicle_status_url?: string;
-        };
-        Relationships: [];
-      };
-      station: {
-        Row: {
-          address: string | null;
-          capacity: number;
-          created_at: string;
-          fetched_at: string;
-          id: string;
-          is_operational: boolean | null;
-          is_renting: boolean | null;
-          is_returning: boolean | null;
-          is_virtual: boolean | null;
-          last_reported: string;
-          location: unknown;
-          name: string;
-          network_id: string;
-          num_bikes_available: number | null;
-          num_docks_available: number;
-          num_ebikes_available: number | null;
-          raw_data: Json;
-        };
-        Insert: {
-          address?: string | null;
-          capacity: number;
-          created_at?: string;
-          fetched_at?: string;
-          id?: string;
-          is_operational?: boolean | null;
-          is_renting?: boolean | null;
-          is_returning?: boolean | null;
-          is_virtual?: boolean | null;
-          last_reported: string;
-          location: unknown;
-          name: string;
-          network_id: string;
-          num_bikes_available?: number | null;
-          num_docks_available: number;
-          num_ebikes_available?: number | null;
-          raw_data: Json;
-        };
-        Update: {
-          address?: string | null;
-          capacity?: number;
-          created_at?: string;
-          fetched_at?: string;
-          id?: string;
-          is_operational?: boolean | null;
-          is_renting?: boolean | null;
-          is_returning?: boolean | null;
-          is_virtual?: boolean | null;
-          last_reported?: string;
-          location?: unknown;
-          name?: string;
-          network_id?: string;
-          num_bikes_available?: number | null;
-          num_docks_available?: number;
-          num_ebikes_available?: number | null;
-          raw_data?: Json;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'station_network_id_network_id_fk';
-            columns: ['network_id'];
-            isOneToOne: false;
-            referencedRelation: 'network';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      station_old: {
-        Row: {
-          address: string | null;
-          capacity: number;
-          created_at: string;
-          fetched_at: string;
-          id: string;
-          is_renting: boolean | null;
-          is_returning: boolean | null;
-          last_reported: string;
-          location: unknown;
-          name: string;
-          network_id: string;
-          num_docks_available: number;
-          num_vehicles_available: number;
-          raw_data: Json;
-          vehicle_types_available: Json;
-        };
-        Insert: {
-          address?: string | null;
-          capacity: number;
-          created_at?: string;
-          fetched_at?: string;
-          id?: string;
-          is_renting?: boolean | null;
-          is_returning?: boolean | null;
-          last_reported: string;
-          location: unknown;
-          name: string;
-          network_id: string;
-          num_docks_available: number;
-          num_vehicles_available: number;
-          raw_data: Json;
-          vehicle_types_available: Json;
-        };
-        Update: {
-          address?: string | null;
-          capacity?: number;
-          created_at?: string;
-          fetched_at?: string;
-          id?: string;
-          is_renting?: boolean | null;
-          is_returning?: boolean | null;
-          last_reported?: string;
-          location?: unknown;
-          name?: string;
-          network_id?: string;
-          num_docks_available?: number;
-          num_vehicles_available?: number;
-          raw_data?: Json;
-          vehicle_types_available?: Json;
-        };
-        Relationships: [];
-      };
-      vehicle: {
-        Row: {
-          battery_level: number | null;
-          created_at: string;
-          fetched_at: string;
-          id: string;
-          is_disabled: boolean | null;
-          is_reserved: boolean | null;
-          last_reported: string | null;
-          location: unknown;
-          network_id: string;
-          pricing_plan_id: string | null;
-          raw_data: Json;
-          rental_uris: Json | null;
-          vehicle_type: string | null;
-        };
-        Insert: {
-          battery_level?: number | null;
-          created_at?: string;
-          fetched_at?: string;
-          id?: string;
-          is_disabled?: boolean | null;
-          is_reserved?: boolean | null;
-          last_reported?: string | null;
-          location: unknown;
-          network_id: string;
-          pricing_plan_id?: string | null;
-          raw_data: Json;
-          rental_uris?: Json | null;
-          vehicle_type?: string | null;
-        };
-        Update: {
-          battery_level?: number | null;
-          created_at?: string;
-          fetched_at?: string;
-          id?: string;
-          is_disabled?: boolean | null;
-          is_reserved?: boolean | null;
-          last_reported?: string | null;
-          location?: unknown;
-          network_id?: string;
-          pricing_plan_id?: string | null;
-          raw_data?: Json;
-          rental_uris?: Json | null;
-          vehicle_type?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'vehicle_network_id_network_id_fk';
-            columns: ['network_id'];
-            isOneToOne: false;
-            referencedRelation: 'network';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      debug_whoami: {
-        Args: Record<PropertyKey, never>;
-        Returns: Json;
-      };
-    };
-    Enums: {
-      [_ in never]: never;
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
   public: {
     Tables: {
       profiles: {
@@ -307,18 +35,331 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_settings: {
+        Row: {
+          active_bike_id: string | null;
+          created_at: string;
+          id: string;
+          start_recording_on_launch: boolean;
+          units: string;
+          updated_at: string;
+        };
+        Insert: {
+          active_bike_id?: string | null;
+          created_at?: string;
+          id: string;
+          start_recording_on_launch?: boolean;
+          units?: string;
+          updated_at?: string;
+        };
+        Update: {
+          active_bike_id?: string | null;
+          created_at?: string;
+          id?: string;
+          start_recording_on_launch?: boolean;
+          units?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      debug_whoami: {
-        Args: Record<PropertyKey, never>;
-        Returns: Json;
-      };
+      debug_whoami: { Args: never; Returns: Json };
     };
     Enums: {
       [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
+  vehicles: {
+    Tables: {
+      kilometrage_log: {
+        Row: {
+          bike_id: string;
+          created_at: string;
+          distance: number;
+          id: string;
+          logged_at: string;
+          notes: string | null;
+          user_id: string;
+        };
+        Insert: {
+          bike_id: string;
+          created_at?: string;
+          distance: number;
+          id?: string;
+          logged_at?: string;
+          notes?: string | null;
+          user_id: string;
+        };
+        Update: {
+          bike_id?: string;
+          created_at?: string;
+          distance?: number;
+          id?: string;
+          logged_at?: string;
+          notes?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'mileage_log_bike_id_fkey';
+            columns: ['bike_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_bike';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      maintenance_record: {
+        Row: {
+          bike_id: string | null;
+          cost: number | null;
+          created_at: string;
+          description: string;
+          id: string;
+          maintenance_type: Database['vehicles']['Enums']['maintenance_type'];
+          metadata: Json | null;
+          part_id: string | null;
+          performed_at: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          bike_id?: string | null;
+          cost?: number | null;
+          created_at?: string;
+          description: string;
+          id?: string;
+          maintenance_type: Database['vehicles']['Enums']['maintenance_type'];
+          metadata?: Json | null;
+          part_id?: string | null;
+          performed_at: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          bike_id?: string | null;
+          cost?: number | null;
+          created_at?: string;
+          description?: string;
+          id?: string;
+          maintenance_type?: Database['vehicles']['Enums']['maintenance_type'];
+          metadata?: Json | null;
+          part_id?: string | null;
+          performed_at?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'maintenance_record_bike_id_fkey';
+            columns: ['bike_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_bike';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'maintenance_record_part_id_fkey';
+            columns: ['part_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_part';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      ownership_history: {
+        Row: {
+          created_at: string;
+          entity_id: string;
+          entity_type: Database['vehicles']['Enums']['entity_type'];
+          id: string;
+          new_owner_id: string;
+          notes: string | null;
+          previous_owner_id: string;
+          transferred_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          entity_id: string;
+          entity_type: Database['vehicles']['Enums']['entity_type'];
+          id?: string;
+          new_owner_id: string;
+          notes?: string | null;
+          previous_owner_id: string;
+          transferred_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          entity_id?: string;
+          entity_type?: Database['vehicles']['Enums']['entity_type'];
+          id?: string;
+          new_owner_id?: string;
+          notes?: string | null;
+          previous_owner_id?: string;
+          transferred_at?: string;
+        };
+        Relationships: [];
+      };
+      part_installation: {
+        Row: {
+          bike_id: string;
+          created_at: string;
+          id: string;
+          installed_at: string;
+          part_id: string;
+          removed_at: string | null;
+        };
+        Insert: {
+          bike_id: string;
+          created_at?: string;
+          id?: string;
+          installed_at?: string;
+          part_id: string;
+          removed_at?: string | null;
+        };
+        Update: {
+          bike_id?: string;
+          created_at?: string;
+          id?: string;
+          installed_at?: string;
+          part_id?: string;
+          removed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'part_installation_bike_id_fkey';
+            columns: ['bike_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_bike';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'part_installation_part_id_fkey';
+            columns: ['part_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_part';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_bike: {
+        Row: {
+          brand: string | null;
+          created_at: string;
+          id: string;
+          metadata: Json | null;
+          model: string | null;
+          name: string;
+          purchase_date: string | null;
+          total_kilometrage: number;
+          type: Database['vehicles']['Enums']['bike_type'];
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          brand?: string | null;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          model?: string | null;
+          name: string;
+          purchase_date?: string | null;
+          total_kilometrage?: number;
+          type: Database['vehicles']['Enums']['bike_type'];
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          brand?: string | null;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          model?: string | null;
+          name?: string;
+          purchase_date?: string | null;
+          total_kilometrage?: number;
+          type?: Database['vehicles']['Enums']['bike_type'];
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      user_part: {
+        Row: {
+          brand: string | null;
+          created_at: string;
+          id: string;
+          metadata: Json | null;
+          model: string | null;
+          name: string;
+          purchase_date: string | null;
+          total_kilometrage: number;
+          type: Database['vehicles']['Enums']['part_type'];
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          brand?: string | null;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          model?: string | null;
+          name: string;
+          purchase_date?: string | null;
+          total_kilometrage?: number;
+          type: Database['vehicles']['Enums']['part_type'];
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          brand?: string | null;
+          created_at?: string;
+          id?: string;
+          metadata?: Json | null;
+          model?: string | null;
+          name?: string;
+          purchase_date?: string | null;
+          total_kilometrage?: number;
+          type?: Database['vehicles']['Enums']['part_type'];
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      bike_type: 'road' | 'mountain' | 'hybrid' | 'gravel' | 'ebike' | 'other';
+      entity_type: 'bike' | 'part';
+      maintenance_type:
+        | 'repair'
+        | 'replacement'
+        | 'adjustment'
+        | 'cleaning'
+        | 'inspection'
+        | 'other';
+      part_type:
+        | 'chain'
+        | 'tires'
+        | 'brake_pads'
+        | 'cassette'
+        | 'derailleur'
+        | 'crankset'
+        | 'saddle'
+        | 'handlebar'
+        | 'pedals'
+        | 'other';
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -442,10 +483,26 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
-  bikeshare: {
-    Enums: {},
-  },
   public: {
     Enums: {},
+  },
+  vehicles: {
+    Enums: {
+      bike_type: ['road', 'mountain', 'hybrid', 'gravel', 'ebike', 'other'],
+      entity_type: ['bike', 'part'],
+      maintenance_type: ['repair', 'replacement', 'adjustment', 'cleaning', 'inspection', 'other'],
+      part_type: [
+        'chain',
+        'tires',
+        'brake_pads',
+        'cassette',
+        'derailleur',
+        'crankset',
+        'saddle',
+        'handlebar',
+        'pedals',
+        'other',
+      ],
+    },
   },
 } as const;

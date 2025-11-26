@@ -35,6 +35,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_settings: {
+        Row: {
+          active_bike_id: string | null;
+          created_at: string;
+          id: string;
+          start_recording_on_launch: boolean;
+          units: string;
+          updated_at: string;
+        };
+        Insert: {
+          active_bike_id?: string | null;
+          created_at?: string;
+          id: string;
+          start_recording_on_launch?: boolean;
+          units?: string;
+          updated_at?: string;
+        };
+        Update: {
+          active_bike_id?: string | null;
+          created_at?: string;
+          id?: string;
+          start_recording_on_launch?: boolean;
+          units?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -226,7 +253,6 @@ export type Database = {
           brand: string | null;
           created_at: string;
           id: string;
-          is_active: boolean;
           metadata: Json | null;
           model: string | null;
           name: string;
@@ -240,7 +266,6 @@ export type Database = {
           brand?: string | null;
           created_at?: string;
           id?: string;
-          is_active?: boolean;
           metadata?: Json | null;
           model?: string | null;
           name: string;
@@ -254,7 +279,6 @@ export type Database = {
           brand?: string | null;
           created_at?: string;
           id?: string;
-          is_active?: boolean;
           metadata?: Json | null;
           model?: string | null;
           name?: string;

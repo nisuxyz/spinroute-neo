@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme, ScrollView } from 'react-native';
+import { StyleSheet, useColorScheme, ScrollView } from 'react-native';
 import { Colors } from '@/constants/theme';
 import UserProfileSection from '@/components/UserProfileSection';
+import AppSettingsSection from '@/components/AppSettingsSection';
 
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
@@ -10,6 +11,7 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <UserProfileSection />
+      <AppSettingsSection />
     </ScrollView>
   );
 }

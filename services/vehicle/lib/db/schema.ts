@@ -19,15 +19,13 @@
  *    - model: text
  *    - purchase_date: date
  *    - total_kilometrage: numeric (default 0) - Total distance in kilometers
- *    - is_active: boolean (default false) - Active bike for trip recording
  *    - metadata: jsonb (color, weight, etc.)
  *
  *    Indexes:
  *    - user_bike_user_id_index on user_id
  *    - user_bike_type_index on type
- *    - user_bike_active_index on (user_id, is_active)
  *
- *    Unique constraint: (user_id, is_active) WHERE is_active = true
+ *    Note: Active bike is tracked in public.user_settings.active_bike_id
  *
  * 2. vehicles.user_part
  *    - id: uuid (primary key)

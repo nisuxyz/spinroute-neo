@@ -213,13 +213,31 @@ router.get('/active', async (c) => {
 
     const supabase = getSupabase(c);
 
-    // Query for active bike
+    // Get active bike ID from user_settings
+    const { data: settings, error: settingsError } = await supabase
+      .schema('public')
+      .from('user_settings')
+      .select('active_bike_id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (settingsError) {
+      console.error('Error fetching user settings:', settingsError);
+      return c.json(errorResponse('database_error', 'Failed to fetch user settings'), 500);
+    }
+
+    // If no active bike ID, return null
+    if (!settings?.active_bike_id) {
+      return c.json(null);
+    }
+
+    // Query for the active bike
     const { data: bike, error } = await supabase
       .schema('vehicles')
       .from('user_bike')
       .select('*')
+      .eq('id', settings.active_bike_id)
       .eq('user_id', user.id)
-      .eq('is_active', true)
       .maybeSingle();
 
     if (error) {
@@ -227,7 +245,7 @@ router.get('/active', async (c) => {
       return c.json(errorResponse('database_error', 'Failed to fetch active bike'), 500);
     }
 
-    // If no active bike, return null
+    // If bike not found, return null
     if (!bike) {
       return c.json(null);
     }
@@ -256,146 +274,6 @@ router.get('/active', async (c) => {
     return c.json(responseBike);
   } catch (error) {
     console.error('Error in GET /api/bikes/active:', error);
-    return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
-  }
-});
-
-/**
- * POST /api/bikes/:id/set-active - Set bike as active
- */
-router.post('/:id/set-active', async (c) => {
-  try {
-    const user = c.get('user');
-    if (!user) {
-      return c.json(errorResponse('unauthorized', 'Authentication required'), 401);
-    }
-
-    const bikeId = c.req.param('id');
-    const supabase = getSupabase(c);
-
-    // Fetch bike to verify ownership
-    const { data: existingBike, error: fetchError } = await supabase
-      .schema('vehicles')
-      .from('user_bike')
-      .select('user_id, is_active')
-      .eq('id', bikeId)
-      .single();
-
-    if (fetchError || !existingBike) {
-      return c.json(errorResponse('not_found', 'Bike not found'), 404);
-    }
-
-    // Verify ownership
-    try {
-      verifyOwnership(existingBike.user_id, user.id);
-    } catch {
-      return c.json(
-        errorResponse('forbidden', 'You do not have permission to access this resource'),
-        403,
-      );
-    }
-
-    // If already active, return success
-    if (existingBike.is_active) {
-      const { data: bike } = await supabase
-        .schema('vehicles')
-        .from('user_bike')
-        .select('*')
-        .eq('id', bikeId)
-        .single();
-      return c.json(bike);
-    }
-
-    // Deactivate all user's bikes
-    const { error: deactivateError } = await supabase
-      .schema('vehicles')
-      .from('user_bike')
-      .update({ is_active: false })
-      .eq('user_id', user.id);
-
-    if (deactivateError) {
-      console.error('Error deactivating bikes:', deactivateError);
-      return c.json(errorResponse('database_error', 'Failed to deactivate bikes'), 500);
-    }
-
-    // Set this bike as active
-    const { data: updatedBike, error: updateError } = await supabase
-      .schema('vehicles')
-      .from('user_bike')
-      .update({ is_active: true, updated_at: new Date().toISOString() })
-      .eq('id', bikeId)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Error setting active bike:', updateError);
-      return c.json(errorResponse('database_error', 'Failed to set active bike'), 500);
-    }
-
-    return c.json(updatedBike);
-  } catch (error) {
-    console.error('Error in POST /api/bikes/:id/set-active:', error);
-    return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
-  }
-});
-
-/**
- * POST /api/bikes/:id/deactivate - Deactivate bike
- */
-router.post('/:id/deactivate', async (c) => {
-  try {
-    const user = c.get('user');
-    if (!user) {
-      return c.json(errorResponse('unauthorized', 'Authentication required'), 401);
-    }
-
-    const bikeId = c.req.param('id');
-    const supabase = getSupabase(c);
-
-    // Fetch bike to verify ownership and active status
-    const { data: existingBike, error: fetchError } = await supabase
-      .schema('vehicles')
-      .from('user_bike')
-      .select('user_id, is_active')
-      .eq('id', bikeId)
-      .single();
-
-    if (fetchError || !existingBike) {
-      return c.json(errorResponse('not_found', 'Bike not found'), 404);
-    }
-
-    // Verify ownership
-    try {
-      verifyOwnership(existingBike.user_id, user.id);
-    } catch {
-      return c.json(
-        errorResponse('forbidden', 'You do not have permission to access this resource'),
-        403,
-      );
-    }
-
-    // Check if bike is currently active
-    if (!existingBike.is_active) {
-      return c.json(errorResponse('validation_error', 'Bike is not currently active'), 400);
-    }
-
-    // Deactivate the bike
-    const { data: updatedBike, error: updateError } = await supabase
-      .schema('vehicles')
-      .from('user_bike')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('id', bikeId)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Error deactivating bike:', updateError);
-      return c.json(errorResponse('database_error', 'Failed to deactivate bike'), 500);
-    }
-
-    return c.json(updatedBike);
-  } catch (error) {
-    console.error('Error in POST /api/bikes/:id/deactivate:', error);
     return c.json(errorResponse('internal_error', 'An unexpected error occurred'), 500);
   }
 });
@@ -590,7 +468,8 @@ router.delete('/:id', async (c) => {
       );
     }
 
-    // Delete bike (cascade deletes handled by DB)
+    // Delete bike
+    // Note: If this bike is active, the FK constraint will automatically clear active_bike_id
     const { error: deleteError } = await supabase
       .schema('vehicles')
       .from('user_bike')
