@@ -129,8 +129,10 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
 
         {/* Record trip */}
         <MapActionButton
-          icon="fiber-manual-record"
-          iconFamily="MaterialIcons"
+          // icon="fiber-manual-record"
+          // iconFamily="MaterialIcons"
+          icon="tire"
+          iconFamily="MaterialCommunityIcons"
           isActive={isRecording}
           buttonColor={electricPurple}
           onActivate={onStartRecording}

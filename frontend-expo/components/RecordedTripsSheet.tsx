@@ -1,21 +1,14 @@
-import React from 'react';
+import React, { useRef, useMemo, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Platform, useColorScheme, Text } from 'react-native';
 import {
-  View,
-  StyleSheet,
-  Modal,
-  Dimensions,
-  Platform,
-  useColorScheme,
-  TouchableWithoutFeedback,
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetView,
   TouchableOpacity,
-  Text,
-} from 'react-native';
+} from '@gorhom/bottom-sheet';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_HEIGHT = SCREEN_HEIGHT * 0.9;
 
 interface RecordedTripsSheetProps {
   visible: boolean;
@@ -27,64 +20,95 @@ const RecordedTripsSheet: React.FC<RecordedTripsSheetProps> = ({ visible, onClos
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['90%'], []);
+
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.present();
+    } else {
+      bottomSheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index === -1) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
+
+  const handleDismiss = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
+
   const GlassContainer = hasGlassEffect ? GlassView : View;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      snapPoints={snapPoints}
+      enableDynamicSizing={false}
+      onChange={handleSheetChanges}
+      onDismiss={handleDismiss}
+      enablePanDownToClose
+      backdropComponent={renderBackdrop}
+      backgroundStyle={[
+        styles.sheetBackground,
+        hasGlassEffect
+          ? { backgroundColor: 'transparent' }
+          : { backgroundColor: colors.buttonBackground },
+      ]}
+      handleIndicatorStyle={{ backgroundColor: colors.text + '40' }}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.sheetContainer, { height: SHEET_HEIGHT }]}>
-              <GlassContainer
-                style={[
-                  styles.glassSheet,
-                  !hasGlassEffect && { backgroundColor: colors.buttonBackground },
-                ]}
-                {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
-              >
-                <View style={styles.header}>
-                  <Text style={[styles.title, { color: colors.text }]}>Recorded Trips</Text>
-                  <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                    <MaterialIcons name="close" size={28} color={colors.text} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.content}>
-                  <Text style={[styles.placeholder, { color: colors.text + '80' }]}>
-                    Recorded trips content coming soon
-                  </Text>
-                </View>
-              </GlassContainer>
-            </View>
-          </TouchableWithoutFeedback>
+      <GlassContainer
+        style={styles.glassSheet}
+        {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Recorded Trips</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <MaterialIcons name="close" size={28} color={colors.text} />
+          </TouchableOpacity>
         </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+
+        <BottomSheetView style={styles.content}>
+          <Text style={[styles.placeholder, { color: colors.text + '80' }]}>
+            Recorded trips content coming soon
+          </Text>
+        </BottomSheetView>
+      </GlassContainer>
+    </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheetContainer: {
-    width: '100%',
+  sheetBackground: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    overflow: 'hidden',
   },
   glassSheet: {
     flex: 1,
     padding: 20,
-    paddingTop: 16,
+    paddingTop: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

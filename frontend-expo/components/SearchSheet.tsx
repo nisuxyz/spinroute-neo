@@ -1,26 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
-  Modal,
-  Dimensions,
   Platform,
   useColorScheme,
   Keyboard,
-  TouchableWithoutFeedback,
-  FlatList,
   Text,
   ActivityIndicator,
 } from 'react-native';
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetFlatList,
+  TouchableOpacity,
+} from '@gorhom/bottom-sheet';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useDebounce } from 'use-debounce';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_HEIGHT = SCREEN_HEIGHT * 0.9;
 
 interface SearchSheetProps {
   visible: boolean;
@@ -56,12 +54,44 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['90%'], []);
+
   // Generate a new session token when the sheet opens
   useEffect(() => {
     if (visible) {
       setSessionToken(generateUUID());
+      bottomSheetRef.current?.present();
+    } else {
+      bottomSheetRef.current?.dismiss();
     }
   }, [visible]);
+
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index === -1) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
+
+  const handleDismiss = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
 
   useEffect(() => {
     if (debouncedQuery.trim().length < 2) {
@@ -178,129 +208,122 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
 
   const GlassContainer = hasGlassEffect ? GlassView : View;
 
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-      statusBarTranslucent
-    >
-      <TouchableWithoutFeedback onPress={handleClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.sheetContainer, { height: SHEET_HEIGHT }]}>
-              <GlassContainer
-                style={[
-                  styles.glassSheet,
-                  !hasGlassEffect && { backgroundColor: colors.buttonBackground },
-                ]}
-                {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
-              >
-                {/* Search Input */}
-                <View style={styles.searchContainer}>
-                  <MaterialIcons name="search" size={24} color={colors.text} />
-                  <TextInput
-                    style={[styles.searchInput, { color: colors.text }]}
-                    placeholder="Search for places..."
-                    placeholderTextColor={colors.text + '80'}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    autoFocus
-                    returnKeyType="search"
-                  />
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchQuery('')}>
-                      <MaterialIcons name="close" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Results List */}
-                {loading && (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color={colors.text} />
-                  </View>
-                )}
-
-                {!loading && suggestions.length > 0 && (
-                  <FlatList
-                    data={suggestions}
-                    keyExtractor={(item) => item.mapbox_id}
-                    style={styles.resultsList}
-                    contentContainerStyle={styles.resultsContent}
-                    keyboardShouldPersistTaps="handled"
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={styles.resultItem}
-                        onPress={() => handleSelectSuggestion(item)}
-                      >
-                        <MaterialIcons
-                          name={getIconForFeatureType(item.feature_type)}
-                          size={20}
-                          color={colors.text}
-                          style={styles.resultIcon}
-                        />
-                        <View style={styles.resultTextContainer}>
-                          <Text style={[styles.resultName, { color: colors.text }]}>
-                            {item.name}
-                          </Text>
-                          <Text
-                            style={[styles.resultDetails, { color: colors.text + 'CC' }]}
-                            numberOfLines={1}
-                          >
-                            {item.full_address || item.place_formatted || ''}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    )}
-                  />
-                )}
-
-                {!loading && searchQuery.length >= 2 && suggestions.length === 0 && (
-                  <View style={styles.emptyContainer}>
-                    <MaterialIcons name="search-off" size={48} color={colors.text + '60'} />
-                    <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
-                      No results found
-                    </Text>
-                  </View>
-                )}
-
-                {/* Close button */}
-                <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                  <MaterialIcons name="keyboard-arrow-down" size={32} color={colors.text} />
-                </TouchableOpacity>
-              </GlassContainer>
-            </View>
-          </TouchableWithoutFeedback>
+  const renderItem = useCallback(
+    ({ item }: { item: SearchSuggestion }) => (
+      <TouchableOpacity style={styles.resultItem} onPress={() => handleSelectSuggestion(item)}>
+        <MaterialIcons
+          name={getIconForFeatureType(item.feature_type)}
+          size={20}
+          color={colors.text}
+          style={styles.resultIcon}
+        />
+        <View style={styles.resultTextContainer}>
+          <Text style={[styles.resultName, { color: colors.text }]}>{item.name}</Text>
+          <Text style={[styles.resultDetails, { color: colors.text + 'CC' }]} numberOfLines={1}>
+            {item.full_address || item.place_formatted || ''}
+          </Text>
         </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+      </TouchableOpacity>
+    ),
+    [colors.text, handleSelectSuggestion],
+  );
+
+  return (
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      snapPoints={snapPoints}
+      enableDynamicSizing={false}
+      onChange={handleSheetChanges}
+      onDismiss={handleDismiss}
+      enablePanDownToClose
+      backdropComponent={renderBackdrop}
+      backgroundStyle={[
+        styles.sheetBackground,
+        hasGlassEffect
+          ? { backgroundColor: 'transparent' }
+          : { backgroundColor: colors.buttonBackground },
+      ]}
+      handleIndicatorStyle={{ backgroundColor: colors.text + '40' }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      enableBlurKeyboardOnGesture
+    >
+      <GlassContainer
+        style={styles.glassSheet}
+        {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
+      >
+        {/* Search Input */}
+        <View style={styles.searchContainer}>
+          <MaterialIcons name="search" size={24} color={colors.text} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search for places..."
+            placeholderTextColor={colors.text + '80'}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus={visible}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <MaterialIcons name="close" size={20} color={colors.text} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Results List */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={colors.text} />
+          </View>
+        )}
+
+        {!loading && suggestions.length > 0 && (
+          <BottomSheetFlatList
+            data={suggestions}
+            keyExtractor={(item: SearchSuggestion) => item.mapbox_id}
+            contentContainerStyle={styles.resultsContent}
+            keyboardShouldPersistTaps="handled"
+            renderItem={renderItem}
+          />
+        )}
+
+        {!loading && searchQuery.length >= 2 && suggestions.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <MaterialIcons name="search-off" size={48} color={colors.text + '60'} />
+            <Text style={[styles.emptyText, { color: colors.text + '80' }]}>No results found</Text>
+          </View>
+        )}
+
+        {/* Close button */}
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+          <MaterialIcons name="keyboard-arrow-down" size={32} color={colors.text} />
+        </TouchableOpacity>
+      </GlassContainer>
+    </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheetContainer: {
-    width: '100%',
+  sheetBackground: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    overflow: 'hidden',
   },
   glassSheet: {
     flex: 1,
     padding: 20,
-    paddingTop: 16,
+    paddingTop: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    paddingRight: 48,
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     gap: 12,
@@ -312,7 +335,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 20,
+    top: 16,
     right: 24,
     width: 40,
     height: 40,
@@ -323,12 +346,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
     alignItems: 'center',
   },
-  resultsList: {
-    marginTop: 16,
-    flex: 1,
-  },
   resultsContent: {
-    paddingBottom: 20,
+    paddingTop: 20,
   },
   resultItem: {
     flexDirection: 'row',

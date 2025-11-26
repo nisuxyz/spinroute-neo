@@ -1,26 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  Modal,
-  Dimensions,
   Platform,
   useColorScheme,
-  TouchableWithoutFeedback,
-  TouchableOpacity,
   Text,
-  ScrollView,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetScrollView,
+  TouchableOpacity,
+} from '@gorhom/bottom-sheet';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_HEIGHT = SCREEN_HEIGHT * 0.9;
 
 interface BikeManagementSheetProps {
   visible: boolean;
@@ -42,7 +40,6 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
   const {
     bikes,
-    activeBike,
     loading,
     error,
     createBike,
@@ -51,6 +48,43 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
     setActiveBike,
     deactivateBike,
   } = useBikes();
+
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['90%'], []);
+
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.present();
+    } else {
+      bottomSheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index === -1) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
+
+  const handleDismiss = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingBike, setEditingBike] = useState<string | null>(null);
@@ -167,280 +201,264 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      snapPoints={snapPoints}
+      enableDynamicSizing={false}
+      onChange={handleSheetChanges}
+      onDismiss={handleDismiss}
+      enablePanDownToClose
+      backdropComponent={renderBackdrop}
+      backgroundStyle={[
+        styles.sheetBackground,
+        hasGlassEffect
+          ? { backgroundColor: 'transparent' }
+          : { backgroundColor: colors.buttonBackground },
+      ]}
+      handleIndicatorStyle={{ backgroundColor: colors.text + '40' }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      enableBlurKeyboardOnGesture
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.sheetContainer, { height: SHEET_HEIGHT }]}>
-              <GlassContainer
+      <GlassContainer
+        style={styles.glassSheet}
+        {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>My Bikes</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <MaterialIcons name="close" size={28} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <BottomSheetScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {error && (
+            <View style={[styles.errorBanner, { backgroundColor: '#ef4444' }]}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {!showAddForm && !editingBike && (
+            <TouchableOpacity
+              style={[styles.addButton, { borderColor: colors.buttonBorder }]}
+              onPress={() => setShowAddForm(true)}
+            >
+              <MaterialIcons name="add" size={24} color={colors.buttonIcon} />
+              <Text style={[styles.addButtonText, { color: colors.text }]}>Add New Bike</Text>
+            </TouchableOpacity>
+          )}
+
+          {(showAddForm || editingBike) && (
+            <View style={[styles.formCard, { backgroundColor: colors.background + '40' }]}>
+              <Text style={[styles.formTitle, { color: colors.text }]}>
+                {editingBike ? 'Edit Bike' : 'Add New Bike'}
+              </Text>
+
+              <TextInput
+                style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
+                placeholder="Bike Name *"
+                placeholderTextColor={colors.icon}
+                value={formData.name}
+                onChangeText={(text) => setFormData({ ...formData, name: text })}
+              />
+
+              <View style={styles.typeGrid}>
+                {BIKE_TYPES.map((type) => (
+                  <TouchableOpacity
+                    key={type.value}
+                    style={[
+                      styles.typeButton,
+                      {
+                        borderColor:
+                          formData.type === type.value ? colors.buttonBorder : colors.icon,
+                        backgroundColor:
+                          formData.type === type.value ? colors.buttonBorder + '20' : 'transparent',
+                      },
+                    ]}
+                    onPress={() => setFormData({ ...formData, type: type.value })}
+                  >
+                    <MaterialIcons
+                      name={type.icon as any}
+                      size={24}
+                      color={formData.type === type.value ? colors.buttonIcon : colors.icon}
+                    />
+                    <Text
+                      style={[
+                        styles.typeLabel,
+                        {
+                          color: formData.type === type.value ? colors.buttonIcon : colors.text,
+                        },
+                      ]}
+                    >
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TextInput
+                style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
+                placeholder="Brand (optional)"
+                placeholderTextColor={colors.icon}
+                value={formData.brand}
+                onChangeText={(text) => setFormData({ ...formData, brand: text })}
+              />
+
+              <TextInput
+                style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
+                placeholder="Model (optional)"
+                placeholderTextColor={colors.icon}
+                value={formData.model}
+                onChangeText={(text) => setFormData({ ...formData, model: text })}
+              />
+
+              {!editingBike && (
+                <TextInput
+                  style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
+                  placeholder="Initial Mileage (miles, optional)"
+                  placeholderTextColor={colors.icon}
+                  keyboardType="numeric"
+                  value={formData.initial_mileage}
+                  onChangeText={(text) => setFormData({ ...formData, initial_mileage: text })}
+                />
+              )}
+
+              <View style={styles.formActions}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, { borderColor: colors.icon }]}
+                  onPress={editingBike ? handleCancelEdit : () => setShowAddForm(false)}
+                >
+                  <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveButton, { backgroundColor: colors.buttonBorder }]}
+                  onPress={editingBike ? handleUpdateBike : handleAddBike}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>
+                      {editingBike ? 'Update Bike' : 'Add Bike'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {loading && bikes.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.buttonIcon} />
+            </View>
+          ) : bikes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialIcons name="pedal-bike" size={64} color={colors.icon} />
+              <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
+                No bikes yet. Add your first bike to get started!
+              </Text>
+            </View>
+          ) : (
+            bikes.map((bike) => (
+              <View
+                key={bike.id}
                 style={[
-                  styles.glassSheet,
-                  !hasGlassEffect && { backgroundColor: colors.buttonBackground },
+                  styles.bikeCard,
+                  {
+                    backgroundColor: colors.background + '40',
+                    borderWidth: bike.is_active ? 2 : 0,
+                    borderColor: bike.is_active ? colors.buttonBorder : 'transparent',
+                  },
                 ]}
-                {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
               >
-                <View style={styles.header}>
-                  <Text style={[styles.title, { color: colors.text }]}>My Bikes</Text>
-                  <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                    <MaterialIcons name="close" size={28} color={colors.text} />
+                <View style={styles.bikeHeader}>
+                  <View style={styles.bikeInfo}>
+                    <View style={styles.bikeNameRow}>
+                      <Text style={[styles.bikeName, { color: colors.text }]}>{bike.name}</Text>
+                      {bike.is_active && (
+                        <View
+                          style={[styles.activeBadge, { backgroundColor: colors.buttonBorder }]}
+                        >
+                          <Text style={styles.activeBadgeText}>Active</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.bikeType, { color: colors.icon }]}>
+                      {BIKE_TYPES.find((t) => t.value === bike.type)?.label || bike.type}
+                    </Text>
+                  </View>
+                  <View style={styles.bikeActions}>
+                    <TouchableOpacity
+                      onPress={() => handleEditBike(bike)}
+                      style={styles.editButton}
+                    >
+                      <MaterialIcons name="edit" size={22} color={colors.buttonIcon} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteBike(bike.id, bike.name)}
+                      style={styles.deleteButton}
+                    >
+                      <MaterialIcons name="delete" size={22} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                {(bike.brand || bike.model) && (
+                  <Text style={[styles.bikeDetails, { color: colors.text + '80' }]}>
+                    {[bike.brand, bike.model].filter(Boolean).join(' ')}
+                  </Text>
+                )}
+                <View style={styles.bikeFooter}>
+                  <View style={styles.mileageContainer}>
+                    <MaterialIcons name="speed" size={16} color={colors.icon} />
+                    <Text style={[styles.mileageText, { color: colors.text }]}>
+                      {bike.total_kilometrage?.toFixed(1) || '0.0'} miles
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.activeToggle,
+                      {
+                        backgroundColor: bike.is_active
+                          ? colors.buttonBorder + '20'
+                          : 'transparent',
+                        borderColor: colors.buttonBorder,
+                      },
+                    ]}
+                    onPress={() => handleToggleActive(bike)}
+                    disabled={loading}
+                  >
+                    <MaterialIcons
+                      name={bike.is_active ? 'star' : 'star-outline'}
+                      size={18}
+                      color={colors.buttonIcon}
+                    />
+                    <Text style={[styles.activeToggleText, { color: colors.buttonIcon }]}>
+                      {bike.is_active ? 'Active' : 'Set Active'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
-
-                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                  {error && (
-                    <View style={[styles.errorBanner, { backgroundColor: '#ef4444' }]}>
-                      <Text style={styles.errorText}>{error}</Text>
-                    </View>
-                  )}
-
-                  {!showAddForm && !editingBike && (
-                    <TouchableOpacity
-                      style={[styles.addButton, { borderColor: colors.buttonBorder }]}
-                      onPress={() => setShowAddForm(true)}
-                    >
-                      <MaterialIcons name="add" size={24} color={colors.buttonIcon} />
-                      <Text style={[styles.addButtonText, { color: colors.text }]}>
-                        Add New Bike
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {(showAddForm || editingBike) && (
-                    <View style={[styles.formCard, { backgroundColor: colors.background + '40' }]}>
-                      <Text style={[styles.formTitle, { color: colors.text }]}>
-                        {editingBike ? 'Edit Bike' : 'Add New Bike'}
-                      </Text>
-
-                      <TextInput
-                        style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
-                        placeholder="Bike Name *"
-                        placeholderTextColor={colors.icon}
-                        value={formData.name}
-                        onChangeText={(text) => setFormData({ ...formData, name: text })}
-                      />
-
-                      <View style={styles.typeGrid}>
-                        {BIKE_TYPES.map((type) => (
-                          <TouchableOpacity
-                            key={type.value}
-                            style={[
-                              styles.typeButton,
-                              {
-                                borderColor:
-                                  formData.type === type.value ? colors.buttonBorder : colors.icon,
-                                backgroundColor:
-                                  formData.type === type.value
-                                    ? colors.buttonBorder + '20'
-                                    : 'transparent',
-                              },
-                            ]}
-                            onPress={() => setFormData({ ...formData, type: type.value })}
-                          >
-                            <MaterialIcons
-                              name={type.icon as any}
-                              size={24}
-                              color={formData.type === type.value ? colors.buttonIcon : colors.icon}
-                            />
-                            <Text
-                              style={[
-                                styles.typeLabel,
-                                {
-                                  color:
-                                    formData.type === type.value ? colors.buttonIcon : colors.text,
-                                },
-                              ]}
-                            >
-                              {type.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-
-                      <TextInput
-                        style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
-                        placeholder="Brand (optional)"
-                        placeholderTextColor={colors.icon}
-                        value={formData.brand}
-                        onChangeText={(text) => setFormData({ ...formData, brand: text })}
-                      />
-
-                      <TextInput
-                        style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
-                        placeholder="Model (optional)"
-                        placeholderTextColor={colors.icon}
-                        value={formData.model}
-                        onChangeText={(text) => setFormData({ ...formData, model: text })}
-                      />
-
-                      {!editingBike && (
-                        <TextInput
-                          style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
-                          placeholder="Initial Mileage (miles, optional)"
-                          placeholderTextColor={colors.icon}
-                          keyboardType="numeric"
-                          value={formData.initial_mileage}
-                          onChangeText={(text) =>
-                            setFormData({ ...formData, initial_mileage: text })
-                          }
-                        />
-                      )}
-
-                      <View style={styles.formActions}>
-                        <TouchableOpacity
-                          style={[styles.cancelButton, { borderColor: colors.icon }]}
-                          onPress={editingBike ? handleCancelEdit : () => setShowAddForm(false)}
-                        >
-                          <Text style={[styles.cancelButtonText, { color: colors.text }]}>
-                            Cancel
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.saveButton, { backgroundColor: colors.buttonBorder }]}
-                          onPress={editingBike ? handleUpdateBike : handleAddBike}
-                          disabled={loading}
-                        >
-                          {loading ? (
-                            <ActivityIndicator color="#fff" />
-                          ) : (
-                            <Text style={styles.saveButtonText}>
-                              {editingBike ? 'Update Bike' : 'Add Bike'}
-                            </Text>
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-
-                  {loading && bikes.length === 0 ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="large" color={colors.buttonIcon} />
-                    </View>
-                  ) : bikes.length === 0 ? (
-                    <View style={styles.emptyState}>
-                      <MaterialIcons name="pedal-bike" size={64} color={colors.icon} />
-                      <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
-                        No bikes yet. Add your first bike to get started!
-                      </Text>
-                    </View>
-                  ) : (
-                    bikes.map((bike) => (
-                      <View
-                        key={bike.id}
-                        style={[
-                          styles.bikeCard,
-                          {
-                            backgroundColor: colors.background + '40',
-                            borderWidth: bike.is_active ? 2 : 0,
-                            borderColor: bike.is_active ? colors.buttonBorder : 'transparent',
-                          },
-                        ]}
-                      >
-                        <View style={styles.bikeHeader}>
-                          <View style={styles.bikeInfo}>
-                            <View style={styles.bikeNameRow}>
-                              <Text style={[styles.bikeName, { color: colors.text }]}>
-                                {bike.name}
-                              </Text>
-                              {bike.is_active && (
-                                <View
-                                  style={[
-                                    styles.activeBadge,
-                                    { backgroundColor: colors.buttonBorder },
-                                  ]}
-                                >
-                                  <Text style={styles.activeBadgeText}>Active</Text>
-                                </View>
-                              )}
-                            </View>
-                            <Text style={[styles.bikeType, { color: colors.icon }]}>
-                              {BIKE_TYPES.find((t) => t.value === bike.type)?.label || bike.type}
-                            </Text>
-                          </View>
-                          <View style={styles.bikeActions}>
-                            <TouchableOpacity
-                              onPress={() => handleEditBike(bike)}
-                              style={styles.editButton}
-                            >
-                              <MaterialIcons name="edit" size={22} color={colors.buttonIcon} />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => handleDeleteBike(bike.id, bike.name)}
-                              style={styles.deleteButton}
-                            >
-                              <MaterialIcons name="delete" size={22} color="#ef4444" />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                        {(bike.brand || bike.model) && (
-                          <Text style={[styles.bikeDetails, { color: colors.text + '80' }]}>
-                            {[bike.brand, bike.model].filter(Boolean).join(' ')}
-                          </Text>
-                        )}
-                        <View style={styles.bikeFooter}>
-                          <View style={styles.mileageContainer}>
-                            <MaterialIcons name="speed" size={16} color={colors.icon} />
-                            <Text style={[styles.mileageText, { color: colors.text }]}>
-                              {bike.total_kilometrage?.toFixed(1) || '0.0'} miles
-                            </Text>
-                          </View>
-                          <TouchableOpacity
-                            style={[
-                              styles.activeToggle,
-                              {
-                                backgroundColor: bike.is_active
-                                  ? colors.buttonBorder + '20'
-                                  : 'transparent',
-                                borderColor: colors.buttonBorder,
-                              },
-                            ]}
-                            onPress={() => handleToggleActive(bike)}
-                            disabled={loading}
-                          >
-                            <MaterialIcons
-                              name={bike.is_active ? 'star' : 'star-outline'}
-                              size={18}
-                              color={colors.buttonIcon}
-                            />
-                            <Text style={[styles.activeToggleText, { color: colors.buttonIcon }]}>
-                              {bike.is_active ? 'Active' : 'Set Active'}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))
-                  )}
-                </ScrollView>
-              </GlassContainer>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+              </View>
+            ))
+          )}
+        </BottomSheetScrollView>
+      </GlassContainer>
+    </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheetContainer: {
-    width: '100%',
+  sheetBackground: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    overflow: 'hidden',
   },
   glassSheet: {
     flex: 1,
     padding: 20,
-    paddingTop: 16,
+    paddingTop: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

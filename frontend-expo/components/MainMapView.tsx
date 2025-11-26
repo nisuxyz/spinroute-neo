@@ -323,10 +323,11 @@ const MainMapView: React.FC = () => {
         </TouchableOpacity>
       )}
 
+      <SearchButton onPress={() => setIsSearchSheetVisible(true)} />
+
       {searchedLocation && (
         <LocationCard location={searchedLocation} onClose={() => setSearchedLocation(null)} />
       )}
-      <SearchButton onPress={() => setIsSearchSheetVisible(true)} />
       <SearchSheet
         visible={isSearchSheetVisible}
         onClose={() => setIsSearchSheetVisible(false)}
