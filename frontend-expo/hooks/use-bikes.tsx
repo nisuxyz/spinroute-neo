@@ -30,7 +30,6 @@ const VEHICLE_SERVICE_URL = process.env.EXPO_PUBLIC_VEHICLE_SERVICE_URL || 'http
 export function useBikes() {
   const { session } = useAuth();
   const [bikes, setBikes] = useState<Bike[]>([]);
-  const [activeBike, setActiveBike] = useState<Bike | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,27 +58,6 @@ export function useBikes() {
       console.error('Error fetching bikes:', err);
     } finally {
       setLoading(false);
-    }
-  }, [session]);
-
-  const fetchActiveBike = useCallback(async () => {
-    if (!session) return;
-
-    try {
-      const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes/active?unit=mi`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch active bike');
-      }
-
-      const data = await response.json();
-      setActiveBike(data);
-    } catch (err) {
-      console.error('Error fetching active bike:', err);
     }
   }, [session]);
 
@@ -190,16 +168,13 @@ export function useBikes() {
 
   useEffect(() => {
     fetchBikes();
-    fetchActiveBike();
-  }, [fetchBikes, fetchActiveBike]);
+  }, [fetchBikes]);
 
   return {
     bikes,
-    activeBike,
     loading,
     error,
     fetchBikes,
-    fetchActiveBike,
     createBike,
     updateBike,
     deleteBike,

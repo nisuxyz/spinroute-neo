@@ -15,6 +15,7 @@ SpinRoute Neo is a mobility platform for tracking and routing bikeshare and micr
 - Real-time bikeshare station availability
 - Map-based station discovery with Mapbox integration
 - User authentication and session management
+- Personal bike and part tracking with kilometrage management (stored in km, convertible to miles)
 - Ride recording and activity tracking
 - Live location sharing and safety features (crash detection, emergency alerts)
 - Multi-platform support (iOS, Android, Web)

@@ -14,7 +14,7 @@ app.use('*', supabaseMiddleware());
 app.route('/', healthRouter);
 
 app.get('/api/hello', (c) => {
-  return c.text('hello vehicle-service');
+  return c.text('hello vehicles-service');
 });
 
 async function loadRoutes() {
@@ -38,4 +38,8 @@ await loadRoutes();
 
 showRoutes(app);
 
-export default app;
+export default {
+  port: 3000,
+  hostname: '0.0.0.0',
+  fetch: app.fetch,
+};

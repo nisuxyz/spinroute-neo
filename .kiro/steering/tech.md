@@ -13,9 +13,9 @@
 ### TypeScript/Bun Services
 - **Framework**: Hono (lightweight web framework)
 - **Runtime**: Bun
-- **Database ORM**: Drizzle ORM
-- **Database**: PostgreSQL (via Supabase)
-- **Authentication**: Better Auth with Supabase integration
+- **Database**: Supabase (PostgreSQL)
+- **Database ORM**: Drizzle ORM (backend/API gateway only)
+- **Authentication**: Supabase Auth (services), Better Auth (API gateway)
 - **Shared Utilities**: `shared-utils` workspace package
 
 ### Go Services
@@ -39,8 +39,11 @@
 ## Database & Backend Services
 
 - **Database**: Supabase (PostgreSQL)
-- **Schema Management**: Drizzle Kit for migrations
+- **Schema Management**: 
+  - Supabase for backend/API gateway migrations
+  - Supabase migrations for microservices
 - **Type Generation**: Supabase CLI for TypeScript types
+  - Never manually edit the supabase types. Since we are using multiple schemas, you have to use the supabase cli to generate the types.
 
 ## Containerization & Deployment
 
@@ -63,9 +66,15 @@ bun install             # Install dependencies
 bun run start:dev       # Run with watch mode
 bun run start:dev:hot   # Run with hot reload
 bun test                # Run tests
+
+# For backend (Drizzle ORM):
 bun run drizzle:generate # Generate database migrations
 bun run drizzle:push    # Push schema changes
 bun run drizzle:studio  # Open Drizzle Studio
+
+# For services (Supabase):
+# Migrations managed via Supabase CLI or MCP tools
+# See service-specific README for details
 ```
 
 ### Container Operations

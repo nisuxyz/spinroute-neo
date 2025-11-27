@@ -4,19 +4,22 @@ FROM docker.io/oven/bun:latest AS builder
 WORKDIR /app
 
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
-COPY package*.json bun.lock ./
+# COPY package*.json bun.lock ./
+COPY ../../ ./
 
 # Install app dependencies
 RUN bun install
 
-COPY lib ./lib
-COPY src ./src
+# COPY lib ./lib
+# COPY src ./src
 
 FROM docker.io/oven/bun:alpine AS runner
 
 WORKDIR /app
 
 COPY --from=builder /app ./
+
+WORKDIR /app/services/vehicles
 
 EXPOSE 3000
 CMD [ "bun", "run", "start" ]

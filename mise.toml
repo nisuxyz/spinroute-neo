@@ -1,5 +1,6 @@
 [tools]
 biome = "latest"
 bun = "latest"
+fly = "latest"
 flyctl = "latest"
 node = "20"

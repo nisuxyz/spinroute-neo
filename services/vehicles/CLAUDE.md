@@ -1,6 +1,6 @@
 ---
 
-# Auth Service - Bun + Hono + Drizzle + Better Auth + PostgreSQL
+# Vehicle Service - Bun + Hono + Supabase
 
 Default to using Bun instead of Node.js for this microservice.
 
@@ -19,8 +19,7 @@ Default to using Bun instead of Node.js for this microservice.
 bun run compose:up
 
 # Make code changes (hot reload enabled)
-# Database changes
-bun run drizzle:push
+# Database changes are managed via Supabase migrations in supabase/migrations/
 
 # View logs
 bun run compose:logs
@@ -57,10 +56,8 @@ bun run start:dev
 bun run start
 
 # Database operations
-bun run drizzle:generate
-bun run drizzle:migrate
-bun run drizzle:push
-bun run drizzle:studio
+# Managed via Supabase CLI and migrations in supabase/migrations/
+# Use Supabase Studio for database management
 
 # Docker Compose development
 bun run compose:up
@@ -86,92 +83,91 @@ bun run helm:upgrade
 ## Tech Stack
 
 - **Framework**: Hono (lightweight web framework)
-- **Auth**: Better Auth with OpenAPI plugin
-- **Database**: PostgreSQL with Bun's built-in SQL connector
-- **ORM**: Drizzle ORM
+- **Auth**: Supabase Auth
+- **Database**: Supabase (PostgreSQL)
 - **Runtime**: Bun
 
 ## APIs
 
 - Use `Hono` instead of `express` for web framework
-- Use `better-auth` for authentication with Drizzle adapter
-- Use `drizzle-orm/bun-sql` with Bun's native PostgreSQL support
-- Use `Bun.sql` for the database engine (built-in PostgreSQL connector)
+- Use `@supabase/ssr` for server-side authentication with Hono
+- Use `@supabase/supabase-js` for database operations
 - `WebSocket` is built-in in Bun. Don't use `ws`.
 - Prefer `Bun.file` over `node:fs`'s readFile/writeFile
 - Bun.$`ls` instead of execa.
 
 ## Database Schema
 
-Using Drizzle ORM with PostgreSQL for the auth service. Main tables:
+Using Supabase for database management. Schema is managed via SQL migrations in `supabase/migrations/`.
 
-```ts#lib/db/auth-schema.ts
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
-
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").notNull().$defaultFn(() => false),
-  image: text("image"),
-  createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-  updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
-});
-
-export const session = pgTable("session", {
-  id: text("id").primaryKey(),
-  expiresAt: timestamp("expires_at").notNull(),
-  token: text("token").notNull().unique(),
-  userId: text("user_id").notNull().references(() => user.id),
-  // ...other fields
-});
-```
+The vehicle service uses the `fleet` schema with tables for vehicles and components. See `lib/db/schema.ts` for documentation.
 
 ## Database Connection
 
-Using Bun's native PostgreSQL connector with Drizzle:
+Using Supabase JS client:
 
-```ts#lib/drizzle.ts
-import { drizzle } from 'drizzle-orm/bun-sql';
-import { SQL } from 'bun';
+```ts#lib/db.ts
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from './db.types';
 
-const sql = new SQL(process.env.DATABASE_URL!);
-export const db = drizzle({ client: sql });
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 ```
 
-### PostgreSQL Benefits for Microservices
-- **Multi-Replica Support**: Perfect for horizontal scaling with multiple auth service replicas
-- **ACID Transactions**: Full consistency for authentication operations
-- **Concurrent Access**: Excellent performance with multiple readers/writers
-- **Production Ready**: Battle-tested for high-load production environments
-- **Connection Pooling**: Built-in support for efficient connection management
-- **Data Consistency**: Shared state across all service replicas
+### Supabase Benefits for Microservices
+- **Managed PostgreSQL**: No infrastructure management needed
+- **Real-time Subscriptions**: Built-in real-time capabilities
+- **Row Level Security**: Fine-grained access control
+- **Auto-generated APIs**: REST and GraphQL endpoints
+- **Connection Pooling**: Built-in Supavisor connection pooler
+- **Backups & HA**: Automated backups and high availability
 
 ### Production Considerations
-- **High Availability**: Use PostgreSQL clustering or cloud managed services
-- **Backup Strategy**: Regular automated backups with point-in-time recovery
-- **Connection Limits**: Monitor and configure appropriate connection pools
-- **Performance**: Optimize queries and use appropriate indexes
+- **Connection Pooling**: Use Supabase connection pooler for serverless environments
+- **RLS Policies**: Implement proper Row Level Security policies
+- **API Keys**: Use service role key for backend, anon key for frontend
+- **Performance**: Use appropriate indexes and optimize queries
 
 ## Authentication Setup
 
-Using Better Auth with Drizzle adapter for PostgreSQL:
+Using Supabase Auth with Hono middleware:
 
 ```ts#lib/auth.ts
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { openAPI } from "better-auth/plugins";
-import { db } from "~lib/drizzle";
-import { user, session, account, verification } from "./db/schema";
+import { createServerClient, parseCookieHeader } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Context, MiddlewareHandler } from 'hono';
+import { setCookie } from 'hono/cookie';
 
-export const auth = betterAuth({
-  plugins: [openAPI()],
-  database: drizzleAdapter(db, { 
-    provider: "pg",
-    schema: { user, session, account, verification }
-  }),
-  emailAndPassword: { enabled: true },
-});
+export const supabaseMiddleware = (): MiddlewareHandler => {
+  return async (c, next) => {
+    const supabase = createServerClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return parseCookieHeader(c.req.header('Cookie') ?? '');
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => 
+              setCookie(c, name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    c.set('supabase', supabase);
+    await next();
+  };
+};
 ```
 
 ## Server Setup
@@ -268,7 +264,7 @@ CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
 - `GET /health` - Health check endpoint (for K8s liveness probe)
 - `GET /ready` - Readiness check (for K8s readiness probe)
 - `GET /live` - Liveness check
-- `POST|GET /api/auth/**` - Better Auth endpoints (sign-up, sign-in, etc.)
+- Authentication is handled by Supabase Auth (not exposed through this service)
 
 ### Internal Service Endpoints (require service auth)
 - `POST /api/internal/validate` - Validate JWT token (used by API gateway)
@@ -354,23 +350,22 @@ Your compose setup includes:
 If you prefer to run PostgreSQL locally:
 
 1. Install and start PostgreSQL
-2. Create database: `createdb auth_db`
-3. Update `.env` with your local connection string
-4. Run migrations: `bun run drizzle:push`
+2. Set up Supabase project and get credentials
+3. Update `.env` with Supabase URL and keys
+4. Run migrations: Apply SQL migrations from `supabase/migrations/`
 5. Start dev server: `bun run start:dev:hot`
 
 ### Database Migrations
 
+Database schema is managed via Supabase SQL migrations in the `supabase/migrations/` directory.
+
 ```bash
-# Generate migration from schema changes
-bun run drizzle:generate
+# Create a new migration
+supabase migration new <migration_name>
 
-# Apply migrations
-bun run drizzle:migrate
+# Apply migrations locally
+supabase db push
 
-# Push schema directly (development)
-bun run drizzle:push
-
-# Open Drizzle Studio
-bun run drizzle:studio
+# Generate TypeScript types
+supabase gen types typescript --project-id <id> --schema fleet > lib/db.types.ts
 ```
