@@ -158,7 +158,7 @@ export default function BikesScreen() {
       <Stack.Screen
         options={{
           title: 'My Bikes',
-          // headerBackTitle: 'Back',
+          headerBackButtonDisplayMode: 'minimal',
         }}
       />
       <View style={[styles.container, { backgroundColor: colors.background }]}>

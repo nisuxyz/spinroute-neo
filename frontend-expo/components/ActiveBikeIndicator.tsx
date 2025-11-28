@@ -1,12 +1,13 @@
 import React from 'react';
-import { StyleSheet, View, Text, useColorScheme } from 'react-native';
+import { StyleSheet, View, Text, useColorScheme, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import { Colors } from '@/constants/theme';
 import type { Bike } from '@/hooks/use-bikes';
 
 interface ActiveBikeIndicatorProps {
-  bike: Bike;
+  bike: Bike | undefined;
+  loading?: boolean;
 }
 
 const bikeTypeIcons: Record<string, keyof typeof MaterialIcons.glyphMap> = {
@@ -18,13 +19,28 @@ const bikeTypeIcons: Record<string, keyof typeof MaterialIcons.glyphMap> = {
   other: 'two-wheeler',
 };
 
-const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({ bike }) => {
+const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({ bike, loading = false }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const icon = bikeTypeIcons[bike.type] || 'pedal-bike';
+  // Always show loading indicator when loading
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <GlassView style={{ borderRadius: 16 }}>
+          <View style={styles.content}>
+            <ActivityIndicator size="small" color={colors.locationPuck} />
+          </View>
+        </GlassView>
+      </View>
+    );
+  }
 
-  // console.log('[ActiveBikeIndicator] Rendering with bike:', { name: bike.name, type: bike.type });
+  if (!bike) {
+    return null;
+  }
+
+  const icon = bikeTypeIcons[bike.type] || 'pedal-bike';
 
   return (
     <View style={styles.container}>
@@ -43,7 +59,9 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({ bike }) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 90,
+    // top: 56,
+    // right: 80,
+    bottom: 16,
     left: 0,
     right: 0,
     alignItems: 'center',

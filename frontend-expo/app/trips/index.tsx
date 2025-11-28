@@ -158,7 +158,7 @@ export default function TripsScreen() {
         <Stack.Screen
           options={{
             title: 'Recorded Trips',
-            // headerBackTitle: 'Back',
+            headerBackButtonDisplayMode: 'minimal',
           }}
         />
         <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -182,7 +182,7 @@ export default function TripsScreen() {
       <Stack.Screen
         options={{
           title: 'Recorded Trips',
-          // headerBackTitle: 'Back',
+          headerBackButtonDisplayMode: 'minimal',
         }}
       />
       <View style={[styles.container, { backgroundColor: colors.background }]}>

@@ -22,7 +22,7 @@ import SearchSheet from './SearchSheet';
 import LocationCard from './LocationCard';
 import MapStylePicker from './MapStylePicker';
 import ActiveBikeIndicator from './ActiveBikeIndicator';
-import { GlassView } from 'expo-glass-effect';
+import RecordingIndicator from './RecordingIndicator';
 
 // Feature flags
 const ENABLE_LAYER_RENDERING_TOGGLE = false;
@@ -100,7 +100,7 @@ const MainMapView: React.FC = () => {
   const mapStyle = settings?.map_style || 'mapbox://styles/mapbox/standard';
 
   // Get bikes and find active bike
-  const { bikes, fetchBikes } = useBikes();
+  const { bikes, loading: bikesLoading, fetchBikes } = useBikes();
   const activeBike = bikes.find((bike) => bike.id === settings?.active_bike_id);
 
   // Refetch bikes when screen comes into focus
@@ -427,31 +427,14 @@ const MainMapView: React.FC = () => {
       />
 
       {/* Active Bike Indicator */}
-      {activeBike && <ActiveBikeIndicator bike={activeBike} />}
+      {(activeBike || (bikesLoading && settings?.active_bike_id)) && (
+        <ActiveBikeIndicator bike={activeBike} loading={bikesLoading} />
+      )}
 
       {/* Recording Status Indicator */}
-      {activeTrip && (
-        <View style={styles.recordingStatusContainer}>
-          <GlassView style={{ borderRadius: 16 }}>
-            <View style={styles.recordingStatus}>
-              <View
-                style={[
-                  styles.recordingDot,
-                  { backgroundColor: isTracking ? '#22c55e' : '#ef4444' },
-                ]}
-              />
-              <Text style={[styles.recordingText, { color: colors.text }]}>
-                {isTracking ? 'Recording' : 'Not Recording'}
-              </Text>
-              {queuedPointsCount > 0 && (
-                <Text style={[styles.queuedText, { color: colors.icon }]}>
-                  ({queuedPointsCount} queued)
-                </Text>
-              )}
-            </View>
-          </GlassView>
-        </View>
-      )}
+      {/* {activeTrip && (
+        <RecordingIndicator isTracking={isTracking} queuedPointsCount={queuedPointsCount} />
+      )} */}
     </View>
   );
 };
@@ -496,37 +479,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
-  },
-  recordingStatusContainer: {
-    position: 'absolute',
-    bottom: 15,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  recordingStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    // backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
-  },
-  recordingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  recordingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  queuedText: {
-    fontSize: 10,
-    color: '#ffffff',
-    opacity: 0.8,
   },
 });
 

@@ -28,7 +28,7 @@ export default function TripDetailScreen() {
       <Stack.Screen
         options={{
           title,
-          headerBackTitle: 'Trips',
+          headerBackButtonDisplayMode: 'minimal',
         }}
       />
       <View style={styles.container}>

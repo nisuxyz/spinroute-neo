@@ -163,6 +163,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
           <Mapbox.MapView
             style={styles.map}
             styleURL={mapStyle}
+            logoEnabled={false}
+            attributionEnabled={false}
+            compassEnabled={true}
             onDidFinishLoadingMap={handleMapLoaded}
           >
             <Mapbox.Camera ref={cameraRef} />
