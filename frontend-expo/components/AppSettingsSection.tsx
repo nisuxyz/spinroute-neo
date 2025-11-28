@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { Colors } from '@/constants/theme';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useBikes } from '@/hooks/use-bikes';
 import { useRouter } from 'expo-router';
+import { lightenColor } from '@/utils/lighten-color';
 
 export default function AppSettingsSection() {
   const colorScheme = useColorScheme();
@@ -21,42 +22,37 @@ export default function AppSettingsSection() {
   const router = useRouter();
   const { settings, loading, updateSettings } = useUserSettings();
   const { bikes, loading: bikesLoading } = useBikes();
-  const [updating, setUpdating] = useState(false);
 
   const handleUnitsChange = async (value: string) => {
-    setUpdating(true);
     const success = await updateSettings({ units: value });
     if (!success) {
       Alert.alert('Error', 'Failed to update units preference');
     }
-    setUpdating(false);
   };
 
   const getActiveBikeName = () => {
     if (!settings?.active_bike_id) return 'None';
+    if (bikesLoading) return 'Loading...';
     const bike = bikes.find((b) => b.id === settings.active_bike_id);
     return bike?.name || 'None';
   };
 
   const handleStartRecordingToggle = async (value: boolean) => {
-    setUpdating(true);
     const success = await updateSettings({ start_recording_on_launch: value });
     if (!success) {
       Alert.alert('Error', 'Failed to update recording preference');
     }
-    setUpdating(false);
   };
 
   const handleCaptureIntervalChange = async (value: number) => {
-    setUpdating(true);
     const success = await updateSettings({ capture_interval_seconds: value });
     if (!success) {
       Alert.alert('Error', 'Failed to update capture interval');
     }
-    setUpdating(false);
   };
 
-  if (loading || bikesLoading) {
+  // Only show loading on initial load when we have no settings at all
+  if (!settings && loading) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={colors.tint} />
@@ -64,6 +60,7 @@ export default function AppSettingsSection() {
     );
   }
 
+  // Don't render if we still don't have settings after loading
   if (!settings) {
     return null;
   }
@@ -90,7 +87,6 @@ export default function AppSettingsSection() {
                   const index = event.nativeEvent.selectedSegmentIndex;
                   handleUnitsChange(index === 0 ? 'metric' : 'imperial');
                 }}
-                enabled={!updating}
                 style={styles.segmentedControl}
               />
             </View>
@@ -103,7 +99,6 @@ export default function AppSettingsSection() {
                 { borderTopColor: colors.background },
               ]}
               onPress={() => router.push('/bikes')}
-              disabled={updating}
               activeOpacity={0.7}
             >
               <View style={styles.settingInfo}>
@@ -139,8 +134,10 @@ export default function AppSettingsSection() {
               <Switch
                 value={settings.start_recording_on_launch}
                 onValueChange={handleStartRecordingToggle}
-                disabled={updating}
-                trackColor={{ false: colors.icon, true: colors.tint }}
+                trackColor={{
+                  false: colors.icon,
+                  true: lightenColor(colors.buttonBackground, 100),
+                }}
                 thumbColor="#fff"
               />
             </View>
@@ -180,7 +177,6 @@ export default function AppSettingsSection() {
                   const intervals = [1, 5, 10, 30, 60];
                   handleCaptureIntervalChange(intervals[index]);
                 }}
-                enabled={!updating}
                 style={styles.segmentedControlWide}
               />
             </View>
@@ -192,12 +188,8 @@ export default function AppSettingsSection() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
-  },
+  container: {},
+  section: {},
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',

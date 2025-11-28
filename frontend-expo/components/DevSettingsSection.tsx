@@ -39,10 +39,7 @@ export default function DevSettingsSection() {
 }
 
 const styles = StyleSheet.create({
-  section: {
-    padding: 20,
-    gap: 16,
-  },
+  section: {},
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',

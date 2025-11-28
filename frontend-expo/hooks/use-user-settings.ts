@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useAuth } from './use-auth';
 import { supabase } from '@/utils/supabase';
 import type { Database } from '@/supabase/types';
@@ -8,6 +8,35 @@ type UserSettingsUpdate = Database['public']['Tables']['user_settings']['Update'
 
 interface DevSettings {
   useDevUrls: boolean;
+}
+
+interface SettingsState {
+  settings: UserSettings | null;
+  loading: boolean;
+  error: string | null;
+}
+
+// Module-level state for user settings (persists across hook instances)
+let settingsState: SettingsState = {
+  settings: null,
+  loading: false,
+  error: null,
+};
+
+const settingsListeners = new Set<() => void>();
+
+function subscribeToSettings(callback: () => void) {
+  settingsListeners.add(callback);
+  return () => settingsListeners.delete(callback);
+}
+
+function getSettingsSnapshot() {
+  return settingsState;
+}
+
+function updateSettingsState(updates: Partial<SettingsState>) {
+  settingsState = { ...settingsState, ...updates };
+  settingsListeners.forEach((listener) => listener());
 }
 
 // Module-level state for dev settings (persists across hook instances)
@@ -34,16 +63,24 @@ function updateDevSettingsState(updates: Partial<DevSettings>) {
 
 export function useUserSettings() {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const { settings, loading, error } = useSyncExternalStore(
+    subscribeToSettings,
+    getSettingsSnapshot,
+  );
   const devSettings = useSyncExternalStore(subscribeToDevSettings, getDevSettingsSnapshot);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchSettings = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      updateSettingsState({ settings: null, loading: false, error: null });
+      return;
+    }
 
-    setLoading(true);
-    setError(null);
+    // Only fetch if we don't have settings yet or if explicitly requested
+    if (settingsState.settings && settingsState.settings.id === user.id) {
+      return;
+    }
+
+    updateSettingsState({ loading: true, error: null });
 
     try {
       const { data, error: fetchError } = await supabase
@@ -66,29 +103,35 @@ export function useUserSettings() {
             .single();
 
           if (insertError) throw insertError;
-          setSettings(newSettings);
+          updateSettingsState({ settings: newSettings, loading: false });
         } else {
           throw fetchError;
         }
       } else {
-        setSettings(data);
+        updateSettingsState({ settings: data, loading: false });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch settings');
+      updateSettingsState({
+        error: err instanceof Error ? err.message : 'Failed to fetch settings',
+        loading: false,
+      });
       console.error('Error fetching settings:', err);
-    } finally {
-      setLoading(false);
     }
   }, [user]);
 
   const updateSettings = async (updates: UserSettingsUpdate): Promise<boolean> => {
     if (!user) {
-      setError('Not authenticated');
+      updateSettingsState({ error: 'Not authenticated' });
       return false;
     }
 
-    setLoading(true);
-    setError(null);
+    // Optimistic update - don't set loading state to avoid UI flicker
+    updateSettingsState({ error: null });
+
+    // Apply optimistic update immediately
+    if (settings) {
+      updateSettingsState({ settings: { ...settings, ...updates } });
+    }
 
     try {
       const { data, error: updateError } = await supabase
@@ -103,14 +146,17 @@ export function useUserSettings() {
 
       if (updateError) throw updateError;
 
-      setSettings(data);
+      // Update with server response
+      updateSettingsState({ settings: data });
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update settings');
+      updateSettingsState({
+        error: err instanceof Error ? err.message : 'Failed to update settings',
+      });
       console.error('Error updating settings:', err);
+      // Revert optimistic update on error
+      await fetchSettings();
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
