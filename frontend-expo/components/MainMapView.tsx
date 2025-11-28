@@ -17,8 +17,6 @@ import { useUserSettings } from '@/hooks/use-user-settings';
 import { Colors } from '@/constants/theme';
 import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
-import BikeManagementSheet from './BikeManagementSheet';
-import RecordedTripsSheet from './RecordedTripsSheet';
 import LocationCard from './LocationCard';
 import { GlassView } from 'expo-glass-effect';
 
@@ -73,8 +71,6 @@ const MainMapView: React.FC = () => {
   const [is3DMode, setIs3DMode] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
   const [isSearchSheetVisible, setIsSearchSheetVisible] = useState(false);
-  const [isBikeManagementSheetVisible, setIsBikeManagementSheetVisible] = useState(false);
-  const [isRecordedTripsSheetVisible, setIsRecordedTripsSheetVisible] = useState(false);
   const [searchedLocation, setSearchedLocation] = useState<{
     name: string;
     display_name: string;
@@ -207,11 +203,11 @@ const MainMapView: React.FC = () => {
   };
 
   const handleOpenBikeManagement = () => {
-    setIsBikeManagementSheetVisible(true);
+    router.push('/bikes');
   };
 
   const handleOpenRecordedTrips = () => {
-    setIsRecordedTripsSheetVisible(true);
+    router.push('/trips');
   };
 
   const handleStartRecording = async () => {
@@ -391,15 +387,6 @@ const MainMapView: React.FC = () => {
           });
         }}
       />
-      <BikeManagementSheet
-        visible={isBikeManagementSheetVisible}
-        onClose={() => setIsBikeManagementSheetVisible(false)}
-      />
-      <RecordedTripsSheet
-        visible={isRecordedTripsSheetVisible}
-        onClose={() => setIsRecordedTripsSheetVisible(false)}
-      />
-
       {/* Recording Status Indicator */}
       {activeTrip && (
         <View style={styles.recordingStatusContainer}>

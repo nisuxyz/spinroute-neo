@@ -13,15 +13,15 @@ import SegmentedControl from '@react-native-segmented-control/segmented-control'
 import { Colors } from '@/constants/theme';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useBikes } from '@/hooks/use-bikes';
-import BikeManagementSheet from './BikeManagementSheet';
+import { useRouter } from 'expo-router';
 
 export default function AppSettingsSection() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
   const { settings, loading, updateSettings } = useUserSettings();
   const { bikes, loading: bikesLoading } = useBikes();
   const [updating, setUpdating] = useState(false);
-  const [showBikeSheet, setShowBikeSheet] = useState(false);
 
   const handleUnitsChange = async (value: string) => {
     setUpdating(true);
@@ -102,7 +102,7 @@ export default function AppSettingsSection() {
                 styles.settingRowBorder,
                 { borderTopColor: colors.background },
               ]}
-              onPress={() => setShowBikeSheet(true)}
+              onPress={() => router.push('/bikes')}
               disabled={updating}
               activeOpacity={0.7}
             >
@@ -187,8 +187,6 @@ export default function AppSettingsSection() {
           </View>
         </View>
       </View>
-
-      <BikeManagementSheet visible={showBikeSheet} onClose={() => setShowBikeSheet(false)} />
     </>
   );
 }

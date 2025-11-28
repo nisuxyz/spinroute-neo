@@ -1,70 +1,26 @@
-import React, { useRef, useMemo, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Platform, useColorScheme, Text, ActivityIndicator } from 'react-native';
+import React from 'react';
 import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetFlatList,
+  View,
+  Text,
+  StyleSheet,
+  useColorScheme,
+  ActivityIndicator,
   TouchableOpacity,
-} from '@gorhom/bottom-sheet';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+} from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useTrips, type TripWithStats } from '@/hooks/use-trips';
-import { useRouter } from 'expo-router';
+import { FlatList } from 'react-native-gesture-handler';
 
-interface RecordedTripsSheetProps {
-  visible: boolean;
-  onClose: () => void;
-}
-
-const RecordedTripsSheet: React.FC<RecordedTripsSheetProps> = ({ visible, onClose }) => {
+export default function TripsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
   const router = useRouter();
-
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['90%'], []);
 
   const { trips, loading, error, hasMore, loadMore, refresh } = useTrips({
     pageSize: 20,
   });
-
-  useEffect(() => {
-    if (visible) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [visible]);
-
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index === -1) {
-        onClose();
-      }
-    },
-    [onClose],
-  );
-
-  const handleDismiss = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
-
-  const GlassContainer = hasGlassEffect ? GlassView : View;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -104,7 +60,7 @@ const RecordedTripsSheet: React.FC<RecordedTripsSheetProps> = ({ visible, onClos
   };
 
   const handleTripPress = (trip: TripWithStats) => {
-    router.push(`/trip/${trip.id}` as any);
+    router.push(`/trip/${trip.id}`);
   };
 
   const renderTripItem = ({ item }: { item: TripWithStats }) => {
@@ -196,35 +152,16 @@ const RecordedTripsSheet: React.FC<RecordedTripsSheetProps> = ({ visible, onClos
     );
   };
 
-  return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={snapPoints}
-      enableDynamicSizing={false}
-      onChange={handleSheetChanges}
-      onDismiss={handleDismiss}
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      backgroundStyle={[
-        styles.sheetBackground,
-        hasGlassEffect
-          ? { backgroundColor: 'transparent' }
-          : { backgroundColor: colors.buttonBackground },
-      ]}
-      handleIndicatorStyle={{ backgroundColor: colors.text + '40' }}
-    >
-      <GlassContainer
-        style={styles.glassSheet}
-        {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
-      >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Recorded Trips</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <MaterialIcons name="close" size={28} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        {error ? (
+  if (error) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: 'Recorded Trips',
+            // headerBackTitle: 'Back',
+          }}
+        />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
           <View style={styles.errorContainer}>
             <MaterialIcons name="error-outline" size={48} color={colors.stationNoDocks} />
             <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
@@ -235,70 +172,54 @@ const RecordedTripsSheet: React.FC<RecordedTripsSheetProps> = ({ visible, onClos
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <BottomSheetFlatList
-            data={trips}
-            renderItem={renderTripItem}
-            keyExtractor={(item: TripWithStats) => item.id}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={renderEmpty}
-            ListFooterComponent={renderFooter}
-            onEndReached={() => {
-              if (hasMore && !loading) {
-                loadMore();
-              }
-            }}
-            onEndReachedThreshold={0.5}
-            refreshing={loading && trips.length === 0}
-            onRefresh={refresh}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </GlassContainer>
-    </BottomSheetModal>
+        </View>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          title: 'Recorded Trips',
+          // headerBackTitle: 'Back',
+        }}
+      />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FlatList
+          data={trips}
+          renderItem={renderTripItem}
+          keyExtractor={(item: TripWithStats) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={() => {
+            if (hasMore && !loading) {
+              loadMore();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          refreshing={loading && trips.length === 0}
+          onRefresh={refresh}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+    </>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  sheetBackground: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  glassSheet: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 12,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
+  container: {
     flex: 1,
   },
   listContent: {
+    padding: 16,
     paddingBottom: 32,
   },
   tripCard: {
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    marginHorizontal: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -399,5 +320,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-
-export default RecordedTripsSheet;

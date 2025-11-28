@@ -1,29 +1,20 @@
-import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  Platform,
   useColorScheme,
   Text,
   TextInput,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetScrollView,
-  TouchableOpacity,
-} from '@gorhom/bottom-sheet';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { Stack } from 'expo-router';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
-
-interface BikeManagementSheetProps {
-  visible: boolean;
-  onClose: () => void;
-}
+import { useUserSettings } from '@/hooks/use-user-settings';
 
 const BIKE_TYPES: { value: BikeType; label: string; icon: string }[] = [
   { value: 'road', label: 'Road', icon: 'directions-bike' },
@@ -34,51 +25,11 @@ const BIKE_TYPES: { value: BikeType; label: string; icon: string }[] = [
   { value: 'other', label: 'Other', icon: 'two-wheeler' },
 ];
 
-import { useUserSettings } from '@/hooks/use-user-settings';
-
-const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onClose }) => {
+export default function BikesScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
   const { bikes, loading, error, createBike, updateBike, deleteBike } = useBikes();
   const { settings, updateSettings, refetch: refetchSettings } = useUserSettings();
-
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['90%'], []);
-
-  useEffect(() => {
-    if (visible) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [visible]);
-
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index === -1) {
-        onClose();
-      }
-    },
-    [onClose],
-  );
-
-  const handleDismiss = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingBike, setEditingBike] = useState<string | null>(null);
@@ -89,8 +40,6 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
     model: '',
     initial_mileage: '',
   });
-
-  const GlassContainer = hasGlassEffect ? GlassView : View;
 
   const handleAddBike = async () => {
     if (!formData.name.trim()) {
@@ -126,7 +75,7 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
       type: bike.type,
       brand: bike.brand || '',
       model: bike.model || '',
-      initial_mileage: '', // Don't show mileage in edit form
+      initial_mileage: '',
     });
     setShowAddForm(false);
   };
@@ -178,7 +127,6 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
         onPress: async () => {
           const success = await deleteBike(id);
           if (success) {
-            // Refetch settings in case the deleted bike was active
             await refetchSettings();
           }
         },
@@ -206,38 +154,15 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
   };
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={snapPoints}
-      enableDynamicSizing={false}
-      onChange={handleSheetChanges}
-      onDismiss={handleDismiss}
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      backgroundStyle={[
-        styles.sheetBackground,
-        hasGlassEffect
-          ? { backgroundColor: 'transparent' }
-          : { backgroundColor: colors.buttonBackground },
-      ]}
-      handleIndicatorStyle={{ backgroundColor: colors.text + '40' }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      enableBlurKeyboardOnGesture
-    >
-      <GlassContainer
-        style={styles.glassSheet}
-        {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
-      >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>My Bikes</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <MaterialIcons name="close" size={28} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        <BottomSheetScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+    <>
+      <Stack.Screen
+        options={{
+          title: 'My Bikes',
+          // headerBackTitle: 'Back',
+        }}
+      />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {error && (
             <View style={[styles.errorBanner, { backgroundColor: '#ef4444' }]}>
               <Text style={styles.errorText}>{error}</Text>
@@ -447,48 +372,19 @@ const BikeManagementSheet: React.FC<BikeManagementSheetProps> = ({ visible, onCl
               );
             })
           )}
-        </BottomSheetScrollView>
-      </GlassContainer>
-    </BottomSheetModal>
+        </ScrollView>
+      </View>
+    </>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  sheetBackground: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  glassSheet: {
+  container: {
     flex: 1,
-    padding: 20,
-    paddingTop: 12,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,
-  },
-  placeholder: {
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
+    padding: 16,
   },
   errorBanner: {
     padding: 12,
@@ -674,5 +570,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-export default BikeManagementSheet;

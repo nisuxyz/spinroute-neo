@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     bottom: 60,
     left: 16,
     right: 16,
-    zIndex: 900,
+    zIndex: 1,
   },
   glassButton: {
     flexDirection: 'row',

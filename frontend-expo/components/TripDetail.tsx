@@ -15,10 +15,9 @@ import Mapbox from '@rnmapbox/maps';
 
 interface TripDetailProps {
   tripId: string;
-  onBack?: () => void;
 }
 
-const TripDetail: React.FC<TripDetailProps> = ({ tripId, onBack }) => {
+const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { trip, tripPoints, routeGeoJSON, loading, error, refresh } = useTripDetail(tripId);
@@ -113,12 +112,6 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId, onBack }) => {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
     >
-      {onBack && (
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <MaterialIcons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      )}
-
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
           {trip.title || `Trip on ${formatDate(trip.started_at)}`}
@@ -279,12 +272,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    marginBottom: 16,
   },
   header: {
     marginBottom: 16,
