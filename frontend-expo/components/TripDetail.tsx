@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useTripDetail } from '@/hooks/use-trip-detail';
+import { useUserSettings } from '@/hooks/use-user-settings';
 import Mapbox from '@rnmapbox/maps';
 
 interface TripDetailProps {
@@ -20,7 +21,45 @@ interface TripDetailProps {
 const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { trip, tripPoints, routeGeoJSON, loading, error, refresh } = useTripDetail(tripId);
+  const { trip, routeGeoJSON, loading, error, refresh } = useTripDetail(tripId);
+  const { settings } = useUserSettings();
+  const cameraRef = useRef<Mapbox.Camera>(null);
+  const mapStyle = settings?.map_style || 'mapbox://styles/mapbox/standard';
+
+  // Calculate bounds for the route - MUST be before any conditional returns
+  const routeBounds = React.useMemo(() => {
+    if (!routeGeoJSON || routeGeoJSON.geometry.coordinates.length === 0) {
+      return null;
+    }
+
+    const coords = routeGeoJSON.geometry.coordinates;
+    const lngs = coords.map((c) => c[0]);
+    const lats = coords.map((c) => c[1]);
+
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+
+    return {
+      ne: [maxLng, maxLat] as [number, number],
+      sw: [minLng, minLat] as [number, number],
+      paddingTop: 40,
+      paddingBottom: 40,
+      paddingLeft: 40,
+      paddingRight: 40,
+    };
+  }, [routeGeoJSON]);
+
+  // Handler for when map finishes loading
+  const handleMapLoaded = React.useCallback(() => {
+    if (routeBounds && cameraRef.current) {
+      // Use a small delay to ensure the camera ref is ready
+      setTimeout(() => {
+        cameraRef.current?.fitBounds(routeBounds.ne, routeBounds.sw, [40, 40, 40, 40], 500);
+      }, 100);
+    }
+  }, [routeBounds]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -96,17 +135,6 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
   const basicStats = trip.trip_basic_stats;
   const advancedStats = trip.trip_advanced_stats;
 
-  // Calculate map center from route points
-  const mapCenter =
-    routeGeoJSON && routeGeoJSON.geometry.coordinates.length > 0
-      ? [
-          routeGeoJSON.geometry.coordinates.reduce((sum, coord) => sum + coord[0], 0) /
-            routeGeoJSON.geometry.coordinates.length,
-          routeGeoJSON.geometry.coordinates.reduce((sum, coord) => sum + coord[1], 0) /
-            routeGeoJSON.geometry.coordinates.length,
-        ]
-      : undefined;
-
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -130,10 +158,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
         </View>
       )}
 
-      {routeGeoJSON && mapCenter && (
+      {routeGeoJSON && routeBounds && (
         <View style={styles.mapContainer}>
-          <Mapbox.MapView style={styles.map} styleURL={Mapbox.StyleURL.Street}>
-            <Mapbox.Camera zoomLevel={13} centerCoordinate={mapCenter} />
+          <Mapbox.MapView
+            style={styles.map}
+            styleURL={mapStyle}
+            onDidFinishLoadingMap={handleMapLoaded}
+          >
+            <Mapbox.Camera ref={cameraRef} />
 
             {/* Route line */}
             <Mapbox.ShapeSource id="routeSource" shape={routeGeoJSON}>
