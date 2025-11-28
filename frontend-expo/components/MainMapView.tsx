@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, useColorScheme, Alert } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import MapActionButtons from './MapActionButtons';
 import StationCallout from './StationCallout';
@@ -14,11 +15,13 @@ import { useStationVisibility } from '@/hooks/use-station-visibility';
 import { useTripRecording } from '@/hooks/use-trip-recording';
 import { useLocationTracking } from '@/hooks/use-location-tracking';
 import { useUserSettings } from '@/hooks/use-user-settings';
+import { useBikes } from '@/hooks/use-bikes';
 import { Colors } from '@/constants/theme';
 import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
 import LocationCard from './LocationCard';
 import MapStylePicker from './MapStylePicker';
+import ActiveBikeIndicator from './ActiveBikeIndicator';
 import { GlassView } from 'expo-glass-effect';
 
 // Feature flags
@@ -95,6 +98,17 @@ const MainMapView: React.FC = () => {
   const { settings, updateSettings } = useUserSettings();
   const captureInterval = settings?.capture_interval_seconds || 5;
   const mapStyle = settings?.map_style || 'mapbox://styles/mapbox/standard';
+
+  // Get bikes and find active bike
+  const { bikes, fetchBikes } = useBikes();
+  const activeBike = bikes.find((bike) => bike.id === settings?.active_bike_id);
+
+  // Refetch bikes when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchBikes();
+    }, [fetchBikes]),
+  );
 
   // Location tracking hook - auto-starts when activeTrip exists
   const {
@@ -266,6 +280,7 @@ const MainMapView: React.FC = () => {
         onPress={handleMapPress}
         compassEnabled={true}
         compassPosition={{ right: 14, top: 2 }}
+        scaleBarPosition={{ left: 20, top: 8 }}
         logoPosition={{ left: 20, bottom: -16 }}
         attributionPosition={{ right: 12, bottom: -16 }}
       >
@@ -410,6 +425,9 @@ const MainMapView: React.FC = () => {
         onClose={() => setIsMapStylePickerVisible(false)}
         onSelectStyle={handleSelectMapStyle}
       />
+
+      {/* Active Bike Indicator */}
+      {activeBike && <ActiveBikeIndicator bike={activeBike} />}
 
       {/* Recording Status Indicator */}
       {activeTrip && (
