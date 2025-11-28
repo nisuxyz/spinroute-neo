@@ -1,16 +1,10 @@
 interface Config {
   port: number;
   environment: string;
-  database: {
+  supabase: {
     url: string;
-  };
-  auth: {
-    secret: string;
-    url: string;
-    tokenExpiry: string;
-  };
-  cors: {
-    origins: string[];
+    anonKey: string;
+    serviceRoleKey: string;
   };
 }
 
@@ -18,16 +12,10 @@ function getConfig(): Config {
   return {
     port: parseInt(process.env.PORT || '3000'),
     environment: process.env.NODE_ENV || 'development',
-    database: {
-      url: process.env.DATABASE_URL || './pglite',
-    },
-    auth: {
-      secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
-      url: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
-      tokenExpiry: process.env.AUTH_TOKEN_EXPIRY || '7d',
-    },
-    cors: {
-      origins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    supabase: {
+      url: process.env.SUPABASE_URL || '',
+      anonKey: process.env.SUPABASE_ANON_KEY || '',
+      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     },
   };
 }

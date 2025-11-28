@@ -1,45 +1,10 @@
----
-
-# Auth Service - Bun + Hono + Drizzle + Better Auth + PostgreSQL
+# Service Template - Bun + Hono + Supabase
 
 Default to using Bun instead of Node.js for this microservice.
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`
 - Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <### 4. **Configuration Management**
-- Environment-based configuration
-- Kubernetes ConfigMaps and Secrets
-- Production-ready Docker images
-
-## Development Workflow
-
-### Daily Development
-```bash
-# Start everything
-bun run compose:up
-
-# Make code changes (hot reload enabled)
-# Database changes
-bun run drizzle:push
-
-# View logs
-bun run compose:logs
-
-# Stop when done
-bun run compose:down
-```
-
-### Production Deployment
-```bash
-# Build production image
-bun run container:build:prod
-
-# Deploy with Helm
-helm install spinroute-auth-service ./helm
-
-# Or with kubectl
-kubectl apply -f k8s/
-```.html|file.ts|file.css>` instead of `webpack` or `esbuild`
+- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
 - Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
 - Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
 - Bun automatically loads .env, so don't use dotenv.
@@ -56,122 +21,73 @@ bun run start:dev
 # Production server
 bun run start
 
-# Database operations
-bun run drizzle:generate
-bun run drizzle:migrate
-bun run drizzle:push
-bun run drizzle:studio
-
-# Docker Compose development
+# Container development
+bun run container:build:dev
 bun run compose:up
 bun run compose:down
 bun run compose:logs
-
-# Container development
-bun run container:build
-bun run container:dev
-
-# Kubernetes deployment with Kustomize
-bun run kustomize:build:dev     # Build dev manifests
-bun run kustomize:build:prod    # Build prod manifests
-bun run kustomize:deploy:dev    # Deploy to dev
-bun run kustomize:deploy:prod   # Deploy to prod
-
-# Helm deployment
-bun run helm:lint
-bun run helm:install
-bun run helm:upgrade
 ```
 
 ## Tech Stack
 
 - **Framework**: Hono (lightweight web framework)
-- **Auth**: Better Auth with OpenAPI plugin
-- **Database**: PostgreSQL with Bun's built-in SQL connector
-- **ORM**: Drizzle ORM
+- **Auth**: Supabase Auth
+- **Database**: Supabase (PostgreSQL)
 - **Runtime**: Bun
 
 ## APIs
 
 - Use `Hono` instead of `express` for web framework
-- Use `better-auth` for authentication with Drizzle adapter
-- Use `drizzle-orm/bun-sql` with Bun's native PostgreSQL support
-- Use `Bun.sql` for the database engine (built-in PostgreSQL connector)
+- Use `@supabase/supabase-js` for database and authentication
+- Use `@supabase/ssr` for server-side rendering support
 - `WebSocket` is built-in in Bun. Don't use `ws`.
 - Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+- Use `Bun.spawn` instead of execa.
 
 ## Database Schema
 
-Using Drizzle ORM with PostgreSQL for the auth service. Main tables:
+Using Supabase with SQL migrations. Migrations are stored in `supabase/migrations/`.
 
-```ts#lib/db/auth-schema.ts
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
-
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").notNull().$defaultFn(() => false),
-  image: text("image"),
-  createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-  updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
-});
-
-export const session = pgTable("session", {
-  id: text("id").primaryKey(),
-  expiresAt: timestamp("expires_at").notNull(),
-  token: text("token").notNull().unique(),
-  userId: text("user_id").notNull().references(() => user.id),
-  // ...other fields
-});
+Generate TypeScript types:
+```bash
+supabase gen types typescript --project-id <id> --schema <schema> > lib/db.types.ts
 ```
 
 ## Database Connection
 
-Using Bun's native PostgreSQL connector with Drizzle:
+Using Supabase client:
 
-```ts#lib/drizzle.ts
-import { drizzle } from 'drizzle-orm/bun-sql';
-import { SQL } from 'bun';
+```ts#lib/db.ts
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from './db.types';
 
-const sql = new SQL(process.env.DATABASE_URL!);
-export const db = drizzle({ client: sql });
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 ```
-
-### PostgreSQL Benefits for Microservices
-- **Multi-Replica Support**: Perfect for horizontal scaling with multiple auth service replicas
-- **ACID Transactions**: Full consistency for authentication operations
-- **Concurrent Access**: Excellent performance with multiple readers/writers
-- **Production Ready**: Battle-tested for high-load production environments
-- **Connection Pooling**: Built-in support for efficient connection management
-- **Data Consistency**: Shared state across all service replicas
-
-### Production Considerations
-- **High Availability**: Use PostgreSQL clustering or cloud managed services
-- **Backup Strategy**: Regular automated backups with point-in-time recovery
-- **Connection Limits**: Monitor and configure appropriate connection pools
-- **Performance**: Optimize queries and use appropriate indexes
 
 ## Authentication Setup
 
-Using Better Auth with Drizzle adapter for PostgreSQL:
+Using Supabase Auth with middleware:
 
 ```ts#lib/auth.ts
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { openAPI } from "better-auth/plugins";
-import { db } from "~lib/drizzle";
-import { user, session, account, verification } from "./db/schema";
+import { createServerClient } from '@supabase/ssr';
+import { supabaseMiddleware, authMiddleware, requireAuth } from 'shared-utils';
 
-export const auth = betterAuth({
-  plugins: [openAPI()],
-  database: drizzleAdapter(db, { 
-    provider: "pg",
-    schema: { user, session, account, verification }
-  }),
-  emailAndPassword: { enabled: true },
-});
+// Apply globally
+app.use('*', supabaseMiddleware());
+
+// Optional: extract user/session
+app.use('*', authMiddleware);
+
+// Require authentication
+app.use('/protected/*', requireAuth());
 ```
 
 ## Server Setup
@@ -179,21 +95,26 @@ export const auth = betterAuth({
 Using Hono with auto-route discovery:
 
 ```ts#src/index.ts
-import { Hono } from 'hono'
+import { Hono } from 'hono';
 import { showRoutes } from 'hono/dev';
-import { Glob } from "bun";
-import { auth } from '../lib/auth';
+import { Glob } from 'bun';
+import { supabaseMiddleware } from '../lib/auth';
+import { healthRouter } from './health';
 
-const app = new Hono()
+const app = new Hono();
 
-app.get('/', (c) => c.text('hello auth-service'))
-  .get('/health', (c) => c.json({ status: 'ok' }))
-  .on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+// Apply Supabase middleware globally
+app.use('*', supabaseMiddleware());
 
-// Auto-import routes from feature/**/+routes.*.ts
+// Health check routes
+app.route('/', healthRouter);
+
+// Auto-import routes from **/+routes.*.ts
 async function loadRoutes() {
-  const glob = new Glob('./feature/**/+routes.*.ts');
-  for await (const file of glob.scan(".")) {
+  const glob = new Glob('./**/+routes.*.ts');
+  const files = glob.scanSync('./src');
+
+  for (const file of files) {
     const module = await import(file);
     if (module.router && module.basePath) {
       app.route(module.basePath, module.router);
@@ -203,6 +124,12 @@ async function loadRoutes() {
 
 await loadRoutes();
 showRoutes(app);
+
+export default {
+  port: 3000,
+  hostname: '0.0.0.0',
+  fetch: app.fetch,
+};
 ```
 
 ## Testing
@@ -212,7 +139,7 @@ Use `bun test` to run tests.
 ```ts#index.test.ts
 import { test, expect } from "bun:test";
 
-test("auth service health", async () => {
+test("service health", async () => {
   const response = await fetch("http://localhost:3000/health");
   expect(response.status).toBe(200);
   const data = await response.json();
@@ -220,12 +147,11 @@ test("auth service health", async () => {
 });
 ```
 
-## Docker Development
+## Container Development
 
-The service includes Docker setup for containerized development:
+The service includes container setup for development:
 
-```dockerfile#Dockerfile.dev
-# Uses Bun's official Docker image
+```dockerfile#Containerfile.dev
 FROM oven/bun:1 as base
 WORKDIR /app
 COPY package.json bun.lockb ./
@@ -237,8 +163,8 @@ CMD ["bun", "run", "start:dev"]
 
 Build and run:
 ```bash
-bun run container:build
-bun run container:dev
+bun run container:build:dev
+bun run compose:up
 ```
 
 ## Environment Variables
@@ -246,131 +172,97 @@ bun run container:dev
 Required environment variables:
 
 ```env
-# Database (PostgreSQL connection string)
-DATABASE_URL=postgresql://userlocaldevpasswordpostgres-service:5432/auth_db
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# Auth
-BETTER_AUTH_SECRET=your_production_secret
-BETTER_AUTH_URL=http://auth-service:3000
-
-# Service Communication (for microservice security)
-API_GATEWAY_SECRET=shared_secret_with_gateway
-INTERNAL_SERVICE_SECRET=shared_secret_for_services
-
-# CORS
-CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
+# Server
+PORT=3000
+NODE_ENV=development
 ```
 
 ## API Endpoints
 
 ### Public Endpoints
-- `GET /` - Service welcome message
-- `GET /health` - Health check endpoint (for K8s liveness probe)
-- `GET /ready` - Readiness check (for K8s readiness probe)
+- `GET /health` - Health check endpoint
+- `GET /ready` - Readiness check (includes database connectivity)
 - `GET /live` - Liveness check
-- `POST|GET /api/auth/**` - Better Auth endpoints (sign-up, sign-in, etc.)
-
-### Internal Service Endpoints (require service auth)
-- `POST /api/internal/validate` - Validate JWT token (used by API gateway)
-- `GET /api/internal/user` - Get user info from token (for service-to-service)
+- `GET /api/hello` - Example endpoint
 
 ### Auto-discovered Routes
-- Routes from `src/feature/**/+routes.*.ts`
+- Routes from `src/**/+routes.api.ts` - Public API routes
+- Routes from `src/**/+routes.internal.ts` - Internal routes
 
-## Microservice Architecture Setup
+## Routing Convention
 
-This auth service is designed for a microservice architecture with:
+Services use a **SvelteKit-inspired file-based routing** with `+` prefix:
 
-### 1. **API Gateway Integration**
-- Gateway validates requests using `/api/internal/validate` endpoint
-- Uses `x-gateway-auth` header for service authentication
-- Other services trust requests from gateway
+- `+routes.api.ts`: Public API routes (exposed externally)
+- `+routes.internal.ts`: Internal service routes
+- Routes are auto-discovered and registered via Bun's Glob API
+- Each route file exports `router` (Hono instance) and `basePath` (string)
 
-### 2. **Service-to-Service Communication**
-- Internal endpoints protected with `x-service-auth` header
-- Rate limiting and validation middleware
-- JWT token validation for service requests
+Example:
+```typescript
+// src/feature/+routes.api.ts
+import { Hono } from 'hono';
+import { requireAuth } from '../../lib/auth';
 
-### 3. **Kubernetes Deployment Options**
+export const basePath = '/api/feature';
+export const router = new Hono();
 
-#### Kustomize (Recommended)
-```bash
-# Development deployment (1 replica + embedded postgres)
-kubectl apply -k kustomize/overlays/dev
+// Public endpoint
+router.get('/public', (c) => c.json({ data: 'value' }));
 
-# Production deployment (3 replicas + external postgres)
-kubectl apply -k kustomize/overlays/prod
-
-# Preview changes
-kubectl kustomize kustomize/overlays/dev
+// Protected endpoint
+router.get('/protected', requireAuth(), (c) => {
+  const user = c.get('user');
+  return c.json({ userId: user?.id });
+});
 ```
 
-#### Helm Charts
-```bash
-# Deploy with Helm
-helm install auth-service ./helm
+## Health Checks
 
-# Production values
-helm install auth-service ./helm -f values-prod.yaml
-```
+The service includes three health check endpoints:
 
-### 4. **Health Checks**
 - `/health` - Basic service health
 - `/ready` - Database connectivity check
 - `/live` - Service liveness
-- Configured for Kubernetes probes
 
-### 5. **Configuration Management**
-- Environment-based configuration
-- Kubernetes ConfigMaps and Secrets
-- Production-ready Docker images
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.md`.
+These are configured for container orchestration (Kubernetes, Docker Compose).
 
 ## Local Development Setup
 
 ### Using Docker Compose (Recommended)
 
-The easiest way to get started is with Docker Compose, which includes PostgreSQL:
-
 ```bash
-# Start all services (auth-service + PostgreSQL)
+# Start service
 bun run compose:up
 
 # View logs
 bun run compose:logs
 
-# Stop services
+# Stop service
 bun run compose:down
 ```
 
-Your compose setup includes:
-- `spinroute-auth-service` - The auth service container
-- `db` - PostgreSQL 16 container with persistent storage
-- Automatic dependency management and health checks
+### Using Local Bun
 
-### Using Local PostgreSQL
+1. Copy `.env.example` to `.env` and configure Supabase credentials
+2. Start dev server: `bun run start:dev:hot`
 
-If you prefer to run PostgreSQL locally:
+## Supabase Migrations
 
-1. Install and start PostgreSQL
-2. Create database: `createdb auth_db`
-3. Update `.env` with your local connection string
-4. Run migrations: `bun run drizzle:push`
-5. Start dev server: `bun run start:dev:hot`
-
-### Database Migrations
+Create and apply migrations using Supabase CLI or MCP tools:
 
 ```bash
-# Generate migration from schema changes
-bun run drizzle:generate
+# Using Supabase CLI
+supabase migration new <migration_name>
+supabase db push
 
-# Apply migrations
-bun run drizzle:migrate
-
-# Push schema directly (development)
-bun run drizzle:push
-
-# Open Drizzle Studio
-bun run drizzle:studio
+# Generate types after schema changes
+supabase gen types typescript --project-id <id> --schema <schema> > lib/db.types.ts
 ```
+
+For more information, read the Bun API docs in `node_modules/bun-types/docs/**.md`.
