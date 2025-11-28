@@ -7,7 +7,7 @@ SpinRoute Neo is a mobility platform for tracking and routing bikeshare and micr
 - **Mobile App**: React Native/Expo app with map-based interface for finding bikeshare stations
 - **Web Frontend**: Astro-based web application
 - **API Gateway**: Central backend service for authentication and request routing
-- **Microservices**: Specialized services for bikeshare data, ride recording, safety/location sharing, routing, and vehicle management
+- **Microservices**: Specialized services for bikeshare data, ride recording, safety/location sharing, and routing
 - **Real-time Data**: Go-based GBFS service consuming CityBikes WebSocket for live station updates
 
 ## Key Features

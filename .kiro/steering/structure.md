@@ -72,9 +72,10 @@ services/<service-name>/
 - **gbfs**: Go-based real-time GBFS data consumer (WebSocket)
 - **recording**: Ride/trip recording and activity tracking (Strava-like)
 - **safety**: Live location sharing, crash detection, and emergency alerts
-- **vehicle**: Vehicle management
 - **routing**: Route calculation
 - **service-template**: Template for creating new services
+
+Note: Vehicle/bike management is handled directly in the frontend via Supabase RLS policies on the `vehicles` schema.
 
 ## Frontend Expo (Mobile)
 

@@ -105,3 +105,9 @@ supabase gen types typescript --project-id <id> --schema <schema> > lib/db.types
 - **Line Width**: 100 characters
 - **Quotes**: Single quotes for JavaScript/TypeScript
 - **Formatting**: Automated via Biome, enforced by Husky pre-commit hooks
+
+## **Important Notes**
+
+- You have to update the types with the supabase cli since we have multiple schemas: `supabase gen types typescript --project-id ftvjoeosbmwedpeekupl --schema=public,bikeshare,vehicles,recording`.
+- Make sure you comprehensively explore and understand the repo and database structure before you start.
+- Always use the supabse mcp tools to run migrations, verify schemas, or any other supabase operations besides generating types, which we need to use the cli command for.
