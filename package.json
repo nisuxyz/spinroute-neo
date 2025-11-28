@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "format": "biome format --write",
-    "prepare": "husky"
+    "prepare": "husky",
+    "deploy:vehicles-service": "fly deploy -c services/vehicles/fly.toml"
   },
   "workspaces": {
     "packages": [
