@@ -134,6 +134,8 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
         <View style={styles.mapContainer}>
           <Mapbox.MapView style={styles.map} styleURL={Mapbox.StyleURL.Street}>
             <Mapbox.Camera zoomLevel={13} centerCoordinate={mapCenter} />
+
+            {/* Route line */}
             <Mapbox.ShapeSource id="routeSource" shape={routeGeoJSON}>
               <Mapbox.LineLayer
                 id="routeLine"
@@ -145,6 +147,40 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
                 }}
               />
             </Mapbox.ShapeSource>
+
+            {/* Start point marker */}
+            {routeGeoJSON.geometry.coordinates.length > 0 && (
+              <Mapbox.PointAnnotation
+                id="startPoint"
+                coordinate={[
+                  routeGeoJSON.geometry.coordinates[0][0],
+                  routeGeoJSON.geometry.coordinates[0][1],
+                ]}
+              >
+                <View style={styles.startMarker}>
+                  <MaterialIcons name="play-arrow" size={20} color="#fff" />
+                </View>
+              </Mapbox.PointAnnotation>
+            )}
+
+            {/* End point marker */}
+            {routeGeoJSON.geometry.coordinates.length > 1 && (
+              <Mapbox.PointAnnotation
+                id="endPoint"
+                coordinate={[
+                  routeGeoJSON.geometry.coordinates[
+                    routeGeoJSON.geometry.coordinates.length - 1
+                  ][0],
+                  routeGeoJSON.geometry.coordinates[
+                    routeGeoJSON.geometry.coordinates.length - 1
+                  ][1],
+                ]}
+              >
+                <View style={styles.endMarker}>
+                  <MaterialIcons name="flag" size={20} color="#fff" />
+                </View>
+              </Mapbox.PointAnnotation>
+            )}
           </Mapbox.MapView>
         </View>
       )}
@@ -306,6 +342,36 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  startMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#22c55e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  endMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ef4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   statsCard: {
     borderRadius: 12,

@@ -390,6 +390,23 @@ export type Database = {
     };
     Functions: {
       debug_whoami: { Args: never; Returns: Json };
+      get_trip_points: {
+        Args: { p_trip_id: string };
+        Returns: {
+          accuracy_m: number;
+          altitude_m: number;
+          cadence_rpm: number;
+          created_at: string;
+          heart_rate_bpm: number;
+          id: string;
+          latitude: number;
+          longitude: number;
+          power_watts: number;
+          recorded_at: string;
+          speed_kmh: number;
+          trip_id: string;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;

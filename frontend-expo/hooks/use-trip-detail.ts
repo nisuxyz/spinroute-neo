@@ -84,39 +84,39 @@ export function useTripDetail(tripId: string): UseTripDetailReturn {
 
       setTrip(tripDetail);
 
-      // Fetch trip points for route visualization
-      const { data: pointsData, error: pointsError } = await supabase
-        .schema('recording')
-        .from('trip_points')
-        .select('*')
-        .eq('trip_id', tripId)
-        .order('recorded_at', { ascending: true });
+      // Fetch trip points with coordinates extracted using PostGIS
+      const { data: pointsData, error: pointsError } = await supabase.rpc('get_trip_points', {
+        p_trip_id: tripId,
+      });
 
-      if (pointsError) throw pointsError;
+      if (pointsError) {
+        console.error('Error fetching trip points:', pointsError);
+        throw pointsError;
+      }
 
       setTripPoints(pointsData || []);
 
       // Generate GeoJSON LineString from points
       if (pointsData && pointsData.length > 0) {
         const coordinates: Array<[number, number] | [number, number, number]> = pointsData
-          .map((point) => {
-            // Parse PostGIS geography point format
-            // Format: POINT(longitude latitude)
-            const locationStr = point.location as unknown as string;
-            if (typeof locationStr === 'string') {
-              const match = locationStr.match(/POINT\(([^ ]+) ([^ ]+)\)/);
-              if (match) {
-                const lng = parseFloat(match[1]);
-                const lat = parseFloat(match[2]);
-                if (point.altitude_m !== null && point.altitude_m !== undefined) {
-                  return [lng, lat, point.altitude_m] as [number, number, number];
-                }
-                return [lng, lat] as [number, number];
+          .map((point: any) => {
+            const lng = point.longitude;
+            const lat = point.latitude;
+            const alt = point.altitude_m;
+
+            if (typeof lng === 'number' && typeof lat === 'number') {
+              if (alt !== null && alt !== undefined) {
+                return [lng, lat, alt] as [number, number, number];
               }
+              return [lng, lat] as [number, number];
             }
             return null;
           })
-          .filter((coord): coord is [number, number] | [number, number, number] => coord !== null);
+          .filter(
+            (
+              coord: [number, number] | [number, number, number] | null,
+            ): coord is [number, number] | [number, number, number] => coord !== null,
+          );
 
         if (coordinates.length > 0) {
           const geoJSON: RouteFeature = {
