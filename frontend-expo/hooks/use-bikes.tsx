@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './use-auth';
-import { useEnv } from './use-env';
-import { useUserSettings } from './use-user-settings';
+import { useSupabase } from './use-supabase';
 import type { Database } from '../supabase/types';
 
 export type BikeType = Database['vehicles']['Enums']['bike_type'];
@@ -27,51 +25,55 @@ export interface UpdateBikeInput {
   metadata?: any;
 }
 
+const KM_TO_MI = 0.621371;
+const MI_TO_KM = 1.60934;
+
+function convertKmToMi(km: number): number {
+  return km * KM_TO_MI;
+}
+
+function convertMiToKm(mi: number): number {
+  return mi * MI_TO_KM;
+}
+
 export function useBikes() {
-  const { session } = useAuth();
-  const { settings } = useUserSettings();
-  const env = useEnv(settings?.useDevUrls);
+  const supabase = useSupabase();
   const [bikes, setBikes] = useState<Bike[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const VEHICLE_SERVICE_URL = env.VEHICLES_SERVICE;
-
-  console.log('useBikes - useDevUrls:', settings?.useDevUrls);
-  console.log('useBikes - env:', env);
-  console.log('useBikes - VEHICLE_SERVICE_URL:', VEHICLE_SERVICE_URL);
-
   const fetchBikes = useCallback(async () => {
-    if (!session || !VEHICLE_SERVICE_URL) return;
+    if (!supabase) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      console.log('Fetching bikes from:', VEHICLE_SERVICE_URL);
-      const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes?unit=mi`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const { data, error: fetchError } = await supabase
+        .schema('vehicles')
+        .from('user_bike')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (!response.ok) {
-        console.log('Response status:', response.status, response.statusText, response);
-        throw new Error('Failed to fetch bikes');
-      }
+      if (fetchError) throw fetchError;
 
-      const data = await response.json();
-      setBikes(data);
+      // Convert km to miles for display
+      const bikesWithMiles = (data || []).map((bike) => ({
+        ...bike,
+        total_kilometrage: convertKmToMi(bike.total_kilometrage),
+      }));
+
+      setBikes(bikesWithMiles);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch bikes');
       console.error('Error fetching bikes:', err);
     } finally {
       setLoading(false);
     }
-  }, [session, VEHICLE_SERVICE_URL]);
+  }, [supabase]);
 
   const createBike = async (input: CreateBikeInput): Promise<Bike | null> => {
-    if (!session || !VEHICLE_SERVICE_URL) {
+    if (!supabase) {
       setError('Not authenticated');
       return null;
     }
@@ -80,24 +82,39 @@ export function useBikes() {
     setError(null);
 
     try {
-      console.log('Creating bike at:', VEHICLE_SERVICE_URL);
-      const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(input),
-      });
+      const unit = input.unit || 'km';
+      const initialKm =
+        input.initial_kilometrage !== undefined
+          ? unit === 'mi'
+            ? convertMiToKm(input.initial_kilometrage)
+            : input.initial_kilometrage
+          : 0;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create bike');
-      }
+      const { data, error: insertError } = await supabase
+        .schema('vehicles')
+        .from('user_bike')
+        .insert({
+          name: input.name,
+          type: input.type,
+          brand: input.brand || null,
+          model: input.model || null,
+          purchase_date: input.purchase_date || null,
+          total_kilometrage: initialKm,
+          metadata: input.metadata || null,
+        })
+        .select()
+        .single();
 
-      const bike = await response.json();
-      setBikes((prev) => [bike, ...prev]);
-      return bike;
+      if (insertError) throw insertError;
+
+      // Convert km to miles for display
+      const bikeWithMiles = {
+        ...data,
+        total_kilometrage: convertKmToMi(data.total_kilometrage),
+      };
+
+      setBikes((prev) => [bikeWithMiles, ...prev]);
+      return bikeWithMiles;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create bike');
       console.error('Error creating bike:', err);
@@ -108,7 +125,7 @@ export function useBikes() {
   };
 
   const updateBike = async (id: string, input: UpdateBikeInput): Promise<Bike | null> => {
-    if (!session || !VEHICLE_SERVICE_URL) {
+    if (!supabase) {
       setError('Not authenticated');
       return null;
     }
@@ -117,24 +134,35 @@ export function useBikes() {
     setError(null);
 
     try {
-      console.log('Updating bike at:', VEHICLE_SERVICE_URL);
-      const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(input),
-      });
+      const updates: any = {
+        updated_at: new Date().toISOString(),
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update bike');
-      }
+      if (input.name !== undefined) updates.name = input.name;
+      if (input.type !== undefined) updates.type = input.type;
+      if (input.brand !== undefined) updates.brand = input.brand;
+      if (input.model !== undefined) updates.model = input.model;
+      if (input.purchase_date !== undefined) updates.purchase_date = input.purchase_date;
+      if (input.metadata !== undefined) updates.metadata = input.metadata;
 
-      const updatedBike = await response.json();
-      setBikes((prev) => prev.map((b) => (b.id === id ? updatedBike : b)));
-      return updatedBike;
+      const { data, error: updateError } = await supabase
+        .schema('vehicles')
+        .from('user_bike')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      // Convert km to miles for display
+      const bikeWithMiles = {
+        ...data,
+        total_kilometrage: convertKmToMi(data.total_kilometrage),
+      };
+
+      setBikes((prev) => prev.map((b) => (b.id === id ? bikeWithMiles : b)));
+      return bikeWithMiles;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update bike');
       console.error('Error updating bike:', err);
@@ -145,7 +173,7 @@ export function useBikes() {
   };
 
   const deleteBike = async (id: string): Promise<boolean> => {
-    if (!session || !VEHICLE_SERVICE_URL) {
+    if (!supabase) {
       setError('Not authenticated');
       return false;
     }
@@ -154,18 +182,13 @@ export function useBikes() {
     setError(null);
 
     try {
-      console.log('Deleting bike at:', VEHICLE_SERVICE_URL);
-      const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const { error: deleteError } = await supabase
+        .schema('vehicles')
+        .from('user_bike')
+        .delete()
+        .eq('id', id);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete bike');
-      }
+      if (deleteError) throw deleteError;
 
       setBikes((prev) => prev.filter((b) => b.id !== id));
       return true;
