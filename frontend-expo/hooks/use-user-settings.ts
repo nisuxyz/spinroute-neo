@@ -98,6 +98,7 @@ export function useUserSettings() {
               id: user.id,
               units: 'metric',
               start_recording_on_launch: false,
+              map_style: 'mapbox://styles/mapbox/standard',
             })
             .select()
             .single();

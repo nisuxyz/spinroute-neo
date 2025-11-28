@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
 import MapActionButton from './MapActionButton';
 import { Colors, electricPurple } from '@/constants/theme';
+import { getMapStyleIcon } from './MapStylePicker';
 
 interface MapActionButtonsProps {
   // Recenter button
@@ -11,6 +12,10 @@ interface MapActionButtonsProps {
   // 3D/2D toggle
   is3DMode: boolean;
   onToggle3D: () => void;
+
+  // Map style
+  currentMapStyle: string;
+  onOpenMapStyle: () => void;
 
   // Settings
   onOpenSettings: () => void;
@@ -37,6 +42,8 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
   isRecentering = false,
   is3DMode,
   onToggle3D,
+  currentMapStyle,
+  onOpenMapStyle,
   onOpenSettings,
   onOpenBikeManagement,
   onOpenRecordedTrips,
@@ -49,6 +56,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const mapStyleIcon = getMapStyleIcon(currentMapStyle);
 
   return (
     <View style={styles.container}>
@@ -76,6 +84,17 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           onDeactivate={onToggle3D}
           accessibilityLabel={is3DMode ? 'Switch to 2D view' : 'Switch to 3D view'}
           testID="3d-toggle"
+        />
+
+        {/* Map style selector */}
+        <MapActionButton
+          icon={mapStyleIcon.icon}
+          iconFamily={mapStyleIcon.iconFamily}
+          isActive={false}
+          buttonColor={electricPurple}
+          onActivate={onOpenMapStyle}
+          accessibilityLabel="Change map style"
+          testID="map-style-button"
         />
 
         {/* Station visibility toggle */}

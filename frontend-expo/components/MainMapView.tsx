@@ -18,6 +18,7 @@ import { Colors } from '@/constants/theme';
 import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
 import LocationCard from './LocationCard';
+import MapStylePicker from './MapStylePicker';
 import { GlassView } from 'expo-glass-effect';
 
 // Feature flags
@@ -71,6 +72,7 @@ const MainMapView: React.FC = () => {
   const [is3DMode, setIs3DMode] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
   const [isSearchSheetVisible, setIsSearchSheetVisible] = useState(false);
+  const [isMapStylePickerVisible, setIsMapStylePickerVisible] = useState(false);
   const [searchedLocation, setSearchedLocation] = useState<{
     name: string;
     display_name: string;
@@ -89,9 +91,10 @@ const MainMapView: React.FC = () => {
     stopTrip,
   } = useTripRecording();
 
-  // User settings for capture interval
-  const { settings } = useUserSettings();
+  // User settings for capture interval and map style
+  const { settings, updateSettings } = useUserSettings();
   const captureInterval = settings?.capture_interval_seconds || 5;
+  const mapStyle = settings?.map_style || 'mapbox://styles/mapbox/standard';
 
   // Location tracking hook - auto-starts when activeTrip exists
   const {
@@ -210,6 +213,17 @@ const MainMapView: React.FC = () => {
     router.push('/trips');
   };
 
+  const handleOpenMapStyle = () => {
+    setIsMapStylePickerVisible(true);
+  };
+
+  const handleSelectMapStyle = async (styleUrl: string) => {
+    const success = await updateSettings({ map_style: styleUrl });
+    if (!success) {
+      Alert.alert('Error', 'Failed to update map style');
+    }
+  };
+
   const handleStartRecording = async () => {
     // Check and request location permissions first
     if (permissionStatus !== 'granted') {
@@ -247,7 +261,7 @@ const MainMapView: React.FC = () => {
       <Mapbox.MapView
         ref={mapRef}
         style={styles.mapView}
-        styleURL={'mapbox://styles/nisargj95/cm9nzzm2y00ji01s6crnj1bag'}
+        styleURL={mapStyle}
         onRegionIsChanging={handleRegionIsChanging}
         onPress={handleMapPress}
         compassEnabled={true}
@@ -350,6 +364,8 @@ const MainMapView: React.FC = () => {
         isRecentering={isRecentering}
         is3DMode={is3DMode}
         onToggle3D={handleToggle3D}
+        currentMapStyle={mapStyle}
+        onOpenMapStyle={handleOpenMapStyle}
         onOpenSettings={handleOpenSettings}
         onOpenBikeManagement={handleOpenBikeManagement}
         onOpenRecordedTrips={handleOpenRecordedTrips}
@@ -387,6 +403,14 @@ const MainMapView: React.FC = () => {
           });
         }}
       />
+
+      <MapStylePicker
+        visible={isMapStylePickerVisible}
+        currentStyle={mapStyle}
+        onClose={() => setIsMapStylePickerVisible(false)}
+        onSelectStyle={handleSelectMapStyle}
+      />
+
       {/* Recording Status Indicator */}
       {activeTrip && (
         <View style={styles.recordingStatusContainer}>

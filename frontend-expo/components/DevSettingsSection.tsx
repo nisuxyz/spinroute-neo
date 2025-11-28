@@ -24,15 +24,17 @@ export default function DevSettingsSection() {
             Connect to local development services instead of production
           </Text>
         </View>
-        <Switch
-          value={settings?.useDevUrls ?? false}
-          onValueChange={handleToggleDevServices}
-          trackColor={{
-            false: colors.text + '40',
-            true: lightenColor(colors.buttonBackground, 100),
-          }}
-          thumbColor={colors.buttonBackground}
-        />
+        <View style={styles.valueContainer}>
+          <Switch
+            value={settings?.useDevUrls ?? false}
+            onValueChange={handleToggleDevServices}
+            trackColor={{
+              false: colors.text + '40',
+              true: lightenColor(colors.buttonBackground, 100),
+            }}
+            thumbColor={colors.buttonBackground}
+          />
+        </View>
       </View>
     </View>
   );
@@ -43,7 +45,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 16,
   },
   settingRow: {
     flexDirection: 'row',
@@ -64,5 +66,10 @@ const styles = StyleSheet.create({
   settingDescription: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,13 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  Modal,
+  Pressable,
 } from 'react-native';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
-import { Colors } from '@/constants/theme';
+import { Picker } from '@react-native-picker/picker';
+import { GlassContainer, GlassView } from 'expo-glass-effect';
+import { Colors, electricPurple } from '@/constants/theme';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useBikes } from '@/hooks/use-bikes';
 import { useRouter } from 'expo-router';
@@ -22,6 +26,8 @@ export default function AppSettingsSection() {
   const router = useRouter();
   const { settings, loading, updateSettings } = useUserSettings();
   const { bikes, loading: bikesLoading } = useBikes();
+  const [showIntervalPicker, setShowIntervalPicker] = useState(false);
+  const [tempInterval, setTempInterval] = useState<number>(5);
 
   const handleUnitsChange = async (value: string) => {
     const success = await updateSettings({ units: value });
@@ -32,7 +38,7 @@ export default function AppSettingsSection() {
 
   const getActiveBikeName = () => {
     if (!settings?.active_bike_id) return 'None';
-    if (bikesLoading) return 'Loading...';
+    // if (bikesLoading) return 'Loading...';
     const bike = bikes.find((b) => b.id === settings.active_bike_id);
     return bike?.name || 'None';
   };
@@ -49,6 +55,16 @@ export default function AppSettingsSection() {
     if (!success) {
       Alert.alert('Error', 'Failed to update capture interval');
     }
+  };
+
+  const openIntervalPicker = () => {
+    setTempInterval(settings?.capture_interval_seconds ?? 5);
+    setShowIntervalPicker(true);
+  };
+
+  const confirmIntervalChange = () => {
+    handleCaptureIntervalChange(tempInterval);
+    setShowIntervalPicker(false);
   };
 
   // Only show loading on initial load when we have no settings at all
@@ -109,7 +125,7 @@ export default function AppSettingsSection() {
               </View>
               <View style={styles.valueContainer}>
                 <Text style={[styles.valueText, { color: colors.text }]}>
-                  {getActiveBikeName()}
+                  {bikesLoading ? <ActivityIndicator /> : getActiveBikeName()}
                 </Text>
                 <Text style={[styles.chevron, { color: colors.icon }]}>›</Text>
               </View>
@@ -131,25 +147,28 @@ export default function AppSettingsSection() {
                   Start recording rides when app launches
                 </Text>
               </View>
-              <Switch
-                value={settings.start_recording_on_launch}
-                onValueChange={handleStartRecordingToggle}
-                trackColor={{
-                  false: colors.icon,
-                  true: lightenColor(colors.buttonBackground, 100),
-                }}
-                thumbColor="#fff"
-              />
+              <View style={styles.valueContainer}>
+                <Switch
+                  value={settings.start_recording_on_launch}
+                  onValueChange={handleStartRecordingToggle}
+                  trackColor={{
+                    false: colors.icon,
+                    true: lightenColor(colors.buttonBackground, 100),
+                  }}
+                  thumbColor="#fff"
+                />
+              </View>
             </View>
 
             {/* Capture Interval */}
-            <View
+            <TouchableOpacity
               style={[
                 styles.settingRow,
                 styles.settingRowBorder,
-                { borderTopColor: colors.background },
-                { paddingBottom: 0 },
+                { borderTopColor: colors.background, paddingBottom: 0 },
               ]}
+              onPress={openIntervalPicker}
+              activeOpacity={0.7}
             >
               <View style={styles.settingInfo}>
                 <Text style={[styles.settingLabel, { color: colors.text }]}>
@@ -159,30 +178,51 @@ export default function AppSettingsSection() {
                   How often to record location during trips
                 </Text>
               </View>
-              <SegmentedControl
-                values={['1s', '5s', '10s', '30s', '60s']}
-                selectedIndex={
-                  settings.capture_interval_seconds === 1
-                    ? 0
-                    : settings.capture_interval_seconds === 5
-                      ? 1
-                      : settings.capture_interval_seconds === 10
-                        ? 2
-                        : settings.capture_interval_seconds === 30
-                          ? 3
-                          : 4
-                }
-                onChange={(event) => {
-                  const index = event.nativeEvent.selectedSegmentIndex;
-                  const intervals = [1, 5, 10, 30, 60];
-                  handleCaptureIntervalChange(intervals[index]);
-                }}
-                style={styles.segmentedControlWide}
-              />
-            </View>
+              <View style={styles.valueContainer}>
+                <Text style={[styles.valueText, { color: colors.text }]}>
+                  {settings.capture_interval_seconds ?? 5}s
+                </Text>
+                <Text style={[styles.chevron, { color: colors.icon }]}>›</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
+
+      {/* Interval Picker Modal */}
+      <Modal
+        visible={showIntervalPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowIntervalPicker(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowIntervalPicker(false)}>
+          <Pressable>
+            <GlassView style={styles.modalContent} glassEffectStyle="regular">
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  Location Capture Interval
+                </Text>
+                <TouchableOpacity onPress={() => setShowIntervalPicker(false)}>
+                  <Text style={[styles.modalCancel, { color: colors.icon }]}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+              <Picker
+                selectedValue={tempInterval}
+                onValueChange={(value) => setTempInterval(value as number)}
+                style={[styles.modalPicker, { color: colors.text }]}
+              >
+                {Array.from({ length: 30 }, (_, i) => i + 1).map((seconds) => (
+                  <Picker.Item key={seconds} label={`${seconds} seconds`} value={seconds} />
+                ))}
+              </Picker>
+              <TouchableOpacity style={[styles.modalButton]} onPress={confirmIntervalChange}>
+                <Text style={styles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+            </GlassView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -230,9 +270,6 @@ const styles = StyleSheet.create({
   segmentedControl: {
     width: 120,
   },
-  segmentedControlWide: {
-    width: 200,
-  },
   valueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -245,5 +282,44 @@ const styles = StyleSheet.create({
   chevron: {
     fontSize: 24,
     fontWeight: '300',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalCancel: {
+    fontSize: 16,
+  },
+  modalPicker: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  modalButton: {
+    borderRadius: 12,
+    backgroundColor: electricPurple,
+    padding: 16,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -357,6 +357,7 @@ export type Database = {
           capture_interval_seconds: number | null;
           created_at: string;
           id: string;
+          map_style: string;
           start_recording_on_launch: boolean;
           units: string;
           updated_at: string;
@@ -366,6 +367,7 @@ export type Database = {
           capture_interval_seconds?: number | null;
           created_at?: string;
           id: string;
+          map_style?: string;
           start_recording_on_launch?: boolean;
           units?: string;
           updated_at?: string;
@@ -375,6 +377,7 @@ export type Database = {
           capture_interval_seconds?: number | null;
           created_at?: string;
           id?: string;
+          map_style?: string;
           start_recording_on_launch?: boolean;
           units?: string;
           updated_at?: string;
