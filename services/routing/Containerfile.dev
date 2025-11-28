@@ -1,7 +1,9 @@
 FROM docker.io/oven/bun:alpine
 
 WORKDIR /app
-COPY . .
+COPY ../../ .
+
+WORKDIR /app/services/routing-service
 
 EXPOSE 3000
 CMD [ "bun", "run", "start:dev" ]

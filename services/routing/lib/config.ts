@@ -1,16 +1,24 @@
 interface Config {
   port: number;
   environment: string;
-  database: {
+  supabase: {
     url: string;
+    anonKey: string;
+    serviceRoleKey: string;
   };
-  auth: {
-    secret: string;
-    url: string;
-    tokenExpiry: string;
+  mapbox: {
+    accessToken: string;
+    baseUrl: string;
   };
-  cors: {
-    origins: string[];
+  openrouteservice: {
+    apiKey: string;
+    baseUrl: string;
+  };
+  routing: {
+    defaultProvider: string;
+    requestTimeout: number; // milliseconds
+    cacheEnabled: boolean;
+    cacheTTL: number; // seconds
   };
 }
 
@@ -18,16 +26,24 @@ function getConfig(): Config {
   return {
     port: parseInt(process.env.PORT || '3000'),
     environment: process.env.NODE_ENV || 'development',
-    database: {
-      url: process.env.DATABASE_URL || './pglite',
+    supabase: {
+      url: process.env.SUPABASE_URL || '',
+      anonKey: process.env.SUPABASE_ANON_KEY || '',
+      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     },
-    auth: {
-      secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
-      url: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
-      tokenExpiry: process.env.AUTH_TOKEN_EXPIRY || '7d',
+    mapbox: {
+      accessToken: process.env.MAPBOX_ACCESS_TOKEN || '',
+      baseUrl: 'https://api.mapbox.com',
     },
-    cors: {
-      origins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    openrouteservice: {
+      apiKey: process.env.ORS_API_KEY || '',
+      baseUrl: process.env.ORS_BASE_URL || 'https://api.openrouteservice.org',
+    },
+    routing: {
+      defaultProvider: process.env.DEFAULT_PROVIDER || 'mapbox',
+      requestTimeout: parseInt(process.env.REQUEST_TIMEOUT || '5000'),
+      cacheEnabled: process.env.CACHE_ENABLED === 'true',
+      cacheTTL: parseInt(process.env.CACHE_TTL || '900'), // 15 minutes
     },
   };
 }
