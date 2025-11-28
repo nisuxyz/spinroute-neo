@@ -13,7 +13,7 @@ router.use('*', internalServiceAuth);
 router.post('/validate', async (c) => {
   try {
     const { token } = await c.req.json();
-    
+
     if (!token) {
       return c.json({ valid: false, error: 'Token required' }, 400);
     }
@@ -21,8 +21,8 @@ router.post('/validate', async (c) => {
     // Use Better Auth to validate the session token
     const session = await auth.api.getSession({
       headers: new Headers({
-        'Authorization': `Bearer ${token}`
-      })
+        Authorization: `Bearer ${token}`,
+      }),
     });
 
     if (!session) {
@@ -35,19 +35,21 @@ router.post('/validate', async (c) => {
         id: session.user.id,
         email: session.user.email,
         name: session.user.name,
-        emailVerified: session.user.emailVerified
+        emailVerified: session.user.emailVerified,
       },
       session: {
         id: session.session.id,
-        expiresAt: session.session.expiresAt
-      }
+        expiresAt: session.session.expiresAt,
+      },
     });
-
   } catch (error) {
-    return c.json({ 
-      valid: false, 
-      error: error instanceof Error ? error.message : 'Validation failed' 
-    }, 500);
+    return c.json(
+      {
+        valid: false,
+        error: error instanceof Error ? error.message : 'Validation failed',
+      },
+      500,
+    );
   }
 });
 
@@ -55,17 +57,17 @@ router.post('/validate', async (c) => {
 router.get('/user', async (c) => {
   try {
     const authHeader = c.req.header('authorization');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return c.json({ error: 'Bearer token required' }, 401);
     }
 
     const token = authHeader.substring(7);
-    
+
     const session = await auth.api.getSession({
       headers: new Headers({
-        'Authorization': `Bearer ${token}`
-      })
+        Authorization: `Bearer ${token}`,
+      }),
     });
 
     if (!session) {
@@ -77,13 +79,15 @@ router.get('/user', async (c) => {
         id: session.user.id,
         email: session.user.email,
         name: session.user.name,
-        emailVerified: session.user.emailVerified
-      }
+        emailVerified: session.user.emailVerified,
+      },
     });
-
   } catch (error) {
-    return c.json({ 
-      error: error instanceof Error ? error.message : 'Failed to get user' 
-    }, 500);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to get user',
+      },
+      500,
+    );
   }
 });

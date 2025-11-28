@@ -10,7 +10,6 @@
   "workspaces": {
     "packages": [
       "services/*",
-      "backend*",
       "frontend*",
       "shared"
     ],

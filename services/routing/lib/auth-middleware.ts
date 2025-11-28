@@ -2,22 +2,22 @@ import { createMiddleware } from 'hono/factory';
 import { auth } from '~lib/auth';
 
 type HonoAuthEnv = {
-	Variables: {
-		user: typeof auth.$Infer.Session.user | null;
-		session: typeof auth.$Infer.Session.session | null
-	}
-}
+  Variables: {
+    user: typeof auth.$Infer.Session.user | null;
+    session: typeof auth.$Infer.Session.session | null;
+  };
+};
 
 export const authMiddleware = createMiddleware<HonoAuthEnv>(async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
 
   if (!session) {
-    c.set("user", null);
-    c.set("session", null);
+    c.set('user', null);
+    c.set('session', null);
     return next();
   }
 
-  c.set("user", session.user);
-  c.set("session", session.session);
+  c.set('user', session.user);
+  c.set('session', session.session);
   return next();
 });
