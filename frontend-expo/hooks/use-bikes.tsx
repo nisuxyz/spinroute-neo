@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './use-auth';
+import { useEnv } from './use-env';
+import { useUserSettings } from './use-user-settings';
 import type { Database } from '../supabase/types';
 
 export type BikeType = Database['vehicles']['Enums']['bike_type'];
@@ -25,21 +27,28 @@ export interface UpdateBikeInput {
   metadata?: any;
 }
 
-const VEHICLE_SERVICE_URL = process.env.EXPO_PUBLIC_VEHICLE_SERVICE_URL || 'http://localhost:3000';
-
 export function useBikes() {
   const { session } = useAuth();
+  const { settings } = useUserSettings();
+  const env = useEnv(settings?.useDevUrls);
   const [bikes, setBikes] = useState<Bike[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const VEHICLE_SERVICE_URL = env.VEHICLES_SERVICE;
+
+  console.log('useBikes - useDevUrls:', settings?.useDevUrls);
+  console.log('useBikes - env:', env);
+  console.log('useBikes - VEHICLE_SERVICE_URL:', VEHICLE_SERVICE_URL);
+
   const fetchBikes = useCallback(async () => {
-    if (!session) return;
+    if (!session || !VEHICLE_SERVICE_URL) return;
 
     setLoading(true);
     setError(null);
 
     try {
+      console.log('Fetching bikes from:', VEHICLE_SERVICE_URL);
       const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes?unit=mi`, {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -59,10 +68,10 @@ export function useBikes() {
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, VEHICLE_SERVICE_URL]);
 
   const createBike = async (input: CreateBikeInput): Promise<Bike | null> => {
-    if (!session) {
+    if (!session || !VEHICLE_SERVICE_URL) {
       setError('Not authenticated');
       return null;
     }
@@ -71,6 +80,7 @@ export function useBikes() {
     setError(null);
 
     try {
+      console.log('Creating bike at:', VEHICLE_SERVICE_URL);
       const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes`, {
         method: 'POST',
         headers: {
@@ -98,7 +108,7 @@ export function useBikes() {
   };
 
   const updateBike = async (id: string, input: UpdateBikeInput): Promise<Bike | null> => {
-    if (!session) {
+    if (!session || !VEHICLE_SERVICE_URL) {
       setError('Not authenticated');
       return null;
     }
@@ -107,6 +117,7 @@ export function useBikes() {
     setError(null);
 
     try {
+      console.log('Updating bike at:', VEHICLE_SERVICE_URL);
       const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes/${id}`, {
         method: 'PATCH',
         headers: {
@@ -134,7 +145,7 @@ export function useBikes() {
   };
 
   const deleteBike = async (id: string): Promise<boolean> => {
-    if (!session) {
+    if (!session || !VEHICLE_SERVICE_URL) {
       setError('Not authenticated');
       return false;
     }
@@ -143,6 +154,7 @@ export function useBikes() {
     setError(null);
 
     try {
+      console.log('Deleting bike at:', VEHICLE_SERVICE_URL);
       const response = await fetch(`${VEHICLE_SERVICE_URL}/api/bikes/${id}`, {
         method: 'DELETE',
         headers: {

@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { useEnv } from '@/hooks/use-env';
 import Mapbox from '@rnmapbox/maps';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -58,13 +59,15 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const env = useEnv(); // Uses default (dev mode in development)
 
   useEffect(() => {
     // Initialize the map view
-    console.log({ env: process.env, token: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN });
-    Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!);
+    Mapbox.setAccessToken(env.MAPBOX_ACCESS_TOKEN!);
     Mapbox.setTelemetryEnabled(false);
-  }, []);
+
+    console.log({ env });
+  }, [env.MAPBOX_ACCESS_TOKEN]);
 
   return (
     <AuthProvider>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useAuth } from './use-auth';
 import { supabase } from '@/utils/supabase';
 import type { Database } from '@/supabase/types';
@@ -6,9 +6,36 @@ import type { Database } from '@/supabase/types';
 type UserSettings = Database['public']['Tables']['user_settings']['Row'];
 type UserSettingsUpdate = Database['public']['Tables']['user_settings']['Update'];
 
+interface DevSettings {
+  useDevUrls: boolean;
+}
+
+// Module-level state for dev settings (persists across hook instances)
+let devSettingsState: DevSettings = {
+  // useDevUrls: process.env.NODE_ENV === 'development',
+  useDevUrls: false,
+};
+
+const devSettingsListeners = new Set<() => void>();
+
+function subscribeToDevSettings(callback: () => void) {
+  devSettingsListeners.add(callback);
+  return () => devSettingsListeners.delete(callback);
+}
+
+function getDevSettingsSnapshot() {
+  return devSettingsState;
+}
+
+function updateDevSettingsState(updates: Partial<DevSettings>) {
+  devSettingsState = { ...devSettingsState, ...updates };
+  devSettingsListeners.forEach((listener) => listener());
+}
+
 export function useUserSettings() {
   const { user } = useAuth();
   const [settings, setSettings] = useState<UserSettings | null>(null);
+  const devSettings = useSyncExternalStore(subscribeToDevSettings, getDevSettingsSnapshot);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,15 +114,20 @@ export function useUserSettings() {
     }
   };
 
+  const updateDevSettings = (updates: Partial<DevSettings>) => {
+    updateDevSettingsState(updates);
+  };
+
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
 
   return {
-    settings,
+    settings: settings ? { ...settings, ...devSettings } : null,
     loading,
     error,
     updateSettings,
+    updateDevSettings,
     refetch: fetchSettings,
   };
 }

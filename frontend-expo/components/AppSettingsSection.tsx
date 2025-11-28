@@ -47,6 +47,15 @@ export default function AppSettingsSection() {
     setUpdating(false);
   };
 
+  const handleCaptureIntervalChange = async (value: number) => {
+    setUpdating(true);
+    const success = await updateSettings({ capture_interval_seconds: value });
+    if (!success) {
+      Alert.alert('Error', 'Failed to update capture interval');
+    }
+    setUpdating(false);
+  };
+
   if (loading || bikesLoading) {
     return (
       <View style={styles.container}>
@@ -117,7 +126,6 @@ export default function AppSettingsSection() {
                 styles.settingRow,
                 styles.settingRowBorder,
                 { borderTopColor: colors.background },
-                { paddingBottom: 0 },
               ]}
             >
               <View style={styles.settingInfo}>
@@ -134,6 +142,46 @@ export default function AppSettingsSection() {
                 disabled={updating}
                 trackColor={{ false: colors.icon, true: colors.tint }}
                 thumbColor="#fff"
+              />
+            </View>
+
+            {/* Capture Interval */}
+            <View
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderTopColor: colors.background },
+                { paddingBottom: 0 },
+              ]}
+            >
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
+                  Location Capture Interval
+                </Text>
+                <Text style={[styles.settingDescription, { color: colors.icon }]}>
+                  How often to record location during trips
+                </Text>
+              </View>
+              <SegmentedControl
+                values={['1s', '5s', '10s', '30s', '60s']}
+                selectedIndex={
+                  settings.capture_interval_seconds === 1
+                    ? 0
+                    : settings.capture_interval_seconds === 5
+                      ? 1
+                      : settings.capture_interval_seconds === 10
+                        ? 2
+                        : settings.capture_interval_seconds === 30
+                          ? 3
+                          : 4
+                }
+                onChange={(event) => {
+                  const index = event.nativeEvent.selectedSegmentIndex;
+                  const intervals = [1, 5, 10, 30, 60];
+                  handleCaptureIntervalChange(intervals[index]);
+                }}
+                enabled={!updating}
+                style={styles.segmentedControlWide}
               />
             </View>
           </View>
@@ -191,6 +239,9 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     width: 120,
+  },
+  segmentedControlWide: {
+    width: 200,
   },
   valueContainer: {
     flexDirection: 'row',

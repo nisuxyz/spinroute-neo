@@ -6,6 +6,322 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: '13.0.5';
   };
+  bikeshare: {
+    Tables: {
+      api_source: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          discovery_url: string;
+          id: string;
+          is_gbfs: boolean;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          active: boolean;
+          created_at?: string;
+          discovery_url: string;
+          id?: string;
+          is_gbfs: boolean;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          discovery_url?: string;
+          id?: string;
+          is_gbfs?: boolean;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      network: {
+        Row: {
+          city: string;
+          company: string;
+          country: string;
+          created_at: string;
+          fetched_at: string;
+          id: string;
+          location: unknown;
+          name: string;
+          raw_data: Json;
+          station_information_url: string;
+          station_status_url: string;
+          vehicle_status_url: string;
+        };
+        Insert: {
+          city: string;
+          company: string;
+          country: string;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          location: unknown;
+          name: string;
+          raw_data: Json;
+          station_information_url: string;
+          station_status_url: string;
+          vehicle_status_url: string;
+        };
+        Update: {
+          city?: string;
+          company?: string;
+          country?: string;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          location?: unknown;
+          name?: string;
+          raw_data?: Json;
+          station_information_url?: string;
+          station_status_url?: string;
+          vehicle_status_url?: string;
+        };
+        Relationships: [];
+      };
+      station: {
+        Row: {
+          address: string | null;
+          capacity: number;
+          created_at: string;
+          fetched_at: string;
+          id: string;
+          is_operational: boolean | null;
+          is_renting: boolean | null;
+          is_returning: boolean | null;
+          is_virtual: boolean | null;
+          last_reported: string;
+          location: unknown;
+          name: string;
+          network_id: string;
+          num_bikes_available: number | null;
+          num_docks_available: number;
+          num_ebikes_available: number | null;
+          raw_data: Json;
+        };
+        Insert: {
+          address?: string | null;
+          capacity: number;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          is_operational?: boolean | null;
+          is_renting?: boolean | null;
+          is_returning?: boolean | null;
+          is_virtual?: boolean | null;
+          last_reported: string;
+          location: unknown;
+          name: string;
+          network_id: string;
+          num_bikes_available?: number | null;
+          num_docks_available: number;
+          num_ebikes_available?: number | null;
+          raw_data: Json;
+        };
+        Update: {
+          address?: string | null;
+          capacity?: number;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          is_operational?: boolean | null;
+          is_renting?: boolean | null;
+          is_returning?: boolean | null;
+          is_virtual?: boolean | null;
+          last_reported?: string;
+          location?: unknown;
+          name?: string;
+          network_id?: string;
+          num_bikes_available?: number | null;
+          num_docks_available?: number;
+          num_ebikes_available?: number | null;
+          raw_data?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'station_network_id_network_id_fk';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      station_old: {
+        Row: {
+          address: string | null;
+          capacity: number;
+          created_at: string;
+          fetched_at: string;
+          id: string;
+          is_renting: boolean | null;
+          is_returning: boolean | null;
+          last_reported: string;
+          location: unknown;
+          name: string;
+          network_id: string;
+          num_docks_available: number;
+          num_vehicles_available: number;
+          raw_data: Json;
+          vehicle_types_available: Json;
+        };
+        Insert: {
+          address?: string | null;
+          capacity: number;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          is_renting?: boolean | null;
+          is_returning?: boolean | null;
+          last_reported: string;
+          location: unknown;
+          name: string;
+          network_id: string;
+          num_docks_available: number;
+          num_vehicles_available: number;
+          raw_data: Json;
+          vehicle_types_available: Json;
+        };
+        Update: {
+          address?: string | null;
+          capacity?: number;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          is_renting?: boolean | null;
+          is_returning?: boolean | null;
+          last_reported?: string;
+          location?: unknown;
+          name?: string;
+          network_id?: string;
+          num_docks_available?: number;
+          num_vehicles_available?: number;
+          raw_data?: Json;
+          vehicle_types_available?: Json;
+        };
+        Relationships: [];
+      };
+      vehicle: {
+        Row: {
+          battery_level: number | null;
+          created_at: string;
+          fetched_at: string;
+          id: string;
+          is_disabled: boolean | null;
+          is_reserved: boolean | null;
+          last_reported: string | null;
+          location: unknown;
+          network_id: string;
+          pricing_plan_id: string | null;
+          raw_data: Json;
+          rental_uris: Json | null;
+          vehicle_type: string | null;
+        };
+        Insert: {
+          battery_level?: number | null;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          is_disabled?: boolean | null;
+          is_reserved?: boolean | null;
+          last_reported?: string | null;
+          location: unknown;
+          network_id: string;
+          pricing_plan_id?: string | null;
+          raw_data: Json;
+          rental_uris?: Json | null;
+          vehicle_type?: string | null;
+        };
+        Update: {
+          battery_level?: number | null;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          is_disabled?: boolean | null;
+          is_reserved?: boolean | null;
+          last_reported?: string | null;
+          location?: unknown;
+          network_id?: string;
+          pricing_plan_id?: string | null;
+          raw_data?: Json;
+          rental_uris?: Json | null;
+          vehicle_type?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'vehicle_network_id_network_id_fk';
+            columns: ['network_id'];
+            isOneToOne: false;
+            referencedRelation: 'network';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      debug_whoami: { Args: never; Returns: Json };
+      get_stations_in_radius: {
+        Args: { center_lat: number; center_lng: number; radius_meters: number };
+        Returns: {
+          address: string;
+          capacity: number;
+          created_at: string;
+          distance_m: number;
+          fetched_at: string;
+          id: string;
+          is_operational: boolean;
+          is_renting: boolean;
+          is_returning: boolean;
+          is_virtual: boolean;
+          last_reported: string;
+          location: unknown;
+          name: string;
+          network_id: string;
+          num_bikes_available: number;
+          num_docks_available: number;
+          num_ebikes_available: number;
+          raw_data: Json;
+        }[];
+      };
+      get_stations_in_view: {
+        Args: { ne_lat: number; ne_lng: number; sw_lat: number; sw_lng: number };
+        Returns: {
+          address: string;
+          capacity: number;
+          created_at: string;
+          fetched_at: string;
+          id: string;
+          is_operational: boolean;
+          is_renting: boolean;
+          is_returning: boolean;
+          is_virtual: boolean;
+          last_reported: string;
+          lat: number;
+          lng: number;
+          location: unknown;
+          name: string;
+          network_id: string;
+          num_bikes_available: number;
+          num_docks_available: number;
+          num_ebikes_available: number;
+          raw_data: Json;
+        }[];
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       profiles: {
@@ -38,6 +354,7 @@ export type Database = {
       user_settings: {
         Row: {
           active_bike_id: string | null;
+          capture_interval_seconds: number | null;
           created_at: string;
           id: string;
           start_recording_on_launch: boolean;
@@ -46,6 +363,7 @@ export type Database = {
         };
         Insert: {
           active_bike_id?: string | null;
+          capture_interval_seconds?: number | null;
           created_at?: string;
           id: string;
           start_recording_on_launch?: boolean;
@@ -54,6 +372,7 @@ export type Database = {
         };
         Update: {
           active_bike_id?: string | null;
+          capture_interval_seconds?: number | null;
           created_at?: string;
           id?: string;
           start_recording_on_launch?: boolean;
@@ -68,6 +387,425 @@ export type Database = {
     };
     Functions: {
       debug_whoami: { Args: never; Returns: Json };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
+  recording: {
+    Tables: {
+      pause_events: {
+        Row: {
+          created_at: string;
+          id: string;
+          paused_at: string;
+          resumed_at: string | null;
+          trip_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          paused_at: string;
+          resumed_at?: string | null;
+          trip_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          paused_at?: string;
+          resumed_at?: string | null;
+          trip_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'pause_events_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      trip_advanced_stats: {
+        Row: {
+          avg_cadence_rpm: number | null;
+          avg_heart_rate_bpm: number | null;
+          avg_moving_speed_kmh: number | null;
+          avg_power_watts: number | null;
+          calculated_at: string;
+          elevation_gain_m: number | null;
+          elevation_loss_m: number | null;
+          max_elevation_m: number | null;
+          max_heart_rate_bpm: number | null;
+          min_elevation_m: number | null;
+          pause_count: number | null;
+          speed_percentile_50_kmh: number | null;
+          speed_percentile_95_kmh: number | null;
+          stopped_time_seconds: number | null;
+          trip_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          avg_cadence_rpm?: number | null;
+          avg_heart_rate_bpm?: number | null;
+          avg_moving_speed_kmh?: number | null;
+          avg_power_watts?: number | null;
+          calculated_at?: string;
+          elevation_gain_m?: number | null;
+          elevation_loss_m?: number | null;
+          max_elevation_m?: number | null;
+          max_heart_rate_bpm?: number | null;
+          min_elevation_m?: number | null;
+          pause_count?: number | null;
+          speed_percentile_50_kmh?: number | null;
+          speed_percentile_95_kmh?: number | null;
+          stopped_time_seconds?: number | null;
+          trip_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          avg_cadence_rpm?: number | null;
+          avg_heart_rate_bpm?: number | null;
+          avg_moving_speed_kmh?: number | null;
+          avg_power_watts?: number | null;
+          calculated_at?: string;
+          elevation_gain_m?: number | null;
+          elevation_loss_m?: number | null;
+          max_elevation_m?: number | null;
+          max_heart_rate_bpm?: number | null;
+          min_elevation_m?: number | null;
+          pause_count?: number | null;
+          speed_percentile_50_kmh?: number | null;
+          speed_percentile_95_kmh?: number | null;
+          stopped_time_seconds?: number | null;
+          trip_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'trip_advanced_stats_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: true;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      trip_basic_stats: {
+        Row: {
+          avg_speed_kmh: number | null;
+          calculated_at: string;
+          distance_km: number | null;
+          duration_seconds: number | null;
+          max_speed_kmh: number | null;
+          moving_duration_seconds: number | null;
+          route_geom: unknown;
+          trip_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          avg_speed_kmh?: number | null;
+          calculated_at?: string;
+          distance_km?: number | null;
+          duration_seconds?: number | null;
+          max_speed_kmh?: number | null;
+          moving_duration_seconds?: number | null;
+          route_geom?: unknown;
+          trip_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          avg_speed_kmh?: number | null;
+          calculated_at?: string;
+          distance_km?: number | null;
+          duration_seconds?: number | null;
+          max_speed_kmh?: number | null;
+          moving_duration_seconds?: number | null;
+          route_geom?: unknown;
+          trip_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'trip_basic_stats_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: true;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      trip_points: {
+        Row: {
+          accuracy_m: number | null;
+          altitude_m: number | null;
+          cadence_rpm: number | null;
+          created_at: string;
+          heart_rate_bpm: number | null;
+          id: string;
+          location: unknown;
+          power_watts: number | null;
+          recorded_at: string;
+          speed_kmh: number | null;
+          trip_id: string;
+        };
+        Insert: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location: unknown;
+          power_watts?: number | null;
+          recorded_at: string;
+          speed_kmh?: number | null;
+          trip_id: string;
+        };
+        Update: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location?: unknown;
+          power_watts?: number | null;
+          recorded_at?: string;
+          speed_kmh?: number | null;
+          trip_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'trip_points_trip_id_fkey';
+            columns: ['trip_id'];
+            isOneToOne: false;
+            referencedRelation: 'trips';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      trip_points_2025_11: {
+        Row: {
+          accuracy_m: number | null;
+          altitude_m: number | null;
+          cadence_rpm: number | null;
+          created_at: string;
+          heart_rate_bpm: number | null;
+          id: string;
+          location: unknown;
+          power_watts: number | null;
+          recorded_at: string;
+          speed_kmh: number | null;
+          trip_id: string;
+        };
+        Insert: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location: unknown;
+          power_watts?: number | null;
+          recorded_at: string;
+          speed_kmh?: number | null;
+          trip_id: string;
+        };
+        Update: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location?: unknown;
+          power_watts?: number | null;
+          recorded_at?: string;
+          speed_kmh?: number | null;
+          trip_id?: string;
+        };
+        Relationships: [];
+      };
+      trip_points_2025_12: {
+        Row: {
+          accuracy_m: number | null;
+          altitude_m: number | null;
+          cadence_rpm: number | null;
+          created_at: string;
+          heart_rate_bpm: number | null;
+          id: string;
+          location: unknown;
+          power_watts: number | null;
+          recorded_at: string;
+          speed_kmh: number | null;
+          trip_id: string;
+        };
+        Insert: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location: unknown;
+          power_watts?: number | null;
+          recorded_at: string;
+          speed_kmh?: number | null;
+          trip_id: string;
+        };
+        Update: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location?: unknown;
+          power_watts?: number | null;
+          recorded_at?: string;
+          speed_kmh?: number | null;
+          trip_id?: string;
+        };
+        Relationships: [];
+      };
+      trip_points_2026_01: {
+        Row: {
+          accuracy_m: number | null;
+          altitude_m: number | null;
+          cadence_rpm: number | null;
+          created_at: string;
+          heart_rate_bpm: number | null;
+          id: string;
+          location: unknown;
+          power_watts: number | null;
+          recorded_at: string;
+          speed_kmh: number | null;
+          trip_id: string;
+        };
+        Insert: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location: unknown;
+          power_watts?: number | null;
+          recorded_at: string;
+          speed_kmh?: number | null;
+          trip_id: string;
+        };
+        Update: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location?: unknown;
+          power_watts?: number | null;
+          recorded_at?: string;
+          speed_kmh?: number | null;
+          trip_id?: string;
+        };
+        Relationships: [];
+      };
+      trip_points_2026_02: {
+        Row: {
+          accuracy_m: number | null;
+          altitude_m: number | null;
+          cadence_rpm: number | null;
+          created_at: string;
+          heart_rate_bpm: number | null;
+          id: string;
+          location: unknown;
+          power_watts: number | null;
+          recorded_at: string;
+          speed_kmh: number | null;
+          trip_id: string;
+        };
+        Insert: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location: unknown;
+          power_watts?: number | null;
+          recorded_at: string;
+          speed_kmh?: number | null;
+          trip_id: string;
+        };
+        Update: {
+          accuracy_m?: number | null;
+          altitude_m?: number | null;
+          cadence_rpm?: number | null;
+          created_at?: string;
+          heart_rate_bpm?: number | null;
+          id?: string;
+          location?: unknown;
+          power_watts?: number | null;
+          recorded_at?: string;
+          speed_kmh?: number | null;
+          trip_id?: string;
+        };
+        Relationships: [];
+      };
+      trips: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          id: string;
+          notes: string | null;
+          started_at: string;
+          status: string;
+          title: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          started_at?: string;
+          status: string;
+          title?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          started_at?: string;
+          status?: string;
+          title?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      create_future_partitions: {
+        Args: { months_ahead?: number };
+        Returns: undefined;
+      };
+      create_next_partition: { Args: never; Returns: undefined };
+      drop_old_partitions: {
+        Args: { months_to_keep?: number };
+        Returns: undefined;
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -483,7 +1221,13 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  bikeshare: {
+    Enums: {},
+  },
   public: {
+    Enums: {},
+  },
+  recording: {
     Enums: {},
   },
   vehicles: {

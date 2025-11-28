@@ -9,6 +9,7 @@ import {
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
+import TripList from './TripList';
 
 interface RecordedTripsSheetProps {
   visible: boolean;
@@ -88,9 +89,7 @@ const RecordedTripsSheet: React.FC<RecordedTripsSheetProps> = ({ visible, onClos
         </View>
 
         <BottomSheetView style={styles.content}>
-          <Text style={[styles.placeholder, { color: colors.text + '80' }]}>
-            Recorded trips content coming soon
-          </Text>
+          <TripList onTripPress={(tripId) => console.log('Trip pressed:', tripId)} />
         </BottomSheetView>
       </GlassContainer>
     </BottomSheetModal>
@@ -128,12 +127,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholder: {
-    fontSize: 16,
-    fontWeight: '500',
   },
 });
 

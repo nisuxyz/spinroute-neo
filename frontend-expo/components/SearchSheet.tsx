@@ -19,6 +19,8 @@ import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useDebounce } from 'use-debounce';
+import { useEnv } from '@/hooks/use-env';
+import { useUserSettings } from '@/hooks/use-user-settings';
 
 interface SearchSheetProps {
   visible: boolean;
@@ -51,8 +53,10 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
   const [sessionToken, setSessionToken] = useState('');
   const [debouncedQuery] = useDebounce(searchQuery, 300);
   const colorScheme = useColorScheme();
+  const { settings } = useUserSettings();
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
+  const env = useEnv(settings?.useDevUrls); // Uses default (dev mode in development)
 
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['90%'], []);
@@ -102,7 +106,7 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
     const fetchSuggestions = async () => {
       setLoading(true);
       try {
-        const accessToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+        const accessToken = env.MAPBOX_ACCESS_TOKEN;
         if (!accessToken) {
           console.warn('Mapbox access token not configured');
           return;
@@ -127,7 +131,7 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
     };
 
     fetchSuggestions();
-  }, [debouncedQuery, sessionToken]);
+  }, [debouncedQuery, sessionToken, env.MAPBOX_ACCESS_TOKEN]);
 
   const handleClose = () => {
     Keyboard.dismiss();
@@ -138,7 +142,7 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
 
   const handleSelectSuggestion = async (suggestion: SearchSuggestion) => {
     try {
-      const accessToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+      const accessToken = env.MAPBOX_ACCESS_TOKEN;
       if (!accessToken) return;
 
       // Retrieve full details including coordinates
