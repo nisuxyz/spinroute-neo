@@ -2,14 +2,17 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { requireAuth } from '../../lib/auth';
-import { providerRegistry } from '../../lib/providers/registry';
-import { MapboxProvider } from '../../lib/providers/mapbox';
+import { providerRegistry, initializeProviders } from '../../lib/providers';
 import { config } from '../../lib/config';
 import { RouteProfile, BikeType } from '../../lib/providers/base';
 import type { RouteRequest } from '../../lib/providers/base';
+import { createLogger, createRequestLogger } from '../../lib/logger';
 
-// Initialize provider registry
-providerRegistry.registerProvider(new MapboxProvider());
+// Initialize logger
+const logger = createLogger('Routing');
+
+// Initialize provider registry with all providers
+initializeProviders();
 
 export const basePath = '/api/routing';
 export const router = new Hono();
@@ -37,10 +40,18 @@ type DirectionsRequest = z.infer<typeof directionsRequestSchema>;
  * Calculate a route between waypoints
  */
 router.post('/directions', zValidator('json', directionsRequestSchema), async (c) => {
-  try {
-    const body = c.req.valid('json') as DirectionsRequest;
-    const user = c.get('user');
+  const body = c.req.valid('json') as DirectionsRequest;
+  const user = c.get('user');
 
+  const requestLogger = createRequestLogger(logger, {
+    userId: user?.id,
+    endpoint: 'POST /api/routing/directions',
+  });
+
+  let provider;
+  let providerName = 'unknown';
+
+  try {
     // Build route request
     const routeRequest: RouteRequest = {
       waypoints: body.waypoints,
@@ -51,12 +62,26 @@ router.post('/directions', zValidator('json', directionsRequestSchema), async (c
       userPlan: 'free', // TODO: Get actual user plan from database
     };
 
+    // Log incoming request
+    requestLogger.logStart('Route request received', {
+      waypointCount: body.waypoints.length,
+      profile: body.profile,
+      bikeType: body.bikeType,
+      requestedProvider: body.provider,
+    });
+
     // Select provider
-    let provider;
     try {
       provider = providerRegistry.selectProvider(routeRequest);
+      providerName = provider.name;
+      requestLogger.addContext({ provider: providerName });
     } catch (error) {
       if (error instanceof Error) {
+        // Log provider selection error
+        requestLogger.logError('Provider selection failed', error, {
+          requestedProvider: body.provider,
+        });
+
         // Check if it's a paid plan error
         if (error.message.includes('requires a paid plan')) {
           return c.json(
@@ -97,13 +122,26 @@ router.post('/directions', zValidator('json', directionsRequestSchema), async (c
       );
     }
 
+    // Log successful request
+    requestLogger.logSuccess('Route calculated successfully', {
+      profile: body.profile,
+      bikeType: body.bikeType,
+      waypointCount: body.waypoints.length,
+      distance: response.routes?.[0]?.distance,
+      duration: response.routes?.[0]?.duration,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    });
+
     return c.json({
       ...response,
       provider: provider.name,
       ...(warnings.length > 0 && { warnings }),
     });
   } catch (error) {
-    console.error('Route calculation error:', error);
+    // Log error with full details
+    requestLogger.logError('Route calculation error', error, {
+      provider: providerName,
+    });
 
     // Handle provider-specific errors
     if (error instanceof Error) {
@@ -118,6 +156,7 @@ router.post('/directions', zValidator('json', directionsRequestSchema), async (c
             code: 'ServiceUnavailable',
             message: 'Routing provider is currently unavailable. Please try again later.',
             details: error.message,
+            provider: providerName,
           },
           503,
         );
@@ -128,6 +167,7 @@ router.post('/directions', zValidator('json', directionsRequestSchema), async (c
         {
           code: 'Error',
           message: error.message,
+          provider: providerName,
         },
         500,
       );
@@ -137,6 +177,7 @@ router.post('/directions', zValidator('json', directionsRequestSchema), async (c
       {
         code: 'Error',
         message: 'An unexpected error occurred',
+        provider: providerName,
       },
       500,
     );
@@ -148,9 +189,18 @@ router.post('/directions', zValidator('json', directionsRequestSchema), async (c
  * Get available routing providers and their capabilities
  */
 router.get('/providers', async (c) => {
+  const user = c.get('user');
+  const requestLogger = createRequestLogger(logger, {
+    userId: user?.id,
+    endpoint: 'GET /api/routing/providers',
+  });
+
   try {
-    const user = c.get('user');
     const userPlan: 'free' | 'paid' = 'free'; // TODO: Get actual user plan from database
+
+    requestLogger.logStart('Providers query received', {
+      userPlan,
+    });
 
     // Get available providers for user's plan
     const availableProviders = providerRegistry.getAvailableProviders(userPlan);
@@ -168,12 +218,17 @@ router.get('/providers', async (c) => {
       }),
     );
 
+    requestLogger.logSuccess('Providers query successful', {
+      providerCount: providersWithStatus.length,
+      availableCount: providersWithStatus.filter((p) => p.available).length,
+    });
+
     return c.json({
       providers: providersWithStatus,
       defaultProvider: config.routing.defaultProvider,
     });
   } catch (error) {
-    console.error('Error fetching providers:', error);
+    requestLogger.logError('Error fetching providers', error);
 
     return c.json(
       {

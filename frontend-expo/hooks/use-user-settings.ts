@@ -41,8 +41,7 @@ function updateSettingsState(updates: Partial<SettingsState>) {
 
 // Module-level state for dev settings (persists across hook instances)
 let devSettingsState: DevSettings = {
-  // useDevUrls: process.env.NODE_ENV === 'development',
-  useDevUrls: false,
+  useDevUrls: process.env.NODE_ENV === 'development',
 };
 
 const devSettingsListeners = new Set<() => void>();

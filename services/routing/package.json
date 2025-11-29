@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.5",
+    "@mapbox/polyline": "^1.2.1",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.74.0",
     "dotenv": "^17.2.1",

@@ -7,9 +7,13 @@ export * from './base';
 export * from './registry';
 export * from './mapbox';
 export * from './mapbox-client';
+export * from './openrouteservice';
+export * from './ors-client';
+export * from './normalizer';
 
 import { providerRegistry } from './registry';
 import { MapboxProvider } from './mapbox';
+import { OpenRouteServiceProvider } from './openrouteservice';
 import { config } from '../config';
 
 /**
@@ -19,6 +23,10 @@ export function initializeProviders(): void {
   // Register Mapbox provider
   const mapboxProvider = new MapboxProvider();
   providerRegistry.registerProvider(mapboxProvider);
+
+  // Register OpenRouteService provider
+  const orsProvider = new OpenRouteServiceProvider();
+  providerRegistry.registerProvider(orsProvider);
 
   // Set default provider from config
   if (config.routing.defaultProvider) {

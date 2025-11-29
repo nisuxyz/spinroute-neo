@@ -23,6 +23,8 @@ import LocationCard from './LocationCard';
 import MapStylePicker from './MapStylePicker';
 import ActiveBikeIndicator from './ActiveBikeIndicator';
 import RecordingIndicator from './RecordingIndicator';
+import RouteInfoCard from './RouteInfoCard';
+import { useDirections, RouteProfile } from '@/hooks/use-directions';
 
 // Feature flags
 const ENABLE_LAYER_RENDERING_TOGGLE = false;
@@ -84,6 +86,16 @@ const MainMapView: React.FC = () => {
     type: string;
     mapbox_id: string;
   } | null>(null);
+  const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null);
+
+  // Directions hook
+  const {
+    route: directionsRoute,
+    loading: directionsLoading,
+    error: directionsError,
+    calculateRoute,
+    clearRoute,
+  } = useDirections();
 
   // Trip recording hook
   const {
@@ -190,6 +202,69 @@ const MainMapView: React.FC = () => {
   const handleMapPress = () => {
     setSelectedStation(null);
   };
+
+  const handleGetDirections = async () => {
+    if (!userLocation || !searchedLocation) {
+      Alert.alert('Location Required', 'Unable to calculate route without location information');
+      return;
+    }
+
+    // Use user preferences from settings (via useDirections hook)
+    // Profile, bike type, and provider will be automatically applied from user settings
+    await calculateRoute({
+      origin: {
+        latitude: userLocation[1],
+        longitude: userLocation[0],
+      },
+      destination: {
+        latitude: searchedLocation.lat,
+        longitude: searchedLocation.lon,
+      },
+    });
+  };
+
+  const handleClearRoute = () => {
+    clearRoute();
+    setRouteGeometry(null);
+    if (userLocation) {
+      cameraRef.current?.setCamera({
+        centerCoordinate: userLocation,
+        zoomLevel: USER_LOCATION_ZOOM,
+        animationDuration: 1000,
+      });
+    }
+  };
+
+  // Update route geometry when directions route changes
+  React.useEffect(() => {
+    if (directionsRoute?.routes?.[0]?.geometry) {
+      const geometry = directionsRoute.routes[0].geometry;
+      if (typeof geometry === 'object' && geometry.type === 'LineString') {
+        setRouteGeometry(geometry as GeoJSON.LineString);
+
+        // Fit camera to route bounds
+        if (geometry.coordinates && geometry.coordinates.length > 0) {
+          const coords = geometry.coordinates as [number, number][];
+          const lons = coords.map((c) => c[0]);
+          const lats = coords.map((c) => c[1]);
+
+          const bounds: [number, number, number, number] = [
+            Math.min(...lons), // west
+            Math.min(...lats), // south
+            Math.max(...lons), // east
+            Math.max(...lats), // north
+          ];
+
+          cameraRef.current?.fitBounds(
+            [bounds[0], bounds[1]], // southwest
+            [bounds[2], bounds[3]], // northeast
+            [60, 60, 60, 200], // padding [top, right, bottom, left]
+            1000, // animation duration
+          );
+        }
+      }
+    }
+  }, [directionsRoute]);
 
   const handleRecenter = () => {
     if (!userLocation) {
@@ -372,6 +447,48 @@ const MainMapView: React.FC = () => {
             </View>
           </Mapbox.MarkerView>
         )}
+
+        {routeGeometry && (
+          <>
+            <Mapbox.ShapeSource id="routeSource" shape={routeGeometry}>
+              <Mapbox.LineLayer
+                id="routeLine"
+                style={{
+                  lineColor: colors.locationPuck,
+                  lineWidth: 5,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />
+            </Mapbox.ShapeSource>
+
+            {userLocation && (
+              <Mapbox.MarkerView
+                id="routeOrigin"
+                coordinate={userLocation}
+                anchor={{ x: 0.5, y: 0.5 }}
+              >
+                <View style={[styles.routeMarker, { backgroundColor: colors.locationPuck }]}>
+                  <MaterialIcons name="trip-origin" size={16} color="white" />
+                </View>
+              </Mapbox.MarkerView>
+            )}
+
+            {searchedLocation && (
+              <Mapbox.MarkerView
+                id="routeDestination"
+                coordinate={[searchedLocation.lon, searchedLocation.lat]}
+                anchor={{ x: 0.5, y: 1 }}
+              >
+                <View style={styles.searchPinContainer}>
+                  <View style={[styles.searchPin, { backgroundColor: colors.locationPuck }]}>
+                    <MaterialIcons name="place" size={32} color="white" />
+                  </View>
+                </View>
+              </Mapbox.MarkerView>
+            )}
+          </>
+        )}
       </Mapbox.MapView>
 
       <MapActionButtons
@@ -403,13 +520,33 @@ const MainMapView: React.FC = () => {
 
       <SearchButton onPress={() => setIsSearchSheetVisible(true)} />
 
-      {searchedLocation && (
-        <LocationCard location={searchedLocation} onClose={() => setSearchedLocation(null)} />
+      {searchedLocation && !routeGeometry && (
+        <LocationCard
+          location={searchedLocation}
+          onClose={() => setSearchedLocation(null)}
+          onGetDirections={handleGetDirections}
+          isLoadingDirections={directionsLoading}
+        />
       )}
+
+      {(directionsRoute || directionsLoading || directionsError) && (
+        <RouteInfoCard
+          route={directionsRoute}
+          loading={directionsLoading}
+          error={directionsError}
+          profile={RouteProfile.CYCLING}
+          units={(settings?.units as 'metric' | 'imperial') || 'metric'}
+          onClearRoute={handleClearRoute}
+          onRecalculate={handleGetDirections}
+        />
+      )}
+
       <SearchSheet
         visible={isSearchSheetVisible}
         onClose={() => setIsSearchSheetVisible(false)}
         onSelectLocation={(location) => {
+          // Clear any existing route when selecting a new location
+          handleClearRoute();
           setSearchedLocation(location);
           cameraRef.current?.setCamera({
             centerCoordinate: [location.lon, location.lat],
@@ -472,6 +609,18 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  routeMarker: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

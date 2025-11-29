@@ -12,6 +12,9 @@ import { RouteProfile, BikeType } from './base';
 import { config } from '../config';
 import { MapboxClient, MapboxApiError } from './mapbox-client';
 import type { MapboxDirectionsRequest } from './mapbox-client';
+import { createLogger, createRequestLogger } from '../logger';
+
+const logger = createLogger('Mapbox');
 
 export class MapboxProvider implements RouteProvider {
   name = 'mapbox';
@@ -29,7 +32,7 @@ export class MapboxProvider implements RouteProvider {
     const accessToken = config.mapbox.accessToken;
 
     if (!accessToken) {
-      console.warn('Mapbox access token not configured');
+      logger.warn('Mapbox access token not configured');
     }
 
     this.client = new MapboxClient({
@@ -43,6 +46,10 @@ export class MapboxProvider implements RouteProvider {
    * Calculate a route using Mapbox Directions API
    */
   async calculateRoute(request: RouteRequest): Promise<MapboxDirectionsResponse> {
+    const requestLogger = createRequestLogger(logger, {
+      userId: request.userId,
+    });
+
     // Map profile to Mapbox profile
     const mapboxProfile = this.mapProfileToMapbox(request.profile);
 
@@ -60,20 +67,40 @@ export class MapboxProvider implements RouteProvider {
       voiceInstructions: true,
     };
 
+    requestLogger.logStart('Calculating route', {
+      profile: mapboxProfile,
+      waypointCount: request.waypoints.length,
+    });
+
     try {
       const response = await this.client.getDirections(params);
 
       // Validate response code
       if (response.code !== 'Ok') {
-        throw new Error(`Mapbox API returned error code: ${response.code}`);
+        const error = new Error(`Mapbox API returned error code: ${response.code}`);
+        requestLogger.logError('API returned error code', error, {
+          code: response.code,
+        });
+        throw error;
       }
+
+      requestLogger.logSuccess('Route calculated successfully', {
+        routeCount: response.routes?.length || 0,
+        distance: response.routes?.[0]?.distance,
+        duration: response.routes?.[0]?.duration,
+      });
 
       return response;
     } catch (error) {
       if (error instanceof MapboxApiError) {
+        requestLogger.logError('API error', error, {
+          code: error.code,
+        });
         // Re-throw with more context
         throw new Error(`Mapbox API error (${error.code}): ${error.message}`);
       }
+
+      requestLogger.logError('Unexpected error', error);
       throw error;
     }
   }
@@ -83,9 +110,11 @@ export class MapboxProvider implements RouteProvider {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      return await this.client.healthCheck();
+      const available = await this.client.healthCheck();
+      logger.info('Availability check', { available });
+      return available;
     } catch (error) {
-      console.error('Mapbox availability check failed:', error);
+      logger.error('Availability check failed', error);
       return false;
     }
   }

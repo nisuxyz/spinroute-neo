@@ -358,6 +358,9 @@ export type Database = {
           created_at: string;
           id: string;
           map_style: string;
+          preferred_bike_type: string | null;
+          preferred_routing_profile: string | null;
+          preferred_routing_provider: string | null;
           start_recording_on_launch: boolean;
           units: string;
           updated_at: string;
@@ -368,6 +371,9 @@ export type Database = {
           created_at?: string;
           id: string;
           map_style?: string;
+          preferred_bike_type?: string | null;
+          preferred_routing_profile?: string | null;
+          preferred_routing_provider?: string | null;
           start_recording_on_launch?: boolean;
           units?: string;
           updated_at?: string;
@@ -378,6 +384,9 @@ export type Database = {
           created_at?: string;
           id?: string;
           map_style?: string;
+          preferred_bike_type?: string | null;
+          preferred_routing_profile?: string | null;
+          preferred_routing_provider?: string | null;
           start_recording_on_launch?: boolean;
           units?: string;
           updated_at?: string;
