@@ -21,6 +21,8 @@ import { Colors } from '@/constants/theme';
 import { useDebounce } from 'use-debounce';
 import { useEnv } from '@/hooks/use-env';
 import { useUserSettings } from '@/hooks/use-user-settings';
+import { useSearchHistory, type SearchHistoryItem } from '@/hooks/use-search-history';
+import { fuzzySearch } from '@/utils/fuzzy-search';
 
 interface SearchSheetProps {
   visible: boolean;
@@ -46,6 +48,10 @@ interface GeocodingResult {
   mapbox_id: string;
 }
 
+type CombinedResult =
+  | { type: 'history'; data: SearchHistoryItem }
+  | { type: 'suggestion'; data: SearchSuggestion };
+
 const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLocation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -54,6 +60,7 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
   const [debouncedQuery] = useDebounce(searchQuery, 300);
   const colorScheme = useColorScheme();
   const { settings } = useUserSettings();
+  const { history, addToHistory, removeFromHistory } = useSearchHistory();
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
   const env = useEnv(settings?.useDevUrls); // Uses default (dev mode in development)
@@ -167,6 +174,9 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
           mapbox_id: suggestion.mapbox_id,
         };
 
+        // Add to history
+        await addToHistory(result);
+
         // Notify parent and close sheet
         onSelectLocation?.(result);
         handleClose();
@@ -176,6 +186,24 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
     }
   };
 
+  const handleSelectHistory = async (item: SearchHistoryItem) => {
+    const result: GeocodingResult = {
+      name: item.name,
+      display_name: item.display_name,
+      lon: item.lon,
+      lat: item.lat,
+      type: item.type,
+      mapbox_id: item.mapbox_id,
+    };
+
+    // Update timestamp by re-adding to history
+    await addToHistory(result);
+
+    // Notify parent and close sheet
+    onSelectLocation?.(result);
+    handleClose();
+  };
+
   const generateUUID = (): string => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
       const r = (Math.random() * 16) | 0;
@@ -183,6 +211,35 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
       return v.toString(16);
     });
   };
+
+  // Combine history and suggestions based on search query
+  const combinedResults = useMemo((): CombinedResult[] => {
+    const results: CombinedResult[] = [];
+
+    if (debouncedQuery.trim().length < 2) {
+      // Show recent history when no search query
+      return history.slice(0, 10).map((item) => ({ type: 'history', data: item }));
+    }
+
+    // Fuzzy search through history
+    const historyMatches = fuzzySearch(
+      debouncedQuery,
+      history,
+      (item) => `${item.name} ${item.display_name}`,
+    );
+
+    // Add top 3 history matches at the beginning
+    historyMatches.slice(0, 3).forEach((match) => {
+      results.push({ type: 'history', data: match.item });
+    });
+
+    // Add API suggestions
+    suggestions.forEach((suggestion) => {
+      results.push({ type: 'suggestion', data: suggestion });
+    });
+
+    return results;
+  }, [debouncedQuery, history, suggestions]);
 
   const getIconForFeatureType = (type: string): any => {
     switch (type) {
@@ -213,23 +270,53 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
   const GlassContainer = hasGlassEffect ? GlassView : View;
 
   const renderItem = useCallback(
-    ({ item }: { item: SearchSuggestion }) => (
-      <TouchableOpacity style={styles.resultItem} onPress={() => handleSelectSuggestion(item)}>
-        <MaterialIcons
-          name={getIconForFeatureType(item.feature_type)}
-          size={20}
-          color={colors.text}
-          style={styles.resultIcon}
-        />
-        <View style={styles.resultTextContainer}>
-          <Text style={[styles.resultName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.resultDetails, { color: colors.text + 'CC' }]} numberOfLines={1}>
-            {item.full_address || item.place_formatted || ''}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    ),
-    [colors.text, handleSelectSuggestion],
+    ({ item }: { item: CombinedResult }) => {
+      const isHistory = item.type === 'history';
+      const data = item.data;
+
+      const handlePress = () => {
+        if (isHistory) {
+          handleSelectHistory(data as SearchHistoryItem);
+        } else {
+          handleSelectSuggestion(data as SearchSuggestion);
+        }
+      };
+
+      const handleRemove = (e: any) => {
+        e.stopPropagation();
+        if (isHistory) {
+          removeFromHistory((data as SearchHistoryItem).mapbox_id);
+        }
+      };
+
+      const icon = isHistory
+        ? 'history'
+        : getIconForFeatureType((data as any).feature_type || (data as any).type);
+      const name = data.name;
+      const details = isHistory
+        ? (data as SearchHistoryItem).display_name
+        : (data as SearchSuggestion).full_address ||
+          (data as SearchSuggestion).place_formatted ||
+          '';
+
+      return (
+        <TouchableOpacity style={styles.resultItem} onPress={handlePress}>
+          <MaterialIcons name={icon} size={20} color={colors.text} style={styles.resultIcon} />
+          <View style={styles.resultTextContainer}>
+            <Text style={[styles.resultName, { color: colors.text }]}>{name}</Text>
+            <Text style={[styles.resultDetails, { color: colors.text + 'CC' }]} numberOfLines={1}>
+              {details}
+            </Text>
+          </View>
+          {isHistory && (
+            <TouchableOpacity onPress={handleRemove} style={styles.removeButton}>
+              <MaterialIcons name="close" size={18} color={colors.text + '80'} />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [colors.text, handleSelectSuggestion, handleSelectHistory, removeFromHistory],
   );
 
   return (
@@ -277,26 +364,42 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
         </View>
 
         {/* Results List */}
-        {loading && (
+        {loading && searchQuery.length >= 2 && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={colors.text} />
           </View>
         )}
 
-        {!loading && suggestions.length > 0 && (
+        {combinedResults.length > 0 && (
           <BottomSheetFlatList
-            data={suggestions}
-            keyExtractor={(item: SearchSuggestion) => item.mapbox_id}
+            data={combinedResults}
+            keyExtractor={(item: CombinedResult) => `${item.type}-${item.data.mapbox_id}`}
             contentContainerStyle={styles.resultsContent}
             keyboardShouldPersistTaps="handled"
             renderItem={renderItem}
+            ListHeaderComponent={
+              searchQuery.length < 2 && history.length > 0 ? (
+                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>
+                  Recent Searches
+                </Text>
+              ) : null
+            }
           />
         )}
 
-        {!loading && searchQuery.length >= 2 && suggestions.length === 0 && (
+        {!loading && searchQuery.length >= 2 && combinedResults.length === 0 && (
           <View style={styles.emptyContainer}>
             <MaterialIcons name="search-off" size={48} color={colors.text + '60'} />
             <Text style={[styles.emptyText, { color: colors.text + '80' }]}>No results found</Text>
+          </View>
+        )}
+
+        {!loading && searchQuery.length < 2 && history.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <MaterialIcons name="history" size={48} color={colors.text + '60'} />
+            <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
+              No search history yet
+            </Text>
           </View>
         )}
 
@@ -385,6 +488,16 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     marginTop: 12,
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  removeButton: {
+    padding: 8,
+    marginLeft: 8,
   },
 });
 
