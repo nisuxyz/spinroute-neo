@@ -428,7 +428,7 @@ const MainMapView: React.FC = () => {
             puckBearingEnabled={true}
             pulsing={{
               isEnabled: true,
-              color: colors.locationPuck,
+              color: colors.buttonIcon,
               radius: 30.0,
             }}
           />
@@ -441,7 +441,7 @@ const MainMapView: React.FC = () => {
             anchor={{ x: 0.5, y: 1 }}
           >
             <View style={styles.searchPinContainer}>
-              <View style={[styles.searchPin, { backgroundColor: colors.locationPuck }]}>
+              <View style={[styles.searchPin, { backgroundColor: colors.buttonIcon }]}>
                 <MaterialIcons name="place" size={32} color="white" />
               </View>
             </View>
@@ -454,7 +454,7 @@ const MainMapView: React.FC = () => {
               <Mapbox.LineLayer
                 id="routeLine"
                 style={{
-                  lineColor: colors.locationPuck,
+                  lineColor: colors.buttonIcon,
                   lineWidth: 5,
                   lineCap: 'round',
                   lineJoin: 'round',
@@ -468,7 +468,7 @@ const MainMapView: React.FC = () => {
                 coordinate={userLocation}
                 anchor={{ x: 0.5, y: 0.5 }}
               >
-                <View style={[styles.routeMarker, { backgroundColor: colors.locationPuck }]}>
+                <View style={[styles.routeMarker, { backgroundColor: colors.buttonIcon }]}>
                   <MaterialIcons name="trip-origin" size={16} color="white" />
                 </View>
               </Mapbox.MarkerView>
@@ -481,7 +481,7 @@ const MainMapView: React.FC = () => {
                 anchor={{ x: 0.5, y: 1 }}
               >
                 <View style={styles.searchPinContainer}>
-                  <View style={[styles.searchPin, { backgroundColor: colors.locationPuck }]}>
+                  <View style={[styles.searchPin, { backgroundColor: colors.buttonIcon }]}>
                     <MaterialIcons name="place" size={32} color="white" />
                   </View>
                 </View>
@@ -565,7 +565,7 @@ const MainMapView: React.FC = () => {
 
       {/* Active Bike Indicator */}
       {(activeBike || (bikesLoading && settings?.active_bike_id)) && (
-        <ActiveBikeIndicator bike={activeBike} loading={bikesLoading} />
+        <ActiveBikeIndicator bike={activeBike} loading={bikesLoading} isRecording={!!activeTrip} />
       )}
 
       {/* Recording Status Indicator */}

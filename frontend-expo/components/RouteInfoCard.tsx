@@ -335,7 +335,10 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
               </View>
               {onRecalculate && (
                 <TouchableOpacity
-                  style={[styles.quickSwitcherButton, { backgroundColor: colors.locationPuck }]}
+                  style={[
+                    styles.quickSwitcherButton,
+                    { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
+                  ]}
                   onPress={() => setShowQuickSwitcher(true)}
                 >
                   <MaterialIcons name="tune" size={20} color="white" />
@@ -348,7 +351,12 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
 
             {/* Route Summary */}
             <View style={styles.expandedSummary}>
-              <View style={[styles.summaryIconCircle, { backgroundColor: colors.locationPuck }]}>
+              <View
+                style={[
+                  styles.summaryIconCircle,
+                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
+                ]}
+              >
                 <MaterialIcons name={getProfileIcon(profile)} size={32} color="white" />
               </View>
               <View style={styles.summaryInfo}>
@@ -382,7 +390,7 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
                       <View
                         style={[
                           styles.instructionIconCircle,
-                          { backgroundColor: colors.locationPuck },
+                          { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
                         ]}
                       >
                         <MaterialIcons
@@ -437,7 +445,12 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
           {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
         >
           <View style={styles.content}>
-            <View style={[styles.iconCircle, { backgroundColor: colors.locationPuck }]}>
+            <View
+              style={[
+                styles.iconCircle,
+                { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
+              ]}
+            >
               <MaterialIcons name={getProfileIcon(profile)} size={24} color="white" />
             </View>
             <View style={styles.infoContainer}>

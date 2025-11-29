@@ -95,7 +95,12 @@ const LocationCard: React.FC<LocationCardProps> = ({
 
           <ScrollView style={styles.expandedContent} showsVerticalScrollIndicator={false}>
             <View style={styles.expandedIconContainer}>
-              <View style={[styles.expandedIconCircle, { backgroundColor: colors.locationPuck }]}>
+              <View
+                style={[
+                  styles.expandedIconCircle,
+                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
+                ]}
+              >
                 <MaterialIcons
                   name={getIconForFeatureType(location.type)}
                   size={48}
@@ -135,7 +140,10 @@ const LocationCard: React.FC<LocationCardProps> = ({
 
             {onGetDirections && (
               <TouchableOpacity
-                style={[styles.directionsButton, { backgroundColor: colors.locationPuck }]}
+                style={[
+                  styles.directionsButton,
+                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
+                ]}
                 onPress={onGetDirections}
                 disabled={isLoadingDirections}
               >

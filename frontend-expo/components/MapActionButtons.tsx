@@ -148,12 +148,9 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
 
         {/* Record trip */}
         <MapActionButton
-          icon="tire"
+          icon="record-rec"
           iconFamily="MaterialCommunityIcons"
           isActive={isRecording}
-          isLoading={isRecording}
-          customLoadingIcon={true}
-          loadingSpinSpeed={1000}
           buttonColor={electricPurple}
           onActivate={onStartRecording}
           onDeactivate={onStopRecording}
