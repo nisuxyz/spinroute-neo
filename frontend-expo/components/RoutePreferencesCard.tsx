@@ -14,6 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { Menu, MenuTrigger, MenuOptions, MenuOption, MenuProvider } from 'react-native-popup-menu';
 import { useUserSettings } from '@/hooks/use-user-settings';
+import GetDirectionsButton from './GetDirectionsButton';
 
 interface RoutePreferencesCardProps {
   visible: boolean;
@@ -122,6 +123,7 @@ const RoutePreferencesCard: React.FC<RoutePreferencesCardProps> = ({
                   borderRadius: 12,
                   padding: 4,
                   minWidth: 200,
+                  marginLeft: 100,
                 },
               }}
             >
@@ -168,6 +170,7 @@ const RoutePreferencesCard: React.FC<RoutePreferencesCardProps> = ({
                   borderRadius: 12,
                   padding: 4,
                   minWidth: 200,
+                  marginLeft: 100,
                 },
               }}
             >
@@ -200,18 +203,7 @@ const RoutePreferencesCard: React.FC<RoutePreferencesCardProps> = ({
           >
             <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.confirmButton,
-              { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-            ]}
-            onPress={handleConfirm}
-          >
-            <Text style={[styles.buttonText, { color: 'white' }]}>
-              {mode === 'initial' ? 'Get Directions' : 'Recalculate'}
-            </Text>
-          </TouchableOpacity>
+          <GetDirectionsButton onPress={handleConfirm} mode={mode} style={styles.button} />
         </View>
       </>
     );
@@ -230,8 +222,14 @@ const RoutePreferencesCard: React.FC<RoutePreferencesCardProps> = ({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <MenuProvider>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <MenuProvider style={styles.modalContainer}>
         <Pressable style={styles.overlay} onPress={onClose}>
           <View onStartShouldSetResponder={() => true}>{renderContent()}</View>
         </Pressable>
@@ -241,6 +239,9 @@ const RoutePreferencesCard: React.FC<RoutePreferencesCardProps> = ({
 };
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -306,21 +307,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   buttonContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 12,
   },
   button: {
-    flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 20,
+  },
+  cancelButton: {
+    borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelButton: {
-    borderWidth: 1,
-  },
-  confirmButton: {},
   buttonText: {
     fontSize: 16,
     fontWeight: '700',

@@ -17,6 +17,7 @@ import { Colors } from '@/constants/theme';
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 import RoutePreferencesCard from './RoutePreferencesCard';
+import GetDirectionsButton from './GetDirectionsButton';
 
 interface LocationCardProps {
   location: {
@@ -45,6 +46,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
   const handleGetDirectionsClick = () => {
+    setIsExpanded(false); // Collapse the card before showing preferences
     setShowPreferences(true);
   };
 
@@ -151,33 +153,12 @@ const LocationCard: React.FC<LocationCardProps> = ({
               </View>
             </View>
 
-            {onGetDirections && !isLoadingDirections && (
-              <TouchableOpacity
-                style={[
-                  styles.directionsButton,
-                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-                ]}
+            {onGetDirections && (
+              <GetDirectionsButton
                 onPress={handleGetDirectionsClick}
-              >
-                <View style={styles.directionsButtonContent}>
-                  <MaterialIcons name="directions" size={20} color="white" />
-                  <Text style={styles.directionsButtonText}>Get Directions</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            {onGetDirections && isLoadingDirections && (
-              <TouchableOpacity
-                style={[
-                  styles.directionsButton,
-                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-                ]}
-                disabled
-              >
-                <View style={styles.directionsButtonContent}>
-                  <MaterialIcons name="hourglass-empty" size={20} color="white" />
-                  <Text style={styles.directionsButtonText}>Calculating...</Text>
-                </View>
-              </TouchableOpacity>
+                isLoading={isLoadingDirections}
+                style={styles.directionsButton}
+              />
             )}
           </ScrollView>
         </GlassContainer>
@@ -366,21 +347,6 @@ const styles = StyleSheet.create({
   },
   directionsButton: {
     marginTop: 24,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  directionsButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  directionsButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
   },
   directionsIconButton: {
     padding: 4,

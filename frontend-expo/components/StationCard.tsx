@@ -13,6 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 
 import RoutePreferencesCard from './RoutePreferencesCard';
+import GetDirectionsButton from './GetDirectionsButton';
 
 interface StationCardProps {
   station: {
@@ -49,6 +50,7 @@ const StationCard: React.FC<StationCardProps> = ({
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
   const handleGetDirectionsClick = () => {
+    setIsExpanded(false); // Collapse the card before showing preferences
     setShowPreferences(true);
   };
 
@@ -267,33 +269,12 @@ const StationCard: React.FC<StationCardProps> = ({
               )}
             </View>
 
-            {onGetDirections && !isLoadingDirections && (
-              <TouchableOpacity
-                style={[
-                  styles.directionsButton,
-                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-                ]}
+            {onGetDirections && (
+              <GetDirectionsButton
                 onPress={handleGetDirectionsClick}
-              >
-                <View style={styles.directionsButtonContent}>
-                  <MaterialIcons name="directions" size={20} color="white" />
-                  <Text style={styles.directionsButtonText}>Get Directions</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            {onGetDirections && isLoadingDirections && (
-              <TouchableOpacity
-                style={[
-                  styles.directionsButton,
-                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-                ]}
-                disabled
-              >
-                <View style={styles.directionsButtonContent}>
-                  <MaterialIcons name="hourglass-empty" size={20} color="white" />
-                  <Text style={styles.directionsButtonText}>Calculating...</Text>
-                </View>
-              </TouchableOpacity>
+                isLoading={isLoadingDirections}
+                style={styles.directionsButton}
+              />
             )}
           </ScrollView>
 
@@ -597,21 +578,6 @@ const styles = StyleSheet.create({
   },
   directionsButton: {
     marginTop: 24,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  directionsButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  directionsButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
 

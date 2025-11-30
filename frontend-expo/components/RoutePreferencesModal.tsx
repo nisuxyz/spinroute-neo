@@ -15,6 +15,7 @@ import { Colors } from '@/constants/theme';
 import ProviderPicker from './ProviderPicker';
 import ProfilePicker from './ProfilePicker';
 import { useUserSettings } from '@/hooks/use-user-settings';
+import GetDirectionsButton from './GetDirectionsButton';
 
 interface RoutePreferencesModalProps {
   visible: boolean;
@@ -143,18 +144,7 @@ const RoutePreferencesModal: React.FC<RoutePreferencesModalProps> = ({
           >
             <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.confirmButton,
-              { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-            ]}
-            onPress={handleConfirm}
-          >
-            <Text style={[styles.buttonText, { color: 'white' }]}>
-              {mode === 'initial' ? 'Get Directions' : 'Recalculate'}
-            </Text>
-          </TouchableOpacity>
+          <GetDirectionsButton onPress={handleConfirm} mode={mode} style={styles.button} />
         </View>
       </>
     );
@@ -259,14 +249,13 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 20,
+  },
+  cancelButton: {
+    borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelButton: {
-    borderWidth: 1,
-  },
-  confirmButton: {},
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
