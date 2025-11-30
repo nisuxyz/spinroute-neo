@@ -7,7 +7,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "environment": "build"
+      "environment": "development"
     },
     "preview": {
       "distribution": "internal",
