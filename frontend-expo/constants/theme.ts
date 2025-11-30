@@ -95,3 +95,168 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+/**
+ * Common spacing values used throughout the app
+ */
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+} as const;
+
+/**
+ * Common border radius values
+ */
+export const BorderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  round: 9999, // For fully rounded elements
+} as const;
+
+/**
+ * Common typography styles
+ */
+export const Typography = {
+  // Display text (large headings)
+  displayLarge: {
+    fontSize: 28,
+    fontWeight: '800' as const,
+    lineHeight: 34,
+  },
+  displayMedium: {
+    fontSize: 24,
+    fontWeight: '800' as const,
+    lineHeight: 30,
+  },
+  // Headings
+  h1: {
+    fontSize: 22,
+    fontWeight: '700' as const,
+    lineHeight: 28,
+  },
+  h2: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    lineHeight: 24,
+  },
+  h3: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    lineHeight: 22,
+  },
+  // Body text
+  bodyLarge: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    lineHeight: 22,
+  },
+  bodyMedium: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    lineHeight: 20,
+  },
+  bodySmall: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    lineHeight: 16,
+  },
+  // Labels
+  label: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  // Caption
+  caption: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    lineHeight: 14,
+  },
+} as const;
+
+/**
+ * Common shadow styles
+ */
+export const Shadows = {
+  small: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  medium: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  large: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+} as const;
+
+/**
+ * Common card styles
+ */
+export const CardStyles = {
+  // Collapsed card (bottom sheet style)
+  collapsed: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    ...Shadows.medium,
+  },
+  // Expanded card (full screen modal style)
+  expanded: {
+    borderRadius: BorderRadius.xxl,
+    padding: Spacing.xl,
+    ...Shadows.large,
+  },
+  // Settings card style
+  settings: {
+    borderRadius: BorderRadius.md,
+    padding: Spacing.lg,
+    ...Shadows.small,
+  },
+  // Detail row inside expanded cards
+  detailRow: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+} as const;
+
+/**
+ * Common button styles
+ */
+export const ButtonStyles = {
+  primary: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  secondary: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 1,
+  },
+} as const;

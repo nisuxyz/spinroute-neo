@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
+import { Colors, CardStyles, Spacing, BorderRadius, Typography, Shadows } from '@/constants/theme';
 
 import RoutePreferencesCard from './RoutePreferencesCard';
 import GetDirectionsButton from './GetDirectionsButton';
@@ -399,18 +399,12 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   card: {
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    ...CardStyles.collapsed,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   iconCircle: {
     width: 48,
@@ -423,8 +417,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stationName: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
     marginBottom: 4,
   },
   statsRow: {
@@ -438,8 +431,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statValue: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
   },
   statDivider: {
     width: 1,
@@ -474,13 +466,7 @@ const styles = StyleSheet.create({
   },
   expandedCard: {
     flex: 1,
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 16,
+    ...CardStyles.expanded,
   },
   expandedHeader: {
     flexDirection: 'row',

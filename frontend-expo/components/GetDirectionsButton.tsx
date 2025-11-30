@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet, useColorScheme } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
+import { Colors, ButtonStyles, Spacing, Typography } from '@/constants/theme';
 
 interface GetDirectionsButtonProps {
   onPress: () => void;
@@ -40,21 +40,16 @@ const GetDirectionsButton: React.FC<GetDirectionsButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    ...ButtonStyles.primary,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   text: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
   },
 });
 

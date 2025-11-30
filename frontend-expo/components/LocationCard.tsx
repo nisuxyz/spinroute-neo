@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
+import { Colors, CardStyles, Spacing, BorderRadius, Typography, Shadows } from '@/constants/theme';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -235,25 +235,18 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   card: {
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    ...CardStyles.collapsed,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   textContainer: {
     flex: 1,
   },
   name: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
     marginBottom: 2,
   },
   address: {
@@ -272,34 +265,27 @@ const styles = StyleSheet.create({
   },
   expandedCard: {
     flex: 1,
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 16,
+    ...CardStyles.expanded,
   },
   expandedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
-    gap: 12,
+    marginBottom: Spacing.xxl,
+    gap: Spacing.md,
   },
   backButton: {
     padding: 4,
   },
   expandedTitle: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
+    ...Typography.h2,
   },
   expandedContent: {
     flex: 1,
   },
   expandedIconContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xxl,
   },
   expandedIconCircle: {
     width: 96,
@@ -309,27 +295,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   expandedName: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 8,
+    ...Typography.displayLarge,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   expandedAddress: {
-    fontSize: 16,
+    ...Typography.bodyLarge,
     textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
+    marginBottom: Spacing.xxxl,
   },
   detailsSection: {
-    gap: 16,
+    gap: Spacing.lg,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    gap: Spacing.lg,
+    ...CardStyles.detailRow,
   },
   detailTextContainer: {
     flex: 1,
