@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { MenuProvider } from 'react-native-popup-menu';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -45,21 +46,23 @@ function RootLayoutNav() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <Stack>
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Map' }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-          <Stack.Screen
-            name="trip/[id]"
-            options={{
-              presentation: 'card',
-              animation: 'slide_from_right',
-            }}
-          />
-        </Stack>
-      </BottomSheetModalProvider>
+      <MenuProvider>
+        <BottomSheetModalProvider>
+          <Stack>
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Map' }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+            <Stack.Screen
+              name="trip/[id]"
+              options={{
+                presentation: 'card',
+                animation: 'slide_from_right',
+              }}
+            />
+          </Stack>
+        </BottomSheetModalProvider>
+      </MenuProvider>
     </GestureHandlerRootView>
   );
 }

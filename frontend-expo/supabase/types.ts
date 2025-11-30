@@ -1018,6 +1018,7 @@ export type Database = {
       user_bike: {
         Row: {
           brand: string | null;
+          color: string;
           created_at: string;
           id: string;
           metadata: Json | null;
@@ -1031,6 +1032,7 @@ export type Database = {
         };
         Insert: {
           brand?: string | null;
+          color?: string;
           created_at?: string;
           id?: string;
           metadata?: Json | null;
@@ -1044,6 +1046,7 @@ export type Database = {
         };
         Update: {
           brand?: string | null;
+          color?: string;
           created_at?: string;
           id?: string;
           metadata?: Json | null;

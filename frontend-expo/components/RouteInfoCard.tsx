@@ -17,8 +17,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import type { DirectionsResponse } from '@/hooks/use-directions';
 import { RouteProfile } from '@/hooks/use-directions';
-import ProviderPicker from './ProviderPicker';
-import ProfilePicker from './ProfilePicker';
+import RoutePreferencesCard from './RoutePreferencesCard';
 import { useUserSettings } from '@/hooks/use-user-settings';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -43,9 +42,7 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
   onRecalculate,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showQuickSwitcher, setShowQuickSwitcher] = useState(false);
-  const [showProviderPicker, setShowProviderPicker] = useState(false);
-  const [showProfilePicker, setShowProfilePicker] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
   const { settings } = useUserSettings();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -53,14 +50,14 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
 
   const GlassContainer = hasGlassEffect ? GlassView : View;
 
-  const handleProviderChange = () => {
-    setShowQuickSwitcher(false);
-    setShowProviderPicker(true);
+  const handleRecalculateClick = () => {
+    setShowPreferences(true);
   };
 
-  const handleProfileChange = () => {
-    setShowQuickSwitcher(false);
-    setShowProfilePicker(true);
+  const handleConfirmRecalculate = () => {
+    if (onRecalculate) {
+      setTimeout(() => onRecalculate(), 300);
+    }
   };
 
   const formatDistance = (meters: number): string => {
@@ -244,67 +241,14 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
   // Collect all steps from all legs
   const allSteps = mainRoute.legs?.flatMap((leg) => leg.steps) || [];
 
-  // Render modals separately so they're always available
-  const renderModals = () => (
-    <>
-      {/* Quick Switcher Modal */}
-      <Modal
-        visible={showQuickSwitcher}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowQuickSwitcher(false)}
-      >
-        <Pressable style={styles.quickSwitcherOverlay} onPress={() => setShowQuickSwitcher(false)}>
-          <Pressable>
-            <GlassView style={styles.quickSwitcherContent} glassEffectStyle="regular">
-              <Text style={[styles.quickSwitcherTitle, { color: colors.text }]}>
-                Recalculate Route
-              </Text>
-              <TouchableOpacity
-                style={[styles.quickSwitcherOption, { borderBottomColor: colors.background }]}
-                onPress={handleProviderChange}
-              >
-                <MaterialIcons name="route" size={24} color={colors.text} />
-                <Text style={[styles.quickSwitcherOptionText, { color: colors.text }]}>
-                  Change Provider
-                </Text>
-                <MaterialIcons name="chevron-right" size={24} color={colors.icon} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickSwitcherOption} onPress={handleProfileChange}>
-                <MaterialIcons name="directions-bike" size={24} color={colors.text} />
-                <Text style={[styles.quickSwitcherOptionText, { color: colors.text }]}>
-                  Change Profile
-                </Text>
-                <MaterialIcons name="chevron-right" size={24} color={colors.icon} />
-              </TouchableOpacity>
-            </GlassView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Provider and Profile Pickers */}
-      <ProviderPicker
-        visible={showProviderPicker}
-        currentProvider={settings?.preferred_routing_provider || null}
-        onClose={() => {
-          setShowProviderPicker(false);
-          if (onRecalculate) {
-            setTimeout(() => onRecalculate(), 300);
-          }
-        }}
-      />
-      <ProfilePicker
-        visible={showProfilePicker}
-        currentProfile={settings?.preferred_routing_profile || null}
-        currentProvider={settings?.preferred_routing_provider || null}
-        onClose={() => {
-          setShowProfilePicker(false);
-          if (onRecalculate) {
-            setTimeout(() => onRecalculate(), 300);
-          }
-        }}
-      />
-    </>
+  // Render preferences card separately so it's always available
+  const renderPreferencesCard = () => (
+    <RoutePreferencesCard
+      visible={showPreferences}
+      onClose={() => setShowPreferences(false)}
+      onConfirm={handleConfirmRecalculate}
+      mode="recalculate"
+    />
   );
 
   // Expanded view with turn-by-turn instructions
@@ -339,7 +283,7 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
                     styles.quickSwitcherButton,
                     { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
                   ]}
-                  onPress={() => setShowQuickSwitcher(true)}
+                  onPress={handleRecalculateClick}
                 >
                   <MaterialIcons name="tune" size={20} color="white" />
                 </TouchableOpacity>
@@ -431,7 +375,7 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
             )}
           </GlassContainer>
         </View>
-        {renderModals()}
+        {renderPreferencesCard()}
       </>
     );
   }
@@ -501,7 +445,7 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
           </View>
         </GlassContainer>
       </TouchableOpacity>
-      {renderModals()}
+      {renderPreferencesCard()}
     </>
   );
 };
@@ -511,7 +455,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 120,
     left: 16,
-    right: 64,
+    right: 16,
     zIndex: 999,
   },
   card: {
@@ -617,7 +561,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 100,
     left: 16,
-    right: 64,
+    right: 16,
     bottom: 120,
     zIndex: 1000,
   },
@@ -762,34 +706,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  quickSwitcherOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickSwitcherContent: {
-    borderRadius: 16,
-    padding: 20,
-    minWidth: 280,
-  },
-  quickSwitcherTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  quickSwitcherOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  quickSwitcherOptionText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

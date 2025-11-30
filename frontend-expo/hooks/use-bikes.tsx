@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from './use-supabase';
+import { supabase as supabaseClient } from '@/utils/supabase';
 import type { Database } from '../supabase/types';
 
 export type BikeType = Database['vehicles']['Enums']['bike_type'];
@@ -13,6 +14,7 @@ export interface CreateBikeInput {
   purchase_date?: string;
   initial_kilometrage?: number;
   unit?: 'km' | 'mi';
+  color?: string;
   metadata?: any;
 }
 
@@ -22,6 +24,7 @@ export interface UpdateBikeInput {
   brand?: string;
   model?: string;
   purchase_date?: string;
+  color?: string;
   metadata?: any;
 }
 
@@ -82,6 +85,14 @@ export function useBikes() {
     setError(null);
 
     try {
+      // Get current user
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const unit = input.unit || 'km';
       const initialKm =
         input.initial_kilometrage !== undefined
@@ -94,12 +105,14 @@ export function useBikes() {
         .schema('vehicles')
         .from('user_bike')
         .insert({
+          user_id: user.id,
           name: input.name,
           type: input.type,
           brand: input.brand || null,
           model: input.model || null,
           purchase_date: input.purchase_date || null,
           total_kilometrage: initialKm,
+          color: input.color || '#3b82f6',
           metadata: input.metadata || null,
         })
         .select()
@@ -143,6 +156,7 @@ export function useBikes() {
       if (input.brand !== undefined) updates.brand = input.brand;
       if (input.model !== undefined) updates.model = input.model;
       if (input.purchase_date !== undefined) updates.purchase_date = input.purchase_date;
+      if (input.color !== undefined) updates.color = input.color;
       if (input.metadata !== undefined) updates.metadata = input.metadata;
 
       const { data, error: updateError } = await supabase

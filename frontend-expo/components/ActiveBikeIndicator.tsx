@@ -72,11 +72,13 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
 
   const icon = bikeTypeIcons[bike.type] || 'pedal-bike';
 
+  const bikeColor = bike.color || '#3b82f6';
+
   return (
     <View style={styles.container}>
       <GlassView style={{ borderRadius: 16 }}>
         <View style={styles.content}>
-          <MaterialIcons name={icon} size={16} color={colors.buttonIcon} />
+          <MaterialIcons name={icon} size={16} color={bikeColor} />
           <Text style={[styles.bikeText, { color: colors.text }]} numberOfLines={1}>
             {bike.name}
           </Text>

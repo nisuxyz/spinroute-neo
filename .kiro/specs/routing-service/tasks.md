@@ -258,7 +258,7 @@
 
 - [ ] 8. Implement caching layer
   - [ ] 8.1 Add caching to routing service
-    - Implement in-memory cache for route responses
+    - Implement cache in db for route responses
     - Use waypoints + profile + provider as cache key
     - Set 15-minute TTL for cached routes
     - _Requirements: 4_

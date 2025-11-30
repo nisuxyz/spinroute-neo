@@ -16,6 +16,8 @@ import { Colors } from '@/constants/theme';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
+import RoutePreferencesCard from './RoutePreferencesCard';
+
 interface LocationCardProps {
   location: {
     name: string;
@@ -37,9 +39,20 @@ const LocationCard: React.FC<LocationCardProps> = ({
   isLoadingDirections = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
+
+  const handleGetDirectionsClick = () => {
+    setShowPreferences(true);
+  };
+
+  const handleConfirmDirections = () => {
+    if (onGetDirections) {
+      onGetDirections();
+    }
+  };
 
   const getIconForFeatureType = (type: string): any => {
     switch (type) {
@@ -138,26 +151,32 @@ const LocationCard: React.FC<LocationCardProps> = ({
               </View>
             </View>
 
-            {onGetDirections && (
+            {onGetDirections && !isLoadingDirections && (
               <TouchableOpacity
                 style={[
                   styles.directionsButton,
                   { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
                 ]}
-                onPress={onGetDirections}
-                disabled={isLoadingDirections}
+                onPress={handleGetDirectionsClick}
               >
-                {isLoadingDirections ? (
-                  <View style={styles.directionsButtonContent}>
-                    <MaterialIcons name="hourglass-empty" size={20} color="white" />
-                    <Text style={styles.directionsButtonText}>Calculating...</Text>
-                  </View>
-                ) : (
-                  <View style={styles.directionsButtonContent}>
-                    <MaterialIcons name="directions" size={20} color="white" />
-                    <Text style={styles.directionsButtonText}>Get Directions</Text>
-                  </View>
-                )}
+                <View style={styles.directionsButtonContent}>
+                  <MaterialIcons name="directions" size={20} color="white" />
+                  <Text style={styles.directionsButtonText}>Get Directions</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            {onGetDirections && isLoadingDirections && (
+              <TouchableOpacity
+                style={[
+                  styles.directionsButton,
+                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
+                ]}
+                disabled
+              >
+                <View style={styles.directionsButtonContent}>
+                  <MaterialIcons name="hourglass-empty" size={20} color="white" />
+                  <Text style={styles.directionsButtonText}>Calculating...</Text>
+                </View>
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -167,53 +186,62 @@ const LocationCard: React.FC<LocationCardProps> = ({
   }
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handleToggleExpand} activeOpacity={0.9}>
-      <GlassContainer
-        style={[styles.card, !hasGlassEffect && { backgroundColor: colors.buttonBackground }]}
-        {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
-      >
-        <View style={styles.content}>
-          <MaterialIcons
-            name={getIconForFeatureType(location.type)}
-            size={24}
-            color={colors.text}
-          />
-          <View style={styles.textContainer}>
-            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
-              {location.name}
-            </Text>
-            <Text style={[styles.address, { color: colors.text + 'CC' }]} numberOfLines={1}>
-              {location.display_name}
-            </Text>
-          </View>
-          {onGetDirections && (
+    <>
+      <TouchableOpacity style={styles.container} onPress={handleToggleExpand} activeOpacity={0.9}>
+        <GlassContainer
+          style={[styles.card, !hasGlassEffect && { backgroundColor: colors.buttonBackground }]}
+          {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
+        >
+          <View style={styles.content}>
+            <MaterialIcons
+              name={getIconForFeatureType(location.type)}
+              size={24}
+              color={colors.text}
+            />
+            <View style={styles.textContainer}>
+              <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+                {location.name}
+              </Text>
+              <Text style={[styles.address, { color: colors.text + 'CC' }]} numberOfLines={1}>
+                {location.display_name}
+              </Text>
+            </View>
+            {onGetDirections && !isLoadingDirections && (
+              <TouchableOpacity
+                style={styles.directionsIconButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleGetDirectionsClick();
+                }}
+              >
+                <MaterialIcons name="directions" size={20} color={colors.text} />
+              </TouchableOpacity>
+            )}
+            {onGetDirections && isLoadingDirections && (
+              <TouchableOpacity style={styles.directionsIconButton} disabled>
+                <MaterialIcons name="hourglass-empty" size={20} color={colors.text} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={styles.directionsIconButton}
+              style={styles.closeButton}
               onPress={(e) => {
                 e.stopPropagation();
-                onGetDirections();
+                onClose();
               }}
-              disabled={isLoadingDirections}
             >
-              <MaterialIcons
-                name={isLoadingDirections ? 'hourglass-empty' : 'directions'}
-                size={20}
-                color={colors.text}
-              />
+              <MaterialIcons name="close" size={20} color={colors.text} />
             </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-          >
-            <MaterialIcons name="close" size={20} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-      </GlassContainer>
-    </TouchableOpacity>
+          </View>
+        </GlassContainer>
+      </TouchableOpacity>
+
+      <RoutePreferencesCard
+        visible={showPreferences}
+        onClose={() => setShowPreferences(false)}
+        onConfirm={handleConfirmDirections}
+        mode="initial"
+      />
+    </>
   );
 };
 
@@ -222,7 +250,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 120,
     left: 16,
-    right: 64,
+    right: 16,
     zIndex: 999,
   },
   card: {
@@ -257,7 +285,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 100,
     left: 16,
-    right: 64,
+    right: 16,
     bottom: 120,
     zIndex: 100,
   },

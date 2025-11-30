@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import MapActionButtons from './MapActionButtons';
-import StationCallout from './StationCallout';
+import StationCard from './StationCard';
 import StationMarker from './StationMarker';
 import StationLayers from './StationLayers';
 import { useSupabase } from '@/hooks/use-supabase';
@@ -16,6 +16,7 @@ import { useTripRecording } from '@/hooks/use-trip-recording';
 import { useLocationTracking } from '@/hooks/use-location-tracking';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useBikes } from '@/hooks/use-bikes';
+import { useStationDetails } from '@/hooks/use-station-details';
 import { Colors } from '@/constants/theme';
 import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
@@ -42,6 +43,13 @@ interface SelectedStation {
   electricBikes: number;
   availableDocks: number;
   availabilityStatus: string;
+  address?: string;
+  capacity?: number;
+  isOperational?: boolean;
+  isRenting?: boolean;
+  isReturning?: boolean;
+  lastReported?: string;
+  networkName?: string;
 }
 
 const MainMapView: React.FC = () => {
@@ -96,6 +104,9 @@ const MainMapView: React.FC = () => {
     calculateRoute,
     clearRoute,
   } = useDirections();
+
+  // Station details hook
+  const { fetchStationDetails } = useStationDetails();
 
   // Trip recording hook
   const {
@@ -152,7 +163,7 @@ const MainMapView: React.FC = () => {
     }
   };
 
-  const handleStationPress = (event: any) => {
+  const handleStationPress = async (event: any) => {
     const feature = event.features[0];
     if (!feature?.properties) return;
 
@@ -163,6 +174,7 @@ const MainMapView: React.FC = () => {
     if (selectedStation?.id === id) {
       setSelectedStation(null);
     } else {
+      // Set basic info immediately
       setSelectedStation({
         id,
         name: message,
@@ -172,10 +184,28 @@ const MainMapView: React.FC = () => {
         availableDocks,
         availabilityStatus,
       });
+
+      // Fetch detailed info in the background
+      const details = await fetchStationDetails(id);
+      if (details) {
+        setSelectedStation((prev) => {
+          if (!prev || prev.id !== id) return prev;
+          return {
+            ...prev,
+            address: details.address || undefined,
+            capacity: details.capacity,
+            isOperational: details.is_operational ?? undefined,
+            isRenting: details.is_renting ?? undefined,
+            isReturning: details.is_returning ?? undefined,
+            lastReported: details.last_reported,
+            networkName: details.network?.name,
+          };
+        });
+      }
     }
   };
 
-  const handleMarkerPress = (
+  const handleMarkerPress = async (
     id: string,
     name: string,
     coordinates: [number, number],
@@ -187,6 +217,7 @@ const MainMapView: React.FC = () => {
     if (selectedStation?.id === id) {
       setSelectedStation(null);
     } else {
+      // Set basic info immediately
       setSelectedStation({
         id,
         name,
@@ -196,6 +227,24 @@ const MainMapView: React.FC = () => {
         availableDocks,
         availabilityStatus,
       });
+
+      // Fetch detailed info in the background
+      const details = await fetchStationDetails(id);
+      if (details) {
+        setSelectedStation((prev) => {
+          if (!prev || prev.id !== id) return prev;
+          return {
+            ...prev,
+            address: details.address || undefined,
+            capacity: details.capacity,
+            isOperational: details.is_operational ?? undefined,
+            isRenting: details.is_renting ?? undefined,
+            isReturning: details.is_returning ?? undefined,
+            lastReported: details.last_reported,
+            networkName: details.network?.name,
+          };
+        });
+      }
     }
   };
 
@@ -203,9 +252,15 @@ const MainMapView: React.FC = () => {
     setSelectedStation(null);
   };
 
-  const handleGetDirections = async () => {
-    if (!userLocation || !searchedLocation) {
-      Alert.alert('Location Required', 'Unable to calculate route without location information');
+  const handleGetDirections = async (destination?: { lat: number; lon: number }) => {
+    if (!userLocation) {
+      Alert.alert('Location Required', 'Unable to calculate route without your location');
+      return;
+    }
+
+    const dest = destination || searchedLocation;
+    if (!dest) {
+      Alert.alert('Destination Required', 'Unable to calculate route without a destination');
       return;
     }
 
@@ -217,9 +272,17 @@ const MainMapView: React.FC = () => {
         longitude: userLocation[0],
       },
       destination: {
-        latitude: searchedLocation.lat,
-        longitude: searchedLocation.lon,
+        latitude: dest.lat,
+        longitude: dest.lon,
       },
+    });
+  };
+
+  const handleGetStationDirections = async () => {
+    if (!selectedStation) return;
+    await handleGetDirections({
+      lat: selectedStation.coordinates[1],
+      lon: selectedStation.coordinates[0],
     });
   };
 
@@ -405,23 +468,6 @@ const MainMapView: React.FC = () => {
             );
           })}
 
-        {selectedStation && (
-          <Mapbox.MarkerView
-            id="stationCallout"
-            allowOverlapWithPuck={true}
-            coordinate={selectedStation.coordinates}
-            anchor={{ x: 0.5, y: 1 }}
-          >
-            <StationCallout
-              stationName={selectedStation.name}
-              classicBikes={selectedStation.classicBikes}
-              electricBikes={selectedStation.electricBikes}
-              availableDocks={selectedStation.availableDocks}
-              onClose={() => setSelectedStation(null)}
-            />
-          </Mapbox.MarkerView>
-        )}
-
         {locationPermissionGranted && (
           <Mapbox.LocationPuck
             puckBearing="heading"
@@ -520,11 +566,20 @@ const MainMapView: React.FC = () => {
 
       <SearchButton onPress={() => setIsSearchSheetVisible(true)} />
 
-      {searchedLocation && !routeGeometry && (
+      {selectedStation && !routeGeometry && (
+        <StationCard
+          station={selectedStation}
+          onClose={() => setSelectedStation(null)}
+          onGetDirections={handleGetStationDirections}
+          isLoadingDirections={directionsLoading}
+        />
+      )}
+
+      {searchedLocation && !routeGeometry && !selectedStation && (
         <LocationCard
           location={searchedLocation}
           onClose={() => setSearchedLocation(null)}
-          onGetDirections={handleGetDirections}
+          onGetDirections={() => handleGetDirections()}
           isLoadingDirections={directionsLoading}
         />
       )}
@@ -537,7 +592,13 @@ const MainMapView: React.FC = () => {
           profile={RouteProfile.CYCLING}
           units={(settings?.units as 'metric' | 'imperial') || 'metric'}
           onClearRoute={handleClearRoute}
-          onRecalculate={handleGetDirections}
+          onRecalculate={
+            selectedStation
+              ? handleGetStationDirections
+              : searchedLocation
+                ? () => handleGetDirections()
+                : undefined
+          }
         />
       )}
 

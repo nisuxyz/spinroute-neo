@@ -1,0 +1,13 @@
+# flyctl launch added from .gitignore
+# deps
+**/node_modules
+
+# pglite
+**/pglite
+
+**/.env
+**/.env.local
+**/.env.*.local
+
+**/.DS_Store
+fly.toml
