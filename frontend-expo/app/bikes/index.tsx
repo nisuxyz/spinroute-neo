@@ -174,7 +174,7 @@ export default function BikesScreen() {
             headerBackButtonDisplayMode: 'minimal',
             headerRight: () => (
               <TouchableOpacity onPress={() => router.push('/bikes/new')}>
-                <Text style={[styles.saveButton, { color: colors.buttonIcon }]}>New Bike</Text>
+                <Text style={[styles.saveButton]}>New Bike</Text>
               </TouchableOpacity>
             ),
           }}
@@ -197,7 +197,7 @@ export default function BikesScreen() {
           headerBackButtonDisplayMode: 'minimal',
           headerRight: () => (
             <TouchableOpacity onPress={() => router.push('/bikes/new')}>
-              <Text style={[styles.saveButton, { color: colors.buttonIcon }]}>New Bike</Text>
+              <Text style={[styles.saveButton]}>New Bike</Text>
             </TouchableOpacity>
           ),
         }}

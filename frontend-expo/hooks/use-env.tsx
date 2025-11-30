@@ -1,4 +1,4 @@
-export const useEnv = (useDevUrls: boolean = process.env.NODE_ENV === 'development') => {
+export const useEnv = (useDevUrls: boolean = false) => {
   // EXPO_PUBLIC_ environment variables are automatically available via process.env
   // in both development and production builds (EAS Build injects them automatically)
 
