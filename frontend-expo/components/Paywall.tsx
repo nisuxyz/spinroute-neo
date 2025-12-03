@@ -108,10 +108,16 @@ export function Paywall({ visible, onClose }: PaywallProps) {
     return null;
   };
 
-  const renderContent = () => {
+  const renderContent = (bottomPadding?: number) => {
     if (isPro) {
       return (
         <>
+          {/* Close Button */}
+          <View style={styles.closeButtonRow}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <MaterialIcons name="close" size={24} color={colors.icon} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.proIconContainer}>
             <MaterialIcons name="workspace-premium" size={64} color={electricPurple} />
           </View>
@@ -130,7 +136,20 @@ export function Paywall({ visible, onClose }: PaywallProps) {
     }
 
     return (
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          bottomPadding ? { paddingBottom: bottomPadding } : undefined,
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Close Button */}
+        <View style={styles.closeButtonRow}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <MaterialIcons name="close" size={24} color={colors.icon} />
+          </TouchableOpacity>
+        </View>
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.iconContainer}>
@@ -231,17 +250,19 @@ export function Paywall({ visible, onClose }: PaywallProps) {
   };
 
   const renderModalContent = () => {
+    const bottomPadding = insets.bottom + Spacing.lg;
+
     if (hasGlassEffect) {
       return (
         <GlassView
           style={[
             styles.modalContent,
-            isPro && styles.modalContentPro,
-            { marginTop: insets.top + Spacing.xl, marginBottom: insets.bottom + Spacing.xl },
+            isPro && [styles.modalContentPro, { paddingBottom: bottomPadding }],
           ]}
           glassEffectStyle="regular"
+          onStartShouldSetResponder={() => true}
         >
-          {renderContent()}
+          {isPro ? renderContent() : renderContent(bottomPadding)}
         </GlassView>
       );
     }
@@ -250,15 +271,12 @@ export function Paywall({ visible, onClose }: PaywallProps) {
       <View
         style={[
           styles.modalContent,
-          isPro && styles.modalContentPro,
-          {
-            backgroundColor: colors.background,
-            marginTop: insets.top + Spacing.xl,
-            marginBottom: insets.bottom + Spacing.xl,
-          },
+          isPro && [styles.modalContentPro, { paddingBottom: bottomPadding }],
+          { backgroundColor: colors.background },
         ]}
+        onStartShouldSetResponder={() => true}
       >
-        {renderContent()}
+        {isPro ? renderContent() : renderContent(bottomPadding)}
       </View>
     );
   };
@@ -267,14 +285,13 @@ export function Paywall({ visible, onClose }: PaywallProps) {
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
       statusBarTranslucent
     >
       <View style={styles.modalContainer}>
-        <Pressable style={styles.overlay} onPress={onClose}>
-          <View onStartShouldSetResponder={() => true}>{renderModalContent()}</View>
-        </Pressable>
+        <Pressable style={styles.overlay} onPress={onClose} />
+        {renderModalContent()}
       </View>
     </Modal>
   );
@@ -377,28 +394,41 @@ const styles = StyleSheet.create({
   // Modal
   modalContainer: {
     flex: 1,
+    justifyContent: 'flex-end',
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
   },
   modalContent: {
     width: '100%',
-    maxHeight: '90%',
-    borderRadius: BorderRadius.xl,
+    maxHeight: '92%',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
     overflow: 'hidden',
   },
   modalContentPro: {
     maxHeight: undefined,
     padding: Spacing.xxxl,
+    paddingTop: Spacing.lg,
+    alignItems: 'center',
+  },
+  closeButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingTop: Spacing.md,
+    paddingRight: Spacing.md,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   scrollContent: {
     padding: Spacing.xl,
-    paddingBottom: Spacing.xxxl,
+    paddingTop: 0,
   },
   proIconContainer: {
     marginBottom: Spacing.lg,
