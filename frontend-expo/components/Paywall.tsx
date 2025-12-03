@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useIAPContext, SUBSCRIPTION_SKUS } from '@/hooks/use-iap';
 import { useSubscription } from '@/hooks/use-subscription';
 import { Colors, electricPurple, Spacing, BorderRadius, Typography } from '@/constants/theme';
@@ -45,6 +46,9 @@ export function Paywall({ visible, onClose }: PaywallProps) {
   } = useIAPContext();
 
   const { isPro } = useSubscription();
+
+  // Check if glass effect is available
+  const glassAvailable = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
   // Snap points - smaller for pro status, larger for purchase flow
   const snapPoints = useMemo(() => (isPro ? ['40%'] : ['90%']), [isPro]);
@@ -108,29 +112,155 @@ export function Paywall({ visible, onClose }: PaywallProps) {
         enablePanDownToClose
         onDismiss={onClose}
         backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: colors.background }}
-        handleIndicatorStyle={{ backgroundColor: colors.icon }}
+        backgroundStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.background }}
+        handleIndicatorStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.icon }}
       >
-        <View style={styles.proContainer}>
-          <View style={styles.proIconContainer}>
-            <MaterialIcons name="workspace-premium" size={64} color={electricPurple} />
+        {glassAvailable ? (
+          <GlassView style={styles.glassBackground} glassEffectStyle="regular">
+            <View style={styles.handleContainer}>
+              <View style={[styles.handle, { backgroundColor: colors.icon }]} />
+            </View>
+            <View style={styles.proContainer}>
+              <View style={styles.proIconContainer}>
+                <MaterialIcons name="workspace-premium" size={64} color={electricPurple} />
+              </View>
+              <Text style={[styles.proTitle, { color: colors.text }]}>You're a Pro! 🎉</Text>
+              <Text style={[styles.proSubtitle, { color: colors.icon }]}>
+                You have full access to all SpinRoute features.
+              </Text>
+              <TouchableOpacity
+                style={[styles.primaryButton, { backgroundColor: electricPurple }]}
+                onPress={onClose}
+              >
+                <Text style={styles.primaryButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </GlassView>
+        ) : (
+          <View style={styles.proContainer}>
+            <View style={[styles.proIconContainer, { backgroundColor: `${electricPurple}15` }]}>
+              <MaterialIcons name="workspace-premium" size={64} color={electricPurple} />
+            </View>
+            <Text style={[styles.proTitle, { color: colors.text }]}>You're a Pro! 🎉</Text>
+            <Text style={[styles.proSubtitle, { color: colors.icon }]}>
+              You have full access to all SpinRoute features.
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: electricPurple }]}
+              onPress={onClose}
+            >
+              <Text style={styles.primaryButtonText}>Close</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.proTitle, { color: colors.text }]}>You're a Pro! 🎉</Text>
-          <Text style={[styles.proSubtitle, { color: colors.icon }]}>
-            You have full access to all SpinRoute features.
-          </Text>
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: electricPurple }]}
-            onPress={onClose}
-          >
-            <Text style={styles.primaryButtonText}>Close</Text>
-          </TouchableOpacity>
-        </View>
+        )}
       </BottomSheetModal>
     );
   }
 
   // Purchase flow content
+  const purchaseContent = (
+    <>
+      {/* Header */}
+      <View style={styles.header}>
+        <View
+          style={[
+            styles.iconContainer,
+            !glassAvailable && { backgroundColor: `${electricPurple}15` },
+          ]}
+        >
+          <MaterialIcons name="workspace-premium" size={48} color={electricPurple} />
+        </View>
+        <Text style={[styles.title, { color: colors.text }]}>Upgrade to Pro</Text>
+        <Text style={[styles.subtitle, { color: colors.icon }]}>
+          Unlock unlimited bikes, trips, and advanced analytics
+        </Text>
+      </View>
+
+      {/* Features */}
+      <View style={[styles.featuresCard, { backgroundColor: colors.buttonBackground }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>What you'll get</Text>
+        <View style={styles.featuresList}>
+          <FeatureItem icon="pedal-bike" text="Unlimited bikes" colors={colors} />
+          <FeatureItem icon="route" text="Unlimited trip recording" colors={colors} />
+          <FeatureItem icon="analytics" text="Advanced statistics" colors={colors} />
+          <FeatureItem icon="map" text="Expanded route providers" colors={colors} />
+        </View>
+      </View>
+
+      {/* Connection Error */}
+      {!connected && (
+        <View style={[styles.errorContainer, { backgroundColor: colors.buttonBackground }]}>
+          <MaterialIcons name="wifi-off" size={20} color="#ef4444" />
+          <Text style={styles.errorText}>
+            Unable to connect to the App Store. Please check your connection.
+          </Text>
+        </View>
+      )}
+
+      {/* Plans */}
+      {productsLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={electricPurple} />
+          <Text style={[styles.loadingText, { color: colors.icon }]}>Loading plans...</Text>
+        </View>
+      ) : (
+        <View style={styles.plans}>
+          {sortedSubscriptions.map((subscription) => (
+            <SubscriptionCard
+              key={subscription.id}
+              subscription={subscription}
+              label={getSubscriptionLabel(subscription.id)}
+              badgeColor={getBadgeColor(subscription.id)}
+              onPress={() => handlePurchase(subscription.id)}
+              disabled={purchasing || restoring || !connected}
+              loading={purchasing}
+              colors={colors}
+            />
+          ))}
+        </View>
+      )}
+
+      {/* Restore Purchases */}
+      <TouchableOpacity
+        style={styles.restoreButton}
+        onPress={restorePurchases}
+        disabled={restoring || purchasing || !connected}
+      >
+        {restoring ? (
+          <ActivityIndicator size="small" color={electricPurple} />
+        ) : (
+          <Text style={[styles.restoreButtonText, { color: electricPurple }]}>
+            Restore Purchases
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      {/* Maybe Later */}
+      <TouchableOpacity style={styles.skipButton} onPress={onClose}>
+        <Text style={[styles.skipButtonText, { color: colors.icon }]}>Maybe Later</Text>
+      </TouchableOpacity>
+
+      {/* Legal Text */}
+      <Text style={[styles.legal, { color: colors.icon }]}>
+        Payment will be charged to your Apple ID account at confirmation of purchase. Subscription
+        automatically renews unless canceled at least 24 hours before the end of the current period.
+        Your account will be charged for renewal within 24 hours prior to the end of the current
+        period.
+      </Text>
+
+      {/* Legal Links */}
+      <View style={styles.legalLinks}>
+        <TouchableOpacity onPress={() => Linking.openURL(TERMS_URL)}>
+          <Text style={[styles.legalLink, { color: electricPurple }]}>Terms of Service</Text>
+        </TouchableOpacity>
+        <Text style={[styles.legalSeparator, { color: colors.icon }]}>•</Text>
+        <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_URL)}>
+          <Text style={[styles.legalLink, { color: electricPurple }]}>Privacy Policy</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
   return (
     <BottomSheetModal
       ref={bottomSheetModalRef}
@@ -138,104 +268,23 @@ export function Paywall({ visible, onClose }: PaywallProps) {
       enablePanDownToClose
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: colors.background }}
-      handleIndicatorStyle={{ backgroundColor: colors.icon }}
+      backgroundStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.background }}
+      handleIndicatorStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.icon }}
     >
-      <BottomSheetScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <MaterialIcons name="workspace-premium" size={48} color={electricPurple} />
+      {glassAvailable ? (
+        <GlassView style={styles.glassBackground} glassEffectStyle="regular">
+          <View style={styles.handleContainer}>
+            <View style={[styles.handle, { backgroundColor: colors.icon }]} />
           </View>
-          <Text style={[styles.title, { color: colors.text }]}>Upgrade to Pro</Text>
-          <Text style={[styles.subtitle, { color: colors.icon }]}>
-            Unlock unlimited bikes, trips, and advanced analytics
-          </Text>
-        </View>
-
-        {/* Features */}
-        <View style={[styles.featuresCard, { backgroundColor: colors.buttonBackground }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>What you'll get</Text>
-          <View style={styles.featuresList}>
-            <FeatureItem icon="pedal-bike" text="Unlimited bikes" colors={colors} />
-            <FeatureItem icon="route" text="Unlimited trip recording" colors={colors} />
-            <FeatureItem icon="analytics" text="Advanced statistics" colors={colors} />
-            <FeatureItem icon="map" text="Expanded route providers" colors={colors} />
-          </View>
-        </View>
-
-        {/* Connection Error */}
-        {!connected && (
-          <View style={[styles.errorContainer, { backgroundColor: colors.buttonBackground }]}>
-            <MaterialIcons name="wifi-off" size={20} color="#ef4444" />
-            <Text style={styles.errorText}>
-              Unable to connect to the App Store. Please check your connection.
-            </Text>
-          </View>
-        )}
-
-        {/* Plans */}
-        {productsLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={electricPurple} />
-            <Text style={[styles.loadingText, { color: colors.icon }]}>Loading plans...</Text>
-          </View>
-        ) : (
-          <View style={styles.plans}>
-            {sortedSubscriptions.map((subscription) => (
-              <SubscriptionCard
-                key={subscription.id}
-                subscription={subscription}
-                label={getSubscriptionLabel(subscription.id)}
-                badgeColor={getBadgeColor(subscription.id)}
-                onPress={() => handlePurchase(subscription.id)}
-                disabled={purchasing || restoring || !connected}
-                loading={purchasing}
-                colors={colors}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* Restore Purchases */}
-        <TouchableOpacity
-          style={styles.restoreButton}
-          onPress={restorePurchases}
-          disabled={restoring || purchasing || !connected}
-        >
-          {restoring ? (
-            <ActivityIndicator size="small" color={electricPurple} />
-          ) : (
-            <Text style={[styles.restoreButtonText, { color: electricPurple }]}>
-              Restore Purchases
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        {/* Maybe Later */}
-        <TouchableOpacity style={styles.skipButton} onPress={onClose}>
-          <Text style={[styles.skipButtonText, { color: colors.icon }]}>Maybe Later</Text>
-        </TouchableOpacity>
-
-        {/* Legal Text */}
-        <Text style={[styles.legal, { color: colors.icon }]}>
-          Payment will be charged to your Apple ID account at confirmation of purchase. Subscription
-          automatically renews unless canceled at least 24 hours before the end of the current
-          period. Your account will be charged for renewal within 24 hours prior to the end of the
-          current period.
-        </Text>
-
-        {/* Legal Links */}
-        <View style={styles.legalLinks}>
-          <TouchableOpacity onPress={() => Linking.openURL(TERMS_URL)}>
-            <Text style={[styles.legalLink, { color: electricPurple }]}>Terms of Service</Text>
-          </TouchableOpacity>
-          <Text style={[styles.legalSeparator, { color: colors.icon }]}>•</Text>
-          <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_URL)}>
-            <Text style={[styles.legalLink, { color: electricPurple }]}>Privacy Policy</Text>
-          </TouchableOpacity>
-        </View>
-      </BottomSheetScrollView>
+          <BottomSheetScrollView contentContainerStyle={styles.scrollContent}>
+            {purchaseContent}
+          </BottomSheetScrollView>
+        </GlassView>
+      ) : (
+        <BottomSheetScrollView contentContainerStyle={styles.scrollContent}>
+          {purchaseContent}
+        </BottomSheetScrollView>
+      )}
     </BottomSheetModal>
   );
 }
@@ -318,12 +367,33 @@ function SubscriptionCard({
 }
 
 const styles = StyleSheet.create({
+  glassBackground: {
+    flex: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+  },
   // Pro content
   proContainer: {
     padding: Spacing.xxxl,
     alignItems: 'center',
   },
   proIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: Spacing.lg,
   },
   proTitle: {
@@ -348,7 +418,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: `${electricPurple}15`,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.lg,
