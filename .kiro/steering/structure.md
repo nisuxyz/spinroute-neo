@@ -2,82 +2,63 @@
 
 ## Monorepo Organization
 
-SpinRoute Neo uses a Bun workspace monorepo with the following top-level structure:
+SpinRoute Neo uses a Bun workspace monorepo with a **database-first architecture**:
 
 ```
 spinroute-neo/
-├── backend/              # API Gateway (Hono + Better Auth)
-├── frontend/             # Web frontend (Astro)
-├── frontend-expo/        # Mobile app (React Native + Expo)
-├── services/             # Microservices
+├── frontend-expo/        # Mobile app (React Native + Expo) - Primary interface
+├── frontend/             # Web frontend (Astro) - Planned
+├── services/             # Minimal microservices (GBFS, Routing only)
 ├── shared/               # Shared utilities workspace package
 └── docs/                 # Documentation
 ```
 
-## Backend (API Gateway)
+## Architecture Overview
+
+### Database-First Approach
+Most features are implemented directly in Supabase with:
+- **RLS Policies**: Row-level security for data access control
+- **Postgres Functions/RPCs**: Business logic in database
+- **Triggers**: Automated data processing and updates
+- **Real-time Subscriptions**: Live data updates to frontend
+
+### Microservices (Minimal - Only When Essential)
+
+#### GBFS Service (Go)
+**Purpose**: Continuous data ingestion from 400+ city feeds
+**Why microservice**: External API polling at scale, Supabase limitation
+**Data**: Stations + free-floating bikeshare vehicles from citybik.es
+**Storage**: All data stored in `bikeshare` schema
 
 ```
-backend/
+services/gbfs/
+├── main.go                  # WebSocket consumer
+├── handlers/                # Data processing (stations + free-floating vehicles)
+├── Containerfile
+└── fly.toml                 # Fly.io deployment
+```
+
+Note: citybik.es already provides both docked station and free-floating vehicle data. The GBFS service will be extended to consume both data types.
+
+#### Routing Service (TypeScript/Hono)
+**Purpose**: Complex route calculation, provider normalization, API aggregation
+**Why microservice**: Computationally intensive, multiple external API coordination
+
+```
+services/routing/
 ├── lib/
-│   ├── auth.ts              # Better Auth configuration
-│   ├── auth-middleware.ts   # Authentication middleware
-│   ├── config.ts            # Environment configuration
-│   ├── drizzle.ts           # Drizzle ORM setup
-│   ├── service-middleware.ts # Service communication middleware
-│   └── db/
-│       ├── auth-schema.ts   # Auth database schema
-│       ├── schema.ts        # Application schema
-│       └── seed.ts          # Database seeding
-├── src/
-│   ├── index.ts             # Main application entry
-│   ├── health.ts            # Health check endpoints
-│   └── feature/
-│       └── internal/
-│           └── +routes.internal.ts  # Auto-loaded internal routes
-├── drizzle/                 # Generated migrations
-├── Containerfile            # Production container
-├── Containerfile.dev        # Development container
-└── compose.yaml             # Podman compose config
-```
-
-## Services Architecture
-
-Each service follows a consistent structure pattern:
-
-```
-services/<service-name>/
-├── lib/
-│   ├── auth.ts              # Supabase Auth middleware
 │   ├── config.ts
 │   ├── db.ts                # Supabase client
-│   ├── db.types.ts          # Generated Supabase types
-│   └── service-middleware.ts
+│   └── db.types.ts          # Generated types
 ├── src/
-│   ├── index.ts             # Service entry point
-│   ├── health.ts            # Health checks
-│   └── feature/
-│       ├── +routes.api.ts   # Public API routes
-│       └── internal/
-│           └── +routes.internal.ts  # Internal routes
-├── supabase/
-│   └── migrations/          # Supabase SQL migrations
-├── Containerfile
-├── Containerfile.dev
-└── compose.yaml
+│   ├── index.ts
+│   └── +routes.api.ts       # Route calculation endpoints
+└── Containerfile
 ```
 
-### Available Services
+## Frontend Expo (Mobile) - Primary Interface
 
-- **bikeshare**: Bikeshare station data and availability
-- **gbfs**: Go-based real-time GBFS data consumer (WebSocket)
-- **recording**: Ride/trip recording and activity tracking (Strava-like)
-- **safety**: Live location sharing, crash detection, and emergency alerts
-- **routing**: Route calculation
-- **service-template**: Template for creating new services
-
-Note: Vehicle/bike management is handled directly in the frontend via Supabase RLS policies on the `vehicles` schema.
-
-## Frontend Expo (Mobile)
+**Architecture**: Direct Supabase access with RLS policies
 
 ```
 frontend-expo/
@@ -94,7 +75,7 @@ frontend-expo/
 │   ├── StationToggleButton.tsx
 │   └── ui/                  # Reusable UI components
 ├── hooks/
-│   ├── use-bikeshare-stations.ts
+│   ├── use-bikeshare-stations.ts  # Direct Supabase queries
 │   ├── use-supabase.ts
 │   └── use-theme-color.ts
 ├── utils/
@@ -108,6 +89,8 @@ frontend-expo/
     └── migrations/          # Local migrations
 ```
 
+**Key Pattern**: Frontend makes direct Supabase calls, security enforced by RLS policies
+
 ## Shared Package
 
 ```
@@ -118,12 +101,55 @@ shared/
 └── package.json
 ```
 
-## Routing Convention
+## Database Schemas
 
-Services use a **SvelteKit-inspired file-based routing** with `+` prefix:
+Current schemas in Supabase PostgreSQL:
+
+### public
+- User profiles
+- Authentication (Supabase Auth)
+- **Planned**: subscription_status, subscription_tier, profile_pictures
+
+### bikeshare
+- Station data and availability ✅
+- **Planned**: free_floating_vehicles table (public bikeshare vehicles from citybik.es)
+- GBFS service will be extended to consume and store free-floating vehicle data
+- Note: This schema is for public bikeshare data, not user-owned bikes
+
+### vehicles
+- User-owned bikes ✅ (personal bikes, not public bikeshare)
+- **Planned**: 
+  - maintenance_records (scheduled maintenance, completed maintenance)
+  - bike_pictures (Supabase Storage references for user bike photos)
+  - maintenance_reminders (trigger-based calculations)
+- Note: This schema is for personal bikes that users own, not public bikeshare vehicles
+
+### recording
+- Trip recordings & analytics ✅ (fully implemented)
+- **Planned**:
+  - sensor_data (heart rate, cadence, power)
+  - health_sync_log (HealthKit/Google Fit sync status)
+
+### safety
+- **NEW (planned)**:
+  - location_shares (active location sharing sessions)
+  - emergency_contacts (user emergency contact list)
+  - safety_events (crash detections, route deviations)
+  - safety_alerts (notifications sent to emergency contacts)
+
+### social
+- **NEW (planned)**:
+  - achievements (user achievement unlocks)
+  - leaderboards (rankings, segments)
+  - social_graph (follows, friendships)
+  - activity_feed (ride shares, kudos, comments)
+  - challenges (monthly challenges, participation)
+
+## Routing Convention (Microservices Only)
+
+Minimal services use **SvelteKit-inspired file-based routing** with `+` prefix:
 
 - `+routes.api.ts`: Public API routes (exposed externally)
-- `+routes.internal.ts`: Internal service-to-service routes
 - Routes are auto-discovered and registered via Bun's Glob API
 - Each route file exports `router` (Hono instance) and `basePath` (string)
 
@@ -141,23 +167,22 @@ router.get('/endpoint', (c) => c.json({ data: 'value' }));
 ## Configuration Files
 
 - `.env.example`: Environment variable templates (per service)
-- `drizzle.config.ts`: Drizzle Kit configuration
 - `tsconfig.json`: TypeScript configuration
-- `compose.yaml`: Podman Compose service definitions
-- `kustomization.yaml`: Kubernetes deployment configs (some services)
+- `compose.yaml`: Podman Compose service definitions (local dev)
+- `fly.toml`: Fly.io deployment configs (GBFS service)
 
 ## Database Migrations
 
-- **Drizzle**: Used for backend/API gateway only (`drizzle/` folder)
-- **Supabase**: Used for all microservices (`supabase/migrations/` folder)
+- **Supabase**: Primary migration system for all schemas
 - Migration files are timestamped SQL
-- Drizzle migrations generated by Drizzle Kit
-- Supabase migrations created via Supabase CLI or MCP tools
+- Migrations created via Supabase CLI or MCP tools
+- RLS policies defined in migrations
 
 ## Development Workflow
 
-1. Services run independently on different ports
-2. API Gateway routes requests to appropriate services
-3. Shared utilities imported via workspace protocol: `shared-utils: workspace:*`
-4. Each service has its own database schema/namespace in Supabase
-5. Container-based development with hot reload support
+1. **Frontend-first**: Most features implemented directly in frontend with Supabase
+2. **RLS Security**: Database policies enforce access control
+3. **Real-time**: Supabase subscriptions for live data updates
+4. **Microservices**: Only GBFS (data ingestion) and Routing (complex computation)
+5. **Shared utilities**: Imported via workspace protocol: `shared-utils: workspace:*`
+6. **Type safety**: Generated TypeScript types from Supabase schemas
