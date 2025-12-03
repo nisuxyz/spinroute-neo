@@ -41,7 +41,7 @@ export default function NewBikeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
-  const { createBike, loading } = useBikes();
+  const { createBike, loading, error: bikeError } = useBikes();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -70,6 +70,17 @@ export default function NewBikeScreen() {
 
     if (result) {
       router.back();
+    } else if (bikeError) {
+      // Check if the error is due to RLS policy (bike limit)
+      if (
+        bikeError.includes('policy') ||
+        bikeError.includes('42501') ||
+        bikeError.includes('row-level security')
+      ) {
+        router.replace('/paywall');
+      } else {
+        Alert.alert('Error', bikeError);
+      }
     }
   };
 
@@ -84,7 +95,7 @@ export default function NewBikeScreen() {
               {loading ? (
                 <ActivityIndicator size="small" color={colors.buttonIcon} />
               ) : (
-                <Text style={[styles.saveButton, { color: colors.buttonIcon }]}>Save</Text>
+                <Text style={[styles.saveButton]}>Save</Text>
               )}
             </TouchableOpacity>
           ),
@@ -264,5 +275,7 @@ const styles = StyleSheet.create({
   saveButton: {
     fontSize: 17,
     fontWeight: '600',
+    color: 'white',
+    paddingHorizontal: 16,
   },
 });

@@ -14,6 +14,7 @@ import { FlatList } from 'react-native-gesture-handler';
 import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
 import { useUserSettings } from '@/hooks/use-user-settings';
+import { useFeatureAccess } from '@/hooks/use-feature-gate';
 
 const BIKE_TYPES: { value: BikeType; label: string; icon: string }[] = [
   { value: 'road', label: 'Road', icon: 'directions-bike' },
@@ -30,6 +31,19 @@ export default function BikesScreen() {
   const router = useRouter();
   const { bikes, loading, error, deleteBike } = useBikes();
   const { settings, updateSettings, refetch: refetchSettings } = useUserSettings();
+  const { canAddUnlimitedBikes, freeBikeLimit } = useFeatureAccess();
+
+  // Check if user can add a new bike
+  const canAddBike = canAddUnlimitedBikes || bikes.length < freeBikeLimit;
+
+  const handleAddBike = () => {
+    if (canAddBike) {
+      router.push('/bikes/new');
+    } else {
+      // Show paywall
+      router.push('/paywall');
+    }
+  };
 
   const handleDeleteBike = (id: string, name: string) => {
     Alert.alert('Delete Bike', `Are you sure you want to delete "${name}"?`, [
@@ -173,7 +187,7 @@ export default function BikesScreen() {
             title: 'My Bikes',
             headerBackButtonDisplayMode: 'minimal',
             headerRight: () => (
-              <TouchableOpacity onPress={() => router.push('/bikes/new')}>
+              <TouchableOpacity onPress={handleAddBike}>
                 <Text style={[styles.saveButton]}>New Bike</Text>
               </TouchableOpacity>
             ),
@@ -196,7 +210,7 @@ export default function BikesScreen() {
           title: 'My Bikes',
           headerBackButtonDisplayMode: 'minimal',
           headerRight: () => (
-            <TouchableOpacity onPress={() => router.push('/bikes/new')}>
+            <TouchableOpacity onPress={handleAddBike}>
               <Text style={[styles.saveButton]}>New Bike</Text>
             </TouchableOpacity>
           ),
@@ -346,5 +360,7 @@ const styles = StyleSheet.create({
   saveButton: {
     fontSize: 17,
     fontWeight: '600',
+    color: 'white',
+    paddingHorizontal: 16,
   },
 });

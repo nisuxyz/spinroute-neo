@@ -5,6 +5,8 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { SubscriptionProvider } from '@/hooks/use-subscription';
+import { IAPProvider } from '@/hooks/use-iap';
 import { useEnv } from '@/hooks/use-env';
 import Mapbox from '@rnmapbox/maps';
 import { useEffect } from 'react';
@@ -54,6 +56,13 @@ function RootLayoutNav() {
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             <Stack.Screen name="settings" options={{ title: 'Settings' }} />
             <Stack.Screen
+              name="paywall"
+              options={{
+                presentation: 'modal',
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
               name="trip/[id]"
               options={{
                 presentation: 'card',
@@ -81,10 +90,14 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <RootLayoutNav />
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <SubscriptionProvider>
+        <IAPProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <RootLayoutNav />
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </IAPProvider>
+      </SubscriptionProvider>
     </AuthProvider>
   );
 }

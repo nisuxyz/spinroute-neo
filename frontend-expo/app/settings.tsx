@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, useColorScheme, ScrollView, View } from 'react-native';
 import { Colors } from '@/constants/theme';
 import UserProfileSection from '@/components/UserProfileSection';
+import SubscriptionSection from '@/components/SubscriptionSection';
 import AppSettingsSection from '@/components/AppSettingsSection';
 import RoutingSettingsSection from '@/components/RoutingSettingsSection';
 import DevSettingsSection from '@/components/DevSettingsSection';
@@ -19,6 +20,9 @@ export default function SettingsScreen() {
     >
       <View style={styles.section}>
         <UserProfileSection />
+      </View>
+      <View style={styles.section}>
+        <SubscriptionSection />
       </View>
       <View style={styles.section}>
         <AppSettingsSection />

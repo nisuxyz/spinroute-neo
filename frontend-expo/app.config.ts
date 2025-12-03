@@ -13,9 +13,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.itsnisu.spinrouteneo',
+    bundleIdentifier: 'xyz.itsnisu.spinroute',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+    },
+    entitlements: {
+      'com.apple.developer.applesignin': ['Default'],
     },
   },
   android: {
@@ -31,7 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.ACCESS_COARSE_LOCATION',
       'android.permission.ACCESS_FINE_LOCATION',
     ],
-    package: 'com.itsnisu.spinrouteneo',
+    package: 'xyz.itsnisu.spinroute',
   },
   web: {
     output: 'static',
@@ -70,6 +73,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-font',
     'expo-web-browser',
+    'expo-iap',
+    // build config for android iap
+    [
+      'expo-build-properties',
+      {
+        android: {
+          kotlinVersion: '2.1.20',
+        },
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

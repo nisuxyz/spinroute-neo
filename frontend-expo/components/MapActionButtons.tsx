@@ -8,6 +8,8 @@ interface MapActionButtonsProps {
   // Recenter button
   onRecenter: () => void;
   isRecentering?: boolean;
+  isFollowModeActive?: boolean;
+  onDisableFollowMode?: () => void;
 
   // 3D/2D toggle
   is3DMode: boolean;
@@ -40,6 +42,8 @@ interface MapActionButtonsProps {
 const MapActionButtons: React.FC<MapActionButtonsProps> = ({
   onRecenter,
   isRecentering = false,
+  isFollowModeActive = false,
+  onDisableFollowMode,
   is3DMode,
   onToggle3D,
   currentMapStyle,
@@ -55,21 +59,23 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
   onToggleStations,
 }) => {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const mapStyleIcon = getMapStyleIcon(currentMapStyle);
 
   return (
     <View style={styles.container}>
       <View style={styles.buttonGroup}>
-        {/* Recenter on user location */}
+        {/* Recenter on user location / Follow mode */}
         <MapActionButton
           icon="my-location"
           iconFamily="MaterialIcons"
-          isActive={false}
+          isActive={isFollowModeActive}
           isLoading={isRecentering}
           buttonColor={electricPurple}
           onActivate={onRecenter}
-          accessibilityLabel="Recenter on your location"
+          onDeactivate={onDisableFollowMode}
+          accessibilityLabel={
+            isFollowModeActive ? 'Disable location following' : 'Follow your location'
+          }
           testID="recenter-button"
         />
 

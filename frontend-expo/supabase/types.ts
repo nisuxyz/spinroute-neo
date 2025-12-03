@@ -329,6 +329,18 @@ export type Database = {
           avatar_url: string | null;
           full_name: string | null;
           id: string;
+          is_renewing: boolean;
+          is_trial: boolean;
+          linked_purchase_token: string | null;
+          original_transaction_id: string | null;
+          product_id: string | null;
+          purchase_token: string | null;
+          purchase_uuid: string;
+          subscription_expires_at: string | null;
+          subscription_status: string;
+          subscription_tier: string;
+          transaction_id: string | null;
+          upcoming_product_id: string | null;
           updated_at: string | null;
           username: string | null;
           website: string | null;
@@ -337,6 +349,18 @@ export type Database = {
           avatar_url?: string | null;
           full_name?: string | null;
           id: string;
+          is_renewing?: boolean;
+          is_trial?: boolean;
+          linked_purchase_token?: string | null;
+          original_transaction_id?: string | null;
+          product_id?: string | null;
+          purchase_token?: string | null;
+          purchase_uuid?: string;
+          subscription_expires_at?: string | null;
+          subscription_status?: string;
+          subscription_tier?: string;
+          transaction_id?: string | null;
+          upcoming_product_id?: string | null;
           updated_at?: string | null;
           username?: string | null;
           website?: string | null;
@@ -345,6 +369,18 @@ export type Database = {
           avatar_url?: string | null;
           full_name?: string | null;
           id?: string;
+          is_renewing?: boolean;
+          is_trial?: boolean;
+          linked_purchase_token?: string | null;
+          original_transaction_id?: string | null;
+          product_id?: string | null;
+          purchase_token?: string | null;
+          purchase_uuid?: string;
+          subscription_expires_at?: string | null;
+          subscription_status?: string;
+          subscription_tier?: string;
+          transaction_id?: string | null;
+          upcoming_product_id?: string | null;
           updated_at?: string | null;
           username?: string | null;
           website?: string | null;
@@ -399,6 +435,10 @@ export type Database = {
     };
     Functions: {
       debug_whoami: { Args: never; Returns: Json };
+      get_subscription_tier: {
+        Args: { check_user_id: string };
+        Returns: string;
+      };
       get_trip_points: {
         Args: { p_trip_id: string };
         Returns: {
@@ -416,6 +456,8 @@ export type Database = {
           trip_id: string;
         }[];
       };
+      user_has_premium: { Args: { check_user_id: string }; Returns: boolean };
+      user_has_pro: { Args: { check_user_id: string }; Returns: boolean };
     };
     Enums: {
       [_ in never]: never;

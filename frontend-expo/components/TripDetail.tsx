@@ -9,9 +9,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useTripDetail } from '@/hooks/use-trip-detail';
 import { useUserSettings } from '@/hooks/use-user-settings';
+import { useSubscription } from '@/hooks/use-subscription';
 import Mapbox from '@rnmapbox/maps';
 
 interface TripDetailProps {
@@ -21,8 +23,10 @@ interface TripDetailProps {
 const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
   const { trip, routeGeoJSON, loading, error, refresh } = useTripDetail(tripId);
   const { settings } = useUserSettings();
+  const { isPro } = useSubscription();
   const cameraRef = useRef<Mapbox.Camera>(null);
   const mapStyle = settings?.map_style || 'mapbox://styles/mapbox/standard';
 
@@ -258,7 +262,8 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
         </View>
       </View>
 
-      {advancedStats && (
+      {/* Advanced Statistics - Pro Only */}
+      {advancedStats && isPro && (
         <View style={[styles.statsCard, { backgroundColor: colors.buttonBackground }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Advanced Statistics</Text>
 
@@ -304,6 +309,52 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
             )}
           </View>
         </View>
+      )}
+
+      {/* Advanced Statistics - Locked for Free Users */}
+      {!isPro && (
+        <TouchableOpacity
+          style={[
+            styles.statsCard,
+            styles.lockedCard,
+            { backgroundColor: colors.buttonBackground },
+          ]}
+          onPress={() => router.push('/paywall')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.lockedHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Advanced Statistics</Text>
+            <View style={styles.proBadge}>
+              <MaterialIcons name="lock" size={14} color="#fff" />
+              <Text style={styles.proBadgeText}>PRO</Text>
+            </View>
+          </View>
+
+          <View style={styles.lockedContent}>
+            <View style={styles.lockedStatsPreview}>
+              <View style={styles.lockedStatBox}>
+                <MaterialIcons name="terrain" size={24} color={colors.icon} />
+                <Text style={[styles.lockedStatValue, { color: colors.icon }]}>---</Text>
+                <Text style={[styles.statLabel, { color: colors.icon }]}>Elevation Gain</Text>
+              </View>
+              <View style={styles.lockedStatBox}>
+                <MaterialIcons name="show-chart" size={24} color={colors.icon} />
+                <Text style={[styles.lockedStatValue, { color: colors.icon }]}>---</Text>
+                <Text style={[styles.statLabel, { color: colors.icon }]}>Median Speed</Text>
+              </View>
+            </View>
+
+            <View style={styles.upgradePrompt}>
+              <Text style={[styles.upgradeText, { color: colors.text }]}>
+                Upgrade to Pro for detailed insights
+              </Text>
+              <View style={styles.upgradeButton}>
+                <Text style={styles.upgradeButtonText}>Unlock</Text>
+                <MaterialIcons name="arrow-forward" size={16} color="#fff" />
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
       )}
 
       <View style={styles.bottomPadding} />
@@ -441,6 +492,72 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 32,
+  },
+  // Locked card styles
+  lockedCard: {
+    overflow: 'hidden',
+  },
+  lockedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  proBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  proBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  lockedContent: {
+    alignItems: 'center',
+  },
+  lockedStatsPreview: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    marginBottom: 16,
+    opacity: 0.5,
+  },
+  lockedStatBox: {
+    alignItems: 'center',
+    padding: 12,
+  },
+  lockedStatValue: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  upgradePrompt: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  upgradeText: {
+    fontSize: 15,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  upgradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 6,
+  },
+  upgradeButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

@@ -14,6 +14,9 @@ export const useEnv = (useDevUrls: boolean = false) => {
   if (process.env.EXPO_PUBLIC_ROUTING_SERVICE_URL) {
     prodUrls.ROUTING_SERVICE = process.env.EXPO_PUBLIC_ROUTING_SERVICE_URL;
   }
+  if (process.env.EXPO_PUBLIC_IAP_SERVICE_URL) {
+    prodUrls.IAP_SERVICE_URL = process.env.EXPO_PUBLIC_IAP_SERVICE_URL;
+  }
 
   // Extract development URLs
   if (process.env.EXPO_PUBLIC_SUPABASE_DEV_URL) {
@@ -21,6 +24,9 @@ export const useEnv = (useDevUrls: boolean = false) => {
   }
   if (process.env.EXPO_PUBLIC_ROUTING_SERVICE_DEV_URL) {
     devUrls.ROUTING_SERVICE = process.env.EXPO_PUBLIC_ROUTING_SERVICE_DEV_URL;
+  }
+  if (process.env.EXPO_PUBLIC_IAP_SERVICE_DEV_URL) {
+    devUrls.IAP_SERVICE_URL = process.env.EXPO_PUBLIC_IAP_SERVICE_DEV_URL;
   }
 
   // Extract other environment variables

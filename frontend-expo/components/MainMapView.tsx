@@ -17,6 +17,7 @@ import { useLocationTracking } from '@/hooks/use-location-tracking';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useBikes } from '@/hooks/use-bikes';
 import { useStationDetails } from '@/hooks/use-station-details';
+import { useFeatureAccess } from '@/hooks/use-feature-gate';
 import { Colors } from '@/constants/theme';
 import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
@@ -84,6 +85,8 @@ const MainMapView: React.FC = () => {
   const [useMarkerView, setUseMarkerView] = useState(true);
   const [is3DMode, setIs3DMode] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
+  const [isFollowModeActive, setIsFollowModeActive] = useState(false);
+  const [liveUserLocation, setLiveUserLocation] = useState<[number, number] | null>(null);
   const [isSearchSheetVisible, setIsSearchSheetVisible] = useState(false);
   const [isMapStylePickerVisible, setIsMapStylePickerVisible] = useState(false);
   const [searchedLocation, setSearchedLocation] = useState<{
@@ -126,6 +129,12 @@ const MainMapView: React.FC = () => {
   const { bikes, loading: bikesLoading, fetchBikes } = useBikes();
   const activeBike = bikes.find((bike) => bike.id === settings?.active_bike_id);
 
+  // Feature access for trip limits
+  const { canRecordUnlimitedTrips, freeWeeklyTripLimit } = useFeatureAccess();
+
+  // Track weekly completed trips for free users
+  const [weeklyTripCount, setWeeklyTripCount] = useState(0);
+
   // Refetch bikes when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
@@ -146,7 +155,35 @@ const MainMapView: React.FC = () => {
     captureInterval,
   });
 
+  // Fetch weekly completed trip count for free users
+  const supabaseRecording = useSupabase('recording');
+  React.useEffect(() => {
+    if (canRecordUnlimitedTrips) return;
+
+    const fetchWeeklyTripCount = async () => {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const { count, error } = await supabaseRecording
+        .from('trips')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('started_at', oneWeekAgo.toISOString());
+
+      if (!error && count !== null) {
+        setWeeklyTripCount(count);
+      }
+    };
+
+    fetchWeeklyTripCount();
+  }, [canRecordUnlimitedTrips, supabaseRecording]);
+
   const handleRegionIsChanging = (regionFeature: any) => {
+    // Disable follow mode when user manually interacts with the map
+    if (regionFeature?.properties?.isUserInteraction && isFollowModeActive) {
+      setIsFollowModeActive(false);
+    }
+
     if (regionFeature?.properties?.isUserInteraction && isStationsVisible) {
       const visibleBounds = regionFeature.properties.visibleBounds;
       if (visibleBounds?.length >= 2) {
@@ -321,7 +358,7 @@ const MainMapView: React.FC = () => {
           cameraRef.current?.fitBounds(
             [bounds[0], bounds[1]], // southwest
             [bounds[2], bounds[3]], // northeast
-            [60, 60, 60, 200], // padding [top, right, bottom, left]
+            [80, 40, 280, 40], // padding [top, right, bottom, left] - extra bottom padding for RouteInfoCard
             1000, // animation duration
           );
         }
@@ -329,12 +366,35 @@ const MainMapView: React.FC = () => {
     }
   }, [directionsRoute]);
 
+  // Follow user location when follow mode is active
+  React.useEffect(() => {
+    if (isFollowModeActive && liveUserLocation) {
+      cameraRef.current?.setCamera({
+        centerCoordinate: liveUserLocation,
+        animationDuration: 300,
+      });
+    }
+  }, [isFollowModeActive, liveUserLocation]);
+
+  // Handler for location updates from LocationPuck
+  const handleUserLocationUpdate = (location: Mapbox.Location) => {
+    if (location?.coords) {
+      const newLocation: [number, number] = [location.coords.longitude, location.coords.latitude];
+      setLiveUserLocation(newLocation);
+    }
+  };
+
   const handleRecenter = () => {
     if (!userLocation) {
       Alert.alert('Location unavailable', 'Unable to get your current location');
       return;
     }
 
+    // Toggle follow mode
+    const newFollowMode = !isFollowModeActive;
+    setIsFollowModeActive(newFollowMode);
+
+    // Center on user location
     setIsRecentering(true);
     cameraRef.current?.setCamera({
       centerCoordinate: userLocation,
@@ -342,6 +402,10 @@ const MainMapView: React.FC = () => {
       animationDuration: 1000,
     });
     setTimeout(() => setIsRecentering(false), 1000);
+  };
+
+  const handleDisableFollowMode = () => {
+    setIsFollowModeActive(false);
   };
 
   const handleToggle3D = () => {
@@ -377,6 +441,13 @@ const MainMapView: React.FC = () => {
   };
 
   const handleStartRecording = async () => {
+    // Check trip limit for free users
+    if (!canRecordUnlimitedTrips && weeklyTripCount >= freeWeeklyTripLimit) {
+      // Show paywall
+      router.push('/paywall');
+      return;
+    }
+
     // Check and request location permissions first
     if (permissionStatus !== 'granted') {
       const granted = await requestPermissions();
@@ -390,7 +461,12 @@ const MainMapView: React.FC = () => {
     if (trip) {
       Alert.alert('Recording Started', 'Your trip is now being recorded');
     } else if (tripError) {
-      Alert.alert('Error', tripError);
+      // Check if the error is due to RLS policy (trip limit)
+      if (tripError.includes('policy') || tripError.includes('42501')) {
+        router.push('/paywall');
+      } else {
+        Alert.alert('Error', tripError);
+      }
     }
   };
 
@@ -469,15 +545,23 @@ const MainMapView: React.FC = () => {
           })}
 
         {locationPermissionGranted && (
-          <Mapbox.LocationPuck
-            puckBearing="heading"
-            puckBearingEnabled={true}
-            pulsing={{
-              isEnabled: true,
-              color: colors.buttonIcon,
-              radius: 30.0,
-            }}
-          />
+          <>
+            <Mapbox.LocationPuck
+              puckBearing="heading"
+              puckBearingEnabled={true}
+              pulsing={{
+                isEnabled: true,
+                color: colors.buttonIcon,
+                radius: 30.0,
+              }}
+            />
+            {/* Hidden UserLocation component to track location updates */}
+            <Mapbox.UserLocation
+              visible={false}
+              onUpdate={handleUserLocationUpdate}
+              minDisplacement={1}
+            />
+          </>
         )}
 
         {searchedLocation && (
@@ -540,6 +624,8 @@ const MainMapView: React.FC = () => {
       <MapActionButtons
         onRecenter={handleRecenter}
         isRecentering={isRecentering}
+        isFollowModeActive={isFollowModeActive}
+        onDisableFollowMode={handleDisableFollowMode}
         is3DMode={is3DMode}
         onToggle3D={handleToggle3D}
         currentMapStyle={mapStyle}

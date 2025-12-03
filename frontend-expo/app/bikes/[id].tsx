@@ -116,7 +116,7 @@ export default function EditBikeScreen() {
               {loading ? (
                 <ActivityIndicator size="small" color={colors.buttonIcon} />
               ) : (
-                <Text style={[styles.saveButton, { color: colors.buttonIcon }]}>Save</Text>
+                <Text style={[styles.saveButton]}>Save</Text>
               )}
             </TouchableOpacity>
           ),
@@ -298,6 +298,8 @@ const styles = StyleSheet.create({
   saveButton: {
     fontSize: 17,
     fontWeight: '600',
+    color: 'white',
+    paddingHorizontal: 16,
   },
   statCard: {
     borderRadius: 12,
