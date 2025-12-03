@@ -1,27 +1,25 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  ScrollView,
   Linking,
   useColorScheme,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetScrollView,
+  TouchableOpacity,
+} from '@gorhom/bottom-sheet';
+import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useIAPContext, SUBSCRIPTION_SKUS } from '@/hooks/use-iap';
 import { useSubscription } from '@/hooks/use-subscription';
 import { Colors, electricPurple, Spacing, BorderRadius, Typography } from '@/constants/theme';
 import type { ProductSubscription } from 'expo-iap';
-
-// Check if glass effect is available (iOS 26+ only)
-const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
 const TERMS_URL = 'https://spinroute.app/terms';
 const PRIVACY_URL = 'https://spinroute.app/privacy';
@@ -34,7 +32,7 @@ interface PaywallProps {
 export function Paywall({ visible, onClose }: PaywallProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const insets = useSafeAreaInsets();
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
   const {
     connected,
@@ -47,6 +45,16 @@ export function Paywall({ visible, onClose }: PaywallProps) {
   } = useIAPContext();
 
   const { isPro } = useSubscription();
+
+  // Snap points - smaller for pro status, larger for purchase flow
+  const snapPoints = useMemo(() => (isPro ? ['40%'] : ['90%']), [isPro]);
+
+  // Present modal when visible becomes true
+  useEffect(() => {
+    if (visible) {
+      bottomSheetModalRef.current?.present();
+    }
+  }, [visible]);
 
   // Sort subscriptions by duration (weekly, monthly, yearly)
   const sortedSubscriptions = useMemo(() => {
@@ -74,36 +82,40 @@ export function Paywall({ visible, onClose }: PaywallProps) {
   };
 
   const getBadgeColor = (productId: string): string => {
-    // Highlight yearly as best value
     if (productId.includes('yearly')) return '#10b981';
     return electricPurple;
   };
 
-  const renderContent = (bottomPadding?: number) => {
-    if (isPro) {
-      return (
-        <>
-          {/* Close Button */}
-          <View style={styles.closeButtonRow}>
-            <TouchableOpacity
-              onPress={onClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              {hasGlassEffect ? (
-                <GlassView style={styles.closeButton} glassEffectStyle="regular" isInteractive>
-                  <MaterialIcons name="close" size={16} color={colors.text} />
-                </GlassView>
-              ) : (
-                <View style={[styles.closeButton, { backgroundColor: colors.icon + '30' }]}>
-                  <MaterialIcons name="close" size={16} color={colors.icon} />
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
+
+  // Pro user content
+  if (isPro) {
+    return (
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        onDismiss={onClose}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={{ backgroundColor: colors.background }}
+        handleIndicatorStyle={{ backgroundColor: colors.icon }}
+      >
+        <View style={styles.proContainer}>
           <View style={styles.proIconContainer}>
             <MaterialIcons name="workspace-premium" size={64} color={electricPurple} />
           </View>
-          <Text style={[styles.proTitle, { color: colors.text }]}>You&apos;re a Pro! 🎉</Text>
+          <Text style={[styles.proTitle, { color: colors.text }]}>You're a Pro! 🎉</Text>
           <Text style={[styles.proSubtitle, { color: colors.icon }]}>
             You have full access to all SpinRoute features.
           </Text>
@@ -113,36 +125,23 @@ export function Paywall({ visible, onClose }: PaywallProps) {
           >
             <Text style={styles.primaryButtonText}>Close</Text>
           </TouchableOpacity>
-        </>
-      );
-    }
-
-    return (
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          bottomPadding ? { paddingBottom: bottomPadding } : undefined,
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Close Button */}
-        <View style={styles.closeButtonRow}>
-          <TouchableOpacity
-            onPress={onClose}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            {hasGlassEffect ? (
-              <GlassView style={styles.closeButton} glassEffectStyle="clear" isInteractive>
-                <MaterialIcons name="close" size={16} color={colors.text} />
-              </GlassView>
-            ) : (
-              <View style={[styles.closeButton, { backgroundColor: colors.icon + '30' }]}>
-                <MaterialIcons name="close" size={16} color={colors.icon} />
-              </View>
-            )}
-          </TouchableOpacity>
         </View>
+      </BottomSheetModal>
+    );
+  }
 
+  // Purchase flow content
+  return (
+    <BottomSheetModal
+      ref={bottomSheetModalRef}
+      snapPoints={snapPoints}
+      enablePanDownToClose
+      onDismiss={onClose}
+      backdropComponent={renderBackdrop}
+      backgroundStyle={{ backgroundColor: colors.background }}
+      handleIndicatorStyle={{ backgroundColor: colors.icon }}
+    >
+      <BottomSheetScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.iconContainer}>
@@ -156,7 +155,7 @@ export function Paywall({ visible, onClose }: PaywallProps) {
 
         {/* Features */}
         <View style={[styles.featuresCard, { backgroundColor: colors.buttonBackground }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>What you&apos;ll get</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>What you'll get</Text>
           <View style={styles.featuresList}>
             <FeatureItem icon="pedal-bike" text="Unlimited bikes" colors={colors} />
             <FeatureItem icon="route" text="Unlimited trip recording" colors={colors} />
@@ -236,55 +235,8 @@ export function Paywall({ visible, onClose }: PaywallProps) {
             <Text style={[styles.legalLink, { color: electricPurple }]}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    );
-  };
-
-  const renderModalContent = () => {
-    const bottomPadding = insets.bottom + Spacing.lg;
-
-    if (hasGlassEffect) {
-      return (
-        <GlassView
-          style={[
-            styles.modalContent,
-            isPro && [styles.modalContentPro, { paddingBottom: bottomPadding }],
-          ]}
-          glassEffectStyle="regular"
-          onStartShouldSetResponder={() => true}
-        >
-          {isPro ? renderContent() : renderContent(bottomPadding)}
-        </GlassView>
-      );
-    }
-
-    return (
-      <View
-        style={[
-          styles.modalContent,
-          isPro && [styles.modalContentPro, { paddingBottom: bottomPadding }],
-          { backgroundColor: colors.background },
-        ]}
-        onStartShouldSetResponder={() => true}
-      >
-        {isPro ? renderContent() : renderContent(bottomPadding)}
-      </View>
-    );
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={styles.modalContainer}>
-        <Pressable style={styles.overlay} onPress={onClose} />
-        {renderModalContent()}
-      </View>
-    </Modal>
+      </BottomSheetScrollView>
+    </BottomSheetModal>
   );
 }
 
@@ -361,50 +313,15 @@ function SubscriptionCard({
           )}
         </View>
       </View>
-      {/* Intro pricing info would come from subscription.description or platform-specific fields */}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  // Modal
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '100%',
-    maxHeight: '92%',
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    overflow: 'hidden',
-  },
-  modalContentPro: {
-    maxHeight: undefined,
+  // Pro content
+  proContainer: {
     padding: Spacing.xxxl,
-    paddingTop: Spacing.lg,
     alignItems: 'center',
-  },
-  closeButtonRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingTop: Spacing.lg,
-    // paddingHorizontal: Spacing.sm,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    padding: Spacing.xl,
-    paddingTop: 0,
   },
   proIconContainer: {
     marginBottom: Spacing.lg,
@@ -419,7 +336,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Spacing.xl,
   },
-  // Header
+  // Purchase flow
+  scrollContent: {
+    padding: Spacing.xl,
+  },
   header: {
     alignItems: 'center',
     marginBottom: Spacing.xxl,
@@ -547,19 +467,6 @@ const styles = StyleSheet.create({
   },
   planLoading: {
     marginLeft: Spacing.sm,
-  },
-  savingsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  savingsText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   badge: {
     position: 'absolute',

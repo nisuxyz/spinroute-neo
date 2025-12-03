@@ -18,6 +18,7 @@ import { useUserSettings } from '@/hooks/use-user-settings';
 import { useBikes } from '@/hooks/use-bikes';
 import { useStationDetails } from '@/hooks/use-station-details';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
+import { usePaywall } from '@/hooks/use-paywall';
 import { Colors } from '@/constants/theme';
 import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
@@ -57,6 +58,7 @@ const MainMapView: React.FC = () => {
   const mapRef = useRef<Mapbox.MapView>(null);
   const cameraRef = useRef<Mapbox.Camera>(null);
   const router = useRouter();
+  const { showPaywall } = usePaywall();
   const supabase = useClient();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -453,7 +455,7 @@ const MainMapView: React.FC = () => {
     // This provides better UX than waiting for RLS error
     if (!canRecordUnlimitedTrips && weeklyTripCount >= freeWeeklyTripLimit) {
       console.log('[MainMapView] Trip limit reached (proactive check), showing paywall');
-      router.push('/paywall');
+      showPaywall();
       return;
     }
 
@@ -483,7 +485,7 @@ const MainMapView: React.FC = () => {
         if (!isPro) {
           // Free user hit RLS error - likely the limit (could be race condition)
           console.log('[MainMapView] RLS error for free user, showing paywall');
-          router.push('/paywall');
+          showPaywall();
         } else {
           // Pro user hit RLS error - something else is wrong (auth?)
           console.error('[MainMapView] RLS error for pro user:', tripError);

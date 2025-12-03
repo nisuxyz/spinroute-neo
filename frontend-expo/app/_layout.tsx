@@ -8,8 +8,10 @@ import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { SubscriptionProvider } from '@/hooks/use-subscription';
 import { IAPProvider } from '@/hooks/use-iap';
 import { EnvProvider, useEnv } from '@/hooks/use-env';
+import { PaywallProvider, usePaywall } from '@/hooks/use-paywall';
 import { Provider as SupabaseProvider } from 'react-supabase';
 import { supabase } from '@/utils/supabase';
+import { Paywall } from '@/components/Paywall';
 import Mapbox from '@rnmapbox/maps';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -23,6 +25,7 @@ export const unstable_settings = {
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
+  const { isVisible, hidePaywall } = usePaywall();
   const segments = useSegments();
   const router = useRouter();
 
@@ -50,20 +53,13 @@ function RootLayoutNav() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <MenuProvider>
-        <BottomSheetModalProvider>
+      <BottomSheetModalProvider>
+        <MenuProvider>
           <Stack>
             <Stack.Screen name="auth" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Map' }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-            <Stack.Screen
-              name="paywall"
-              options={{
-                presentation: 'modal',
-                headerShown: false,
-              }}
-            />
             <Stack.Screen
               name="trip/[id]"
               options={{
@@ -72,8 +68,10 @@ function RootLayoutNav() {
               }}
             />
           </Stack>
-        </BottomSheetModalProvider>
-      </MenuProvider>
+          {/* Global Paywall - controlled by context */}
+          <Paywall visible={isVisible} onClose={hidePaywall} />
+        </MenuProvider>
+      </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }
@@ -105,10 +103,12 @@ export default function RootLayout() {
           <MapboxInitializer />
           <SubscriptionProvider>
             <IAPProvider>
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <RootLayoutNav />
-                <StatusBar style="auto" />
-              </ThemeProvider>
+              <PaywallProvider>
+                <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                  <RootLayoutNav />
+                  <StatusBar style="auto" />
+                </ThemeProvider>
+              </PaywallProvider>
             </IAPProvider>
           </SubscriptionProvider>
         </EnvProvider>

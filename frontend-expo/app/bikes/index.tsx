@@ -15,6 +15,7 @@ import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
+import { usePaywall } from '@/hooks/use-paywall';
 
 const BIKE_TYPES: { value: BikeType; label: string; icon: string }[] = [
   { value: 'road', label: 'Road', icon: 'directions-bike' },
@@ -32,12 +33,13 @@ export default function BikesScreen() {
   const { bikes, loading, error, deleteBike } = useBikes();
   const { settings, updateSettings, refetch: refetchSettings } = useUserSettings();
   const { canAddUnlimitedBikes, freeBikeLimit } = useFeatureAccess();
+  const { showPaywall } = usePaywall();
 
   // Proactive check: Show paywall immediately if limit reached
   const handleAddBike = () => {
     if (!canAddUnlimitedBikes && bikes.length >= freeBikeLimit) {
       console.log('[Bikes] Bike limit reached (proactive check), showing paywall');
-      router.push('/paywall');
+      showPaywall();
       return;
     }
     // Navigate to add bike screen - RLS policy enforces limit as security boundary

@@ -9,18 +9,18 @@ import {
   Linking,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useClient } from 'react-supabase';
 import { Colors } from '@/constants/theme';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
 import { useBikes } from '@/hooks/use-bikes';
+import { usePaywall } from '@/hooks/use-paywall';
 
 export default function SubscriptionSection() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const router = useRouter();
+  const { showPaywall } = usePaywall();
   const { isPro, status, expiresAt, isTrial, isRenewing, loading } = useSubscription();
 
   const { freeBikeLimit, freeWeeklyTripLimit } = useFeatureAccess();
@@ -63,7 +63,7 @@ export default function SubscriptionSection() {
   };
 
   const handleUpgrade = () => {
-    router.push('/paywall');
+    showPaywall();
   };
 
   const formatDate = (date: Date | null) => {

@@ -1,17 +1,9 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-  TouchableOpacity,
-  useColorScheme,
-  ScrollView,
-} from 'react-native';
+import React, { useCallback, useMemo, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { GlassView } from 'expo-glass-effect';
-import { Colors, electricPurple } from '@/constants/theme';
+import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { Colors, electricPurple, Spacing, BorderRadius, Typography } from '@/constants/theme';
 
 export interface MapStyle {
   name: string;
@@ -119,114 +111,130 @@ export default function MapStylePicker({
 }: MapStylePickerProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const bottomSheetRef = useRef<BottomSheet>(null);
 
-  const handleSelectStyle = (styleUrl: string) => {
-    onSelectStyle(styleUrl);
-    onClose();
-  };
+  // Snap points for the bottom sheet
+  const snapPoints = useMemo(() => ['65%'], []);
 
-  const renderIcon = (style: MapStyle, size: number = 24) => {
-    if (style.iconFamily === 'MaterialIcons') {
-      return <MaterialIcons name={style.icon as any} size={size} color={colors.text} />;
+  // Open/close bottom sheet based on visible prop
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.expand();
+    } else {
+      bottomSheetRef.current?.close();
     }
-    return <MaterialCommunityIcons name={style.icon as any} size={size} color={colors.text} />;
-  };
+  }, [visible]);
+
+  const handleSelectStyle = useCallback(
+    (styleUrl: string) => {
+      onSelectStyle(styleUrl);
+      bottomSheetRef.current?.close();
+    },
+    [onSelectStyle],
+  );
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
+
+  const renderIcon = useCallback(
+    (style: MapStyle, size: number = 24) => {
+      if (style.iconFamily === 'MaterialIcons') {
+        return <MaterialIcons name={style.icon as any} size={size} color={colors.text} />;
+      }
+      return <MaterialCommunityIcons name={style.icon as any} size={size} color={colors.text} />;
+    },
+    [colors.text],
+  );
+
+  if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable>
-          <GlassView style={styles.modalContent} glassEffectStyle="regular">
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Map Style</Text>
-              <TouchableOpacity onPress={onClose}>
-                <Text style={[styles.modalCancel, { color: colors.icon }]}>Close</Text>
-              </TouchableOpacity>
+    <BottomSheet
+      ref={bottomSheetRef}
+      index={-1}
+      snapPoints={snapPoints}
+      enablePanDownToClose
+      onClose={onClose}
+      backdropComponent={renderBackdrop}
+      backgroundStyle={{ backgroundColor: colors.background }}
+      handleIndicatorStyle={{ backgroundColor: colors.icon }}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text }]}>Map Style</Text>
+      </View>
+      <BottomSheetScrollView contentContainerStyle={styles.content}>
+        {MAP_STYLES.map((style) => {
+          const isSelected = style.url === currentStyle;
+          return (
+            <View
+              key={style.url}
+              style={[
+                styles.styleItem,
+                { backgroundColor: colors.buttonBackground },
+                isSelected && { borderColor: electricPurple, borderWidth: 2 },
+              ]}
+            >
+              <View style={styles.styleIcon}>{renderIcon(style, 28)}</View>
+              <View style={styles.styleInfo}>
+                <Text style={[styles.styleName, { color: colors.text }]}>{style.name}</Text>
+                <Text style={[styles.styleDescription, { color: colors.icon }]}>
+                  {style.description}
+                </Text>
+              </View>
+              {isSelected && <MaterialIcons name="check" size={24} color={electricPurple} />}
             </View>
-            <ScrollView style={styles.styleList} showsVerticalScrollIndicator={false}>
-              {MAP_STYLES.map((style) => {
-                const isSelected = style.url === currentStyle;
-                return (
-                  <TouchableOpacity
-                    key={style.url}
-                    style={[
-                      styles.styleItem,
-                      { borderBottomColor: colors.background },
-                      isSelected && { backgroundColor: colors.buttonBackground },
-                    ]}
-                    onPress={() => handleSelectStyle(style.url)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.styleIcon}>{renderIcon(style, 28)}</View>
-                    <View style={styles.styleInfo}>
-                      <Text style={[styles.styleName, { color: colors.text }]}>{style.name}</Text>
-                      <Text style={[styles.styleDescription, { color: colors.icon }]}>
-                        {style.description}
-                      </Text>
-                    </View>
-                    {isSelected && <MaterialIcons name="check" size={24} color={electricPurple} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </GlassView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+          );
+        })}
+      </BottomSheetScrollView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  header: {
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 20,
+  title: {
+    ...Typography.h1,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  modalCancel: {
-    fontSize: 16,
-  },
-  styleList: {
-    maxHeight: 400,
+  content: {
+    padding: Spacing.lg,
+    gap: Spacing.sm,
   },
   styleItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderRadius: 8,
-    marginBottom: 4,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xs,
   },
   styleIcon: {
     width: 40,
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   styleInfo: {
     flex: 1,
   },
   styleName: {
-    fontSize: 16,
+    ...Typography.bodyLarge,
     fontWeight: '600',
     marginBottom: 2,
   },
   styleDescription: {
-    fontSize: 12,
+    ...Typography.bodySmall,
   },
 });
