@@ -112,6 +112,7 @@ export function Paywall({ visible, onClose }: PaywallProps) {
         enablePanDownToClose
         onDismiss={onClose}
         backdropComponent={renderBackdrop}
+        style={{ marginTop: 16 }}
         backgroundStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.background }}
         handleIndicatorStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.icon }}
       >
@@ -268,6 +269,7 @@ export function Paywall({ visible, onClose }: PaywallProps) {
       enablePanDownToClose
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
+      style={{ marginTop: 16 }}
       backgroundStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.background }}
       handleIndicatorStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.icon }}
     >
@@ -409,6 +411,7 @@ const styles = StyleSheet.create({
   // Purchase flow
   scrollContent: {
     padding: Spacing.xl,
+    paddingBottom: Spacing.xxxl * 20,
   },
   header: {
     alignItems: 'center',
