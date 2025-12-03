@@ -14,6 +14,7 @@ import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
+import { useFeatureAccess } from '@/hooks/use-feature-gate';
 
 const BIKE_TYPES: { value: BikeType; label: string; icon: string }[] = [
   { value: 'road', label: 'Road', icon: 'directions-bike' },
@@ -42,6 +43,7 @@ export default function NewBikeScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { createBike, loading, error: bikeError } = useBikes();
+  const { isPro } = useFeatureAccess();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -71,13 +73,24 @@ export default function NewBikeScreen() {
     if (result) {
       router.back();
     } else if (bikeError) {
-      // Check if the error is due to RLS policy (bike limit)
+      // Fallback: Catch RLS errors (race conditions, edge cases)
+      // RLS error could be auth failure OR limit exceeded - we check user tier
       if (
+        bikeError.includes('RLS_POLICY_VIOLATION') ||
         bikeError.includes('policy') ||
         bikeError.includes('42501') ||
-        bikeError.includes('row-level security')
+        bikeError.includes('row-level security') ||
+        bikeError.includes('new row violates')
       ) {
-        router.replace('/paywall');
+        if (!isPro) {
+          // Free user hit RLS error - likely the limit (could be race condition)
+          console.log('[NewBike] RLS error for free user, showing paywall');
+          router.replace('/paywall');
+        } else {
+          // Pro user hit RLS error - something else is wrong (auth?)
+          console.error('[NewBike] RLS error for pro user:', bikeError);
+          Alert.alert('Error', 'Unable to create bike. Please try again or contact support.');
+        }
       } else {
         Alert.alert('Error', bikeError);
       }

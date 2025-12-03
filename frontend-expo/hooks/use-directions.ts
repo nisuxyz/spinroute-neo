@@ -92,7 +92,7 @@ export const useDirections = (): UseDirectionsResult => {
   const [error, setError] = useState<string | null>(null);
   const { session } = useAuth();
   const { settings } = useUserSettings();
-  const env = useEnv(settings?.useDevUrls);
+  const env = useEnv();
 
   const calculateRoute = useCallback(
     async (request: DirectionsRequest) => {
@@ -176,7 +176,14 @@ export const useDirections = (): UseDirectionsResult => {
         setLoading(false);
       }
     },
-    [session, env, settings],
+    [
+      session?.access_token,
+      env.ROUTING_SERVICE,
+      env.SUPABASE,
+      settings?.preferred_routing_profile,
+      settings?.preferred_bike_type,
+      settings?.preferred_routing_provider,
+    ],
   );
 
   const clearRoute = useCallback(() => {

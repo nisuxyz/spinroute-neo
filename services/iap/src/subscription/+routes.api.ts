@@ -12,7 +12,11 @@ import { z } from 'zod';
 import { requireAuth } from '../../lib/auth';
 import { supabase } from '../../lib/db';
 import { createLogger, createRequestLogger } from '../../lib/logger';
-import { validateAppleReceipt, mapAppleReceiptToSubscription } from '../../lib/apple/validate';
+import {
+  validateAppleReceipt,
+  mapAppleReceiptToSubscription,
+  decodeTransactionInfo,
+} from '../../lib/apple/validate';
 import {
   validateGooglePurchase,
   acknowledgeSubscription,
@@ -83,11 +87,69 @@ router.post(
         // ===================
         requestLogger.logStart('Validating iOS receipt with Apple');
 
-        // Validate receipt with Apple
-        const appleResponse = await validateAppleReceipt(body.receiptData);
+        // Check if this is a JWS token (StoreKit 2) or base64 receipt (StoreKit 1)
+        // JWS tokens have the format: header.payload.signature
+        const isJWS = body.receiptData.split('.').length === 3;
 
-        // Map Apple response to our subscription data model
-        const appleData = mapAppleReceiptToSubscription(appleResponse);
+        let appleData: any;
+
+        if (isJWS) {
+          // StoreKit 2: Decode JWS token directly
+          requestLogger.logStart('Decoding StoreKit 2 JWS token');
+          try {
+            const transactionInfo = decodeTransactionInfo(body.receiptData);
+
+            // Check if subscription is expired
+            const expiresAt = transactionInfo.expiresDate
+              ? new Date(transactionInfo.expiresDate).toISOString()
+              : null;
+            const isExpired =
+              transactionInfo.expiresDate && transactionInfo.expiresDate < Date.now();
+            const isRevoked = !!transactionInfo.revocationDate;
+
+            // Determine status and tier based on expiry
+            let status: 'active' | 'expired' | 'cancelled';
+            let tier: 'pro' | 'free';
+
+            if (isRevoked) {
+              status = 'cancelled';
+              tier = 'free';
+            } else if (isExpired) {
+              status = 'expired';
+              tier = 'free';
+            } else {
+              status = 'active';
+              tier = 'pro';
+            }
+
+            appleData = {
+              subscription_tier: tier,
+              subscription_status: status,
+              subscription_expires_at: expiresAt,
+              product_id: transactionInfo.productId,
+              upcoming_product_id: null,
+              is_trial: transactionInfo.offerType === 1 || transactionInfo.offerType === 2,
+              is_renewing: !isExpired && !isRevoked, // Only renewing if not expired/revoked
+              original_transaction_id: transactionInfo.originalTransactionId,
+              transaction_id: transactionInfo.transactionId,
+            };
+
+            requestLogger.logSuccess('StoreKit 2 JWS decoded successfully', {
+              isExpired,
+              isRevoked,
+              tier,
+              status,
+            });
+          } catch (error) {
+            requestLogger.logError('Failed to decode JWS token', error);
+            throw new Error('Invalid JWS token');
+          }
+        } else {
+          // StoreKit 1: Use legacy verifyReceipt endpoint
+          requestLogger.logStart('Using legacy verifyReceipt endpoint');
+          const appleResponse = await validateAppleReceipt(body.receiptData);
+          appleData = mapAppleReceiptToSubscription(appleResponse);
+        }
 
         subscriptionData = {
           subscription_tier: appleData.subscription_tier,

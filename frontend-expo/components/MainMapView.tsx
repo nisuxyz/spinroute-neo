@@ -130,10 +130,38 @@ const MainMapView: React.FC = () => {
   const activeBike = bikes.find((bike) => bike.id === settings?.active_bike_id);
 
   // Feature access for trip limits
-  const { canRecordUnlimitedTrips, freeWeeklyTripLimit } = useFeatureAccess();
+  const { canRecordUnlimitedTrips, freeWeeklyTripLimit, isPro } = useFeatureAccess();
 
-  // Track weekly completed trips for free users
+  // Track weekly completed trips for free users (for proactive limit check)
   const [weeklyTripCount, setWeeklyTripCount] = useState(0);
+  const [tripsLoading, setTripsLoading] = useState(true);
+
+  // Fetch weekly completed trip count for free users
+  const supabaseRecording = useSupabase('recording');
+  React.useEffect(() => {
+    if (canRecordUnlimitedTrips) {
+      setTripsLoading(false);
+      return;
+    }
+
+    const fetchWeeklyTripCount = async () => {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const { count, error } = await supabaseRecording
+        .from('trips')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('started_at', oneWeekAgo.toISOString());
+
+      if (!error && count !== null) {
+        setWeeklyTripCount(count);
+      }
+      setTripsLoading(false);
+    };
+
+    fetchWeeklyTripCount();
+  }, [canRecordUnlimitedTrips, supabaseRecording]);
 
   // Refetch bikes when screen comes into focus
   useFocusEffect(
@@ -155,28 +183,8 @@ const MainMapView: React.FC = () => {
     captureInterval,
   });
 
-  // Fetch weekly completed trip count for free users
-  const supabaseRecording = useSupabase('recording');
-  React.useEffect(() => {
-    if (canRecordUnlimitedTrips) return;
-
-    const fetchWeeklyTripCount = async () => {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-      const { count, error } = await supabaseRecording
-        .from('trips')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('started_at', oneWeekAgo.toISOString());
-
-      if (!error && count !== null) {
-        setWeeklyTripCount(count);
-      }
-    };
-
-    fetchWeeklyTripCount();
-  }, [canRecordUnlimitedTrips, supabaseRecording]);
+  // Note: Trip limit is enforced by RLS policy at database level
+  // We rely on catching the RLS error in handleStartRecording
 
   const handleRegionIsChanging = (regionFeature: any) => {
     // Disable follow mode when user manually interacts with the map
@@ -441,14 +449,15 @@ const MainMapView: React.FC = () => {
   };
 
   const handleStartRecording = async () => {
-    // Check trip limit for free users
+    // Proactive check: Show paywall immediately if limit reached
+    // This provides better UX than waiting for RLS error
     if (!canRecordUnlimitedTrips && weeklyTripCount >= freeWeeklyTripLimit) {
-      // Show paywall
+      console.log('[MainMapView] Trip limit reached (proactive check), showing paywall');
       router.push('/paywall');
       return;
     }
 
-    // Check and request location permissions first
+    // Check and request location permissions
     if (permissionStatus !== 'granted') {
       const granted = await requestPermissions();
       if (!granted) {
@@ -457,13 +466,29 @@ const MainMapView: React.FC = () => {
       }
     }
 
+    // Try to start trip - RLS policy enforces limits as security boundary
     const trip = await startTrip();
     if (trip) {
       Alert.alert('Recording Started', 'Your trip is now being recorded');
     } else if (tripError) {
-      // Check if the error is due to RLS policy (trip limit)
-      if (tripError.includes('policy') || tripError.includes('42501')) {
-        router.push('/paywall');
+      // Fallback: Catch RLS errors (race conditions, edge cases)
+      // RLS error could be auth failure OR limit exceeded - we assume limit for free users
+      if (
+        tripError.includes('RLS_POLICY_VIOLATION') ||
+        tripError.includes('policy') ||
+        tripError.includes('42501') ||
+        tripError.includes('row-level security') ||
+        tripError.includes('new row violates')
+      ) {
+        if (!isPro) {
+          // Free user hit RLS error - likely the limit (could be race condition)
+          console.log('[MainMapView] RLS error for free user, showing paywall');
+          router.push('/paywall');
+        } else {
+          // Pro user hit RLS error - something else is wrong (auth?)
+          console.error('[MainMapView] RLS error for pro user:', tripError);
+          Alert.alert('Error', 'Unable to start trip. Please try again or contact support.');
+        }
       } else {
         Alert.alert('Error', tripError);
       }

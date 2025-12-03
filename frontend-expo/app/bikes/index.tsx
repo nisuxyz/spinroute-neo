@@ -33,16 +33,15 @@ export default function BikesScreen() {
   const { settings, updateSettings, refetch: refetchSettings } = useUserSettings();
   const { canAddUnlimitedBikes, freeBikeLimit } = useFeatureAccess();
 
-  // Check if user can add a new bike
-  const canAddBike = canAddUnlimitedBikes || bikes.length < freeBikeLimit;
-
+  // Proactive check: Show paywall immediately if limit reached
   const handleAddBike = () => {
-    if (canAddBike) {
-      router.push('/bikes/new');
-    } else {
-      // Show paywall
+    if (!canAddUnlimitedBikes && bikes.length >= freeBikeLimit) {
+      console.log('[Bikes] Bike limit reached (proactive check), showing paywall');
       router.push('/paywall');
+      return;
     }
+    // Navigate to add bike screen - RLS policy enforces limit as security boundary
+    router.push('/bikes/new');
   };
 
   const handleDeleteBike = (id: string, name: string) => {

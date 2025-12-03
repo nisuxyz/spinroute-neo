@@ -7,7 +7,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { SubscriptionProvider } from '@/hooks/use-subscription';
 import { IAPProvider } from '@/hooks/use-iap';
-import { useEnv } from '@/hooks/use-env';
+import { EnvProvider, useEnv } from '@/hooks/use-env';
 import Mapbox from '@rnmapbox/maps';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -76,28 +76,39 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const env = useEnv(); // Uses default (dev mode in development)
+function MapboxInitializer() {
+  const env = useEnv();
 
   useEffect(() => {
-    // Initialize the map view
-    Mapbox.setAccessToken(env.MAPBOX_ACCESS_TOKEN!);
-    Mapbox.setTelemetryEnabled(false);
+    if (!env.MAPBOX_ACCESS_TOKEN) {
+      console.warn('Mapbox access token not configured');
+      return;
+    }
 
-    console.log({ env });
+    // Initialize the map view
+    Mapbox.setAccessToken(env.MAPBOX_ACCESS_TOKEN);
+    Mapbox.setTelemetryEnabled(false);
   }, [env.MAPBOX_ACCESS_TOKEN]);
+
+  return null;
+}
+
+export default function RootLayout() {
+  const colorScheme = useColorScheme();
 
   return (
     <AuthProvider>
-      <SubscriptionProvider>
-        <IAPProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <RootLayoutNav />
-            <StatusBar style="auto" />
-          </ThemeProvider>
-        </IAPProvider>
-      </SubscriptionProvider>
+      <EnvProvider>
+        <MapboxInitializer />
+        <SubscriptionProvider>
+          <IAPProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <RootLayoutNav />
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </IAPProvider>
+        </SubscriptionProvider>
+      </EnvProvider>
     </AuthProvider>
   );
 }

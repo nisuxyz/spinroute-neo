@@ -8,6 +8,7 @@ import {
   type ProductSubscriptionAndroid,
 } from 'expo-iap';
 import { useSubscription } from './use-subscription';
+import { useAuth } from './use-auth';
 import { useEnv } from './use-env';
 
 // Subscription product IDs
@@ -45,6 +46,7 @@ interface IAPProviderProps {
 
 export function IAPProvider({ children }: IAPProviderProps) {
   const { purchaseUUID, refresh: refreshSubscription } = useSubscription();
+  const { session } = useAuth();
   const env = useEnv();
 
   const [productsLoading, setProductsLoading] = useState(true);
@@ -59,18 +61,60 @@ export function IAPProvider({ children }: IAPProviderProps) {
         return false;
       }
 
+      if (!session?.access_token) {
+        console.error('No auth session available for validation');
+        return false;
+      }
+
       try {
+        // Log purchase object to debug
+        console.log('[validateReceipt] Purchase object:', {
+          productId: purchase.productId,
+          purchaseToken: purchase.purchaseToken,
+          transactionId: purchase.transactionId,
+          platform: Platform.OS,
+        });
+
+        // expo-iap uses unified purchaseToken field for both platforms
+        // iOS: purchaseToken contains the JWS token (receipt)
+        // Android: purchaseToken contains the purchase token
+        const requestBody =
+          Platform.OS === 'ios'
+            ? {
+                platform: 'ios' as const,
+                receiptData: purchase.purchaseToken || '',
+                productId: purchase.productId,
+              }
+            : {
+                platform: 'android' as const,
+                purchaseToken: purchase.purchaseToken || '',
+                productId: purchase.productId,
+              };
+
+        console.log('[validateReceipt] Request body:', {
+          platform: requestBody.platform,
+          productId: requestBody.productId,
+          hasData: Platform.OS === 'ios' ? !!requestBody.receiptData : !!requestBody.purchaseToken,
+        });
+
+        // Check if we have the required data
+        const hasRequiredData =
+          Platform.OS === 'ios' ? !!requestBody.receiptData : !!requestBody.purchaseToken;
+
+        if (!hasRequiredData) {
+          console.error('[validateReceipt] No purchase data available');
+          // In sandbox/development, data might not be immediately available
+          // Return true to allow transaction to complete, webhook will handle validation
+          return true;
+        }
+
         const response = await fetch(`${env.IAP_SERVICE_URL}/api/subscription/validate-receipt`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({
-            platform: Platform.OS as 'ios' | 'android',
-            receipt: purchase.purchaseToken || '',
-            productId: purchase.productId,
-            purchaseUUID,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
@@ -81,13 +125,13 @@ export function IAPProvider({ children }: IAPProviderProps) {
 
         const result = await response.json();
         console.log('Receipt validated:', result);
-        return result.success;
+        return result.success === true;
       } catch (error) {
         console.error('Error validating receipt:', error);
         return false;
       }
     },
-    [purchaseUUID, env.IAP_SERVICE_URL],
+    [purchaseUUID, session?.access_token, env.IAP_SERVICE_URL],
   );
 
   // Handle successful purchase
@@ -99,23 +143,31 @@ export function IAPProvider({ children }: IAPProviderProps) {
       console.log('Purchase successful:', purchase.productId);
       setPurchasing(false);
 
-      // Validate on our backend
-      const isValid = await validateReceipt(purchase);
+      try {
+        // Validate on our backend
+        const isValid = await validateReceipt(purchase);
 
-      if (isValid) {
-        // Finish the transaction with the store
-        await finishTransaction({ purchase });
+        if (isValid) {
+          // Finish the transaction with the store
+          await finishTransaction({ purchase });
 
-        // Refresh local subscription state
-        await refreshSubscription();
+          // Refresh local subscription state
+          await refreshSubscription();
 
-        Alert.alert('Success!', 'Your Pro subscription is now active.');
-      } else {
-        // Don't finish transaction if validation failed
-        // This allows the user to restore/retry
+          Alert.alert('Success!', 'Your Pro subscription is now active.');
+        } else {
+          // Don't finish transaction if validation failed
+          // This allows the user to restore/retry
+          Alert.alert(
+            'Verification Failed',
+            'Your purchase could not be verified. Please try restoring purchases or contact support if this persists.',
+          );
+        }
+      } catch (error) {
+        console.error('Error in purchase success handler:', error);
         Alert.alert(
-          'Verification Failed',
-          'Your purchase could not be verified. Please contact support if this persists.',
+          'Error',
+          'An error occurred while processing your purchase. Please try restoring purchases.',
         );
       }
     },
@@ -241,10 +293,11 @@ export function IAPProvider({ children }: IAPProviderProps) {
     setRestoring(true);
 
     try {
+      // Trigger fetch of available purchases
       await getAvailablePurchases();
 
       // Check if there are any purchases to restore
-      if (availablePurchases.length === 0) {
+      if (!availablePurchases || availablePurchases.length === 0) {
         Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
         setRestoring(false);
         return;

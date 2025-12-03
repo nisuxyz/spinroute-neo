@@ -118,7 +118,18 @@ export function useBikes() {
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Error creating bike:', insertError);
+        // Preserve the full error for RLS detection
+        const errorMsg = insertError.message || 'Failed to create bike';
+        // Mark RLS policy violations for easy detection
+        if (insertError.code === '42501') {
+          setError(`RLS_POLICY_VIOLATION: ${errorMsg}`);
+        } else {
+          setError(errorMsg);
+        }
+        return null;
+      }
 
       // Convert km to miles for display
       const bikeWithMiles = {
@@ -129,7 +140,8 @@ export function useBikes() {
       setBikes((prev) => [bikeWithMiles, ...prev]);
       return bikeWithMiles;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create bike');
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create bike';
+      setError(errorMsg);
       console.error('Error creating bike:', err);
       return null;
     } finally {

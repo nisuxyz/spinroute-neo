@@ -57,40 +57,57 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select(
-        'subscription_tier, subscription_status, subscription_expires_at, purchase_uuid, product_id, is_trial, is_renewing',
-      )
-      .eq('id', user.id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(
+          'subscription_tier, subscription_status, subscription_expires_at, purchase_uuid, product_id, is_trial, is_renewing',
+        )
+        .eq('id', user.id)
+        .single();
 
-    if (error) {
-      console.error('Error fetching subscription:', error);
+      if (error) {
+        console.error('Error fetching subscription:', error);
+        setState((prev) => ({ ...prev, loading: false }));
+        return;
+      }
+
+      setState({
+        tier: data.subscription_tier,
+        status: data.subscription_status,
+        expiresAt: data.subscription_expires_at ? new Date(data.subscription_expires_at) : null,
+        purchaseUUID: data.purchase_uuid,
+        productId: data.product_id,
+        isTrial: data.is_trial,
+        isRenewing: data.is_renewing,
+        loading: false,
+      });
+    } catch (error) {
+      console.error('Unexpected error fetching subscription:', error);
       setState((prev) => ({ ...prev, loading: false }));
-      return;
     }
-
-    setState({
-      tier: data.subscription_tier,
-      status: data.subscription_status,
-      expiresAt: data.subscription_expires_at ? new Date(data.subscription_expires_at) : null,
-      purchaseUUID: data.purchase_uuid,
-      productId: data.product_id,
-      isTrial: data.is_trial,
-      isRenewing: data.is_renewing,
-      loading: false,
-    });
   }, [user]);
 
-  // Initial fetch
+  // Initial fetch - only run once when user changes
   useEffect(() => {
-    fetchSubscription();
-  }, [fetchSubscription]);
+    let cancelled = false;
+
+    const loadSubscription = async () => {
+      if (!cancelled) {
+        await fetchSubscription();
+      }
+    };
+
+    loadSubscription();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]); // Only depend on user.id to avoid re-fetching
 
   // Subscribe to realtime updates from webhooks
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
     const channel = supabase
       .channel(`profile-subscription-${user.id}`)
@@ -103,6 +120,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           filter: `id=eq.${user.id}`,
         },
         (payload) => {
+          console.log('Subscription updated via webhook:', payload.new);
           const data = payload.new;
           setState({
             tier: data.subscription_tier,
@@ -119,13 +137,19 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       .subscribe();
 
     return () => {
+      // Properly unsubscribe and remove channel
+      channel.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id
 
   const value: SubscriptionContextValue = {
     ...state,
-    isPro: state.tier === 'pro' && state.status === 'active',
+    isPro:
+      state.tier === 'pro' &&
+      (state.status === 'active' || state.status === 'grace_period') &&
+      // Double-check expiry date as safety measure
+      (!state.expiresAt || state.expiresAt > new Date()),
     refresh: fetchSubscription,
   };
 

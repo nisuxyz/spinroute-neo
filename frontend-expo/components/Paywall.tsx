@@ -26,22 +26,6 @@ const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
 const TERMS_URL = 'https://spinroute.app/terms';
 const PRIVACY_URL = 'https://spinroute.app/privacy';
 
-// Promotional offers - update these when offers change
-const PROMO_OFFERS = {
-  weekly: {
-    badge: '1 Week Free',
-    savings: '1 week free trial',
-  },
-  monthly: {
-    badge: 'First Month $1.99',
-    savings: 'Then $4.99/month',
-  },
-  yearly: {
-    badge: 'First Year $49.99',
-    savings: 'Then $59.99/year',
-  },
-} as const;
-
 interface PaywallProps {
   visible: boolean;
   onClose: () => void;
@@ -89,23 +73,10 @@ export function Paywall({ visible, onClose }: PaywallProps) {
     return 'Subscription';
   };
 
-  const getBadgeText = (productId: string): string | null => {
-    if (productId.includes('yearly')) return PROMO_OFFERS.yearly.badge;
-    if (productId.includes('monthly')) return PROMO_OFFERS.monthly.badge;
-    if (productId.includes('weekly')) return PROMO_OFFERS.weekly.badge;
-    return null;
-  };
-
   const getBadgeColor = (productId: string): string => {
+    // Highlight yearly as best value
     if (productId.includes('yearly')) return '#10b981';
     return electricPurple;
-  };
-
-  const getSavingsText = (productId: string): string | null => {
-    if (productId.includes('yearly')) return PROMO_OFFERS.yearly.savings;
-    if (productId.includes('monthly')) return PROMO_OFFERS.monthly.savings;
-    if (productId.includes('weekly')) return PROMO_OFFERS.weekly.savings;
-    return null;
   };
 
   const renderContent = (bottomPadding?: number) => {
@@ -114,8 +85,19 @@ export function Paywall({ visible, onClose }: PaywallProps) {
         <>
           {/* Close Button */}
           <View style={styles.closeButtonRow}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <MaterialIcons name="close" size={24} color={colors.icon} />
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              {hasGlassEffect ? (
+                <GlassView style={styles.closeButton} glassEffectStyle="regular" isInteractive>
+                  <MaterialIcons name="close" size={16} color={colors.text} />
+                </GlassView>
+              ) : (
+                <View style={[styles.closeButton, { backgroundColor: colors.icon + '30' }]}>
+                  <MaterialIcons name="close" size={16} color={colors.icon} />
+                </View>
+              )}
             </TouchableOpacity>
           </View>
           <View style={styles.proIconContainer}>
@@ -145,8 +127,19 @@ export function Paywall({ visible, onClose }: PaywallProps) {
       >
         {/* Close Button */}
         <View style={styles.closeButtonRow}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <MaterialIcons name="close" size={24} color={colors.icon} />
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            {hasGlassEffect ? (
+              <GlassView style={styles.closeButton} glassEffectStyle="clear" isInteractive>
+                <MaterialIcons name="close" size={16} color={colors.text} />
+              </GlassView>
+            ) : (
+              <View style={[styles.closeButton, { backgroundColor: colors.icon + '30' }]}>
+                <MaterialIcons name="close" size={16} color={colors.icon} />
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -195,9 +188,7 @@ export function Paywall({ visible, onClose }: PaywallProps) {
                 key={subscription.id}
                 subscription={subscription}
                 label={getSubscriptionLabel(subscription.id)}
-                badge={getBadgeText(subscription.id)}
                 badgeColor={getBadgeColor(subscription.id)}
-                savingsText={getSavingsText(subscription.id)}
                 onPress={() => handlePurchase(subscription.id)}
                 disabled={purchasing || restoring || !connected}
                 loading={purchasing}
@@ -317,9 +308,7 @@ function FeatureItem({ icon, text, colors }: FeatureItemProps) {
 interface SubscriptionCardProps {
   subscription: ProductSubscription;
   label: string;
-  badge: string | null;
   badgeColor: string;
-  savingsText: string | null;
   onPress: () => void;
   disabled: boolean;
   loading: boolean;
@@ -329,9 +318,7 @@ interface SubscriptionCardProps {
 function SubscriptionCard({
   subscription,
   label,
-  badge,
   badgeColor,
-  savingsText,
   onPress,
   disabled,
   loading,
@@ -351,9 +338,9 @@ function SubscriptionCard({
       disabled={disabled}
       activeOpacity={0.7}
     >
-      {badge && (
+      {isYearly && (
         <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-          <Text style={styles.badgeText}>{badge}</Text>
+          <Text style={styles.badgeText}>Best Value</Text>
         </View>
       )}
       <View style={styles.planContent}>
@@ -374,18 +361,7 @@ function SubscriptionCard({
           )}
         </View>
       </View>
-      {savingsText && (
-        <View style={styles.savingsContainer}>
-          <MaterialIcons
-            name="local-offer"
-            size={14}
-            color={isYearly ? '#10b981' : electricPurple}
-          />
-          <Text style={[styles.savingsText, { color: isYearly ? '#10b981' : electricPurple }]}>
-            {savingsText}
-          </Text>
-        </View>
-      )}
+      {/* Intro pricing info would come from subscription.description or platform-specific fields */}
     </TouchableOpacity>
   );
 }
@@ -416,8 +392,8 @@ const styles = StyleSheet.create({
   closeButtonRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingTop: Spacing.md,
-    paddingRight: Spacing.md,
+    paddingTop: Spacing.lg,
+    // paddingHorizontal: Spacing.sm,
   },
   closeButton: {
     width: 40,

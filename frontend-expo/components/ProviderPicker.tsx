@@ -45,7 +45,7 @@ export default function ProviderPicker({ visible, currentProvider, onClose }: Pr
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { settings, updateSettings } = useUserSettings();
-  const { ROUTING_SERVICE } = useEnv(settings?.useDevUrls);
+  const { ROUTING_SERVICE } = useEnv();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

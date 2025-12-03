@@ -63,7 +63,7 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
   const { history, addToHistory, removeFromHistory } = useSearchHistory();
   const colors = Colors[colorScheme ?? 'light'];
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
-  const env = useEnv(settings?.useDevUrls); // Uses default (dev mode in development)
+  const env = useEnv();
 
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['90%'], []);

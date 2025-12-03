@@ -1,49 +1,59 @@
-export const useEnv = (useDevUrls: boolean = false) => {
-  // EXPO_PUBLIC_ environment variables are automatically available via process.env
-  // in both development and production builds (EAS Build injects them automatically)
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useUserSettings } from './use-user-settings';
 
-  // Define known environment variables
-  const prodUrls: Record<string, string> = {};
-  const devUrls: Record<string, string> = {};
-  const env: Record<string, string> = {};
+interface EnvConfig {
+  SUPABASE: string;
+  ROUTING_SERVICE: string;
+  IAP_SERVICE_URL: string;
+  MAPBOX_ACCESS_TOKEN: string;
+  SUPABASE_KEY: string;
+}
 
-  // Extract production URLs
-  if (process.env.EXPO_PUBLIC_SUPABASE_URL) {
-    prodUrls.SUPABASE = process.env.EXPO_PUBLIC_SUPABASE_URL;
-  }
-  if (process.env.EXPO_PUBLIC_ROUTING_SERVICE_URL) {
-    prodUrls.ROUTING_SERVICE = process.env.EXPO_PUBLIC_ROUTING_SERVICE_URL;
-  }
-  if (process.env.EXPO_PUBLIC_IAP_SERVICE_URL) {
-    prodUrls.IAP_SERVICE_URL = process.env.EXPO_PUBLIC_IAP_SERVICE_URL;
-  }
+const EnvContext = createContext<EnvConfig | null>(null);
 
-  // Extract development URLs
-  if (process.env.EXPO_PUBLIC_SUPABASE_DEV_URL) {
-    devUrls.SUPABASE = process.env.EXPO_PUBLIC_SUPABASE_DEV_URL;
-  }
-  if (process.env.EXPO_PUBLIC_ROUTING_SERVICE_DEV_URL) {
-    devUrls.ROUTING_SERVICE = process.env.EXPO_PUBLIC_ROUTING_SERVICE_DEV_URL;
-  }
-  if (process.env.EXPO_PUBLIC_IAP_SERVICE_DEV_URL) {
-    devUrls.IAP_SERVICE_URL = process.env.EXPO_PUBLIC_IAP_SERVICE_DEV_URL;
-  }
+export function EnvProvider({ children }: { children: ReactNode }) {
+  const { settings } = useUserSettings();
 
-  // Extract other environment variables
-  if (process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN) {
-    env.MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const env = useMemo(() => {
+    const useDevUrls = settings?.useDevUrls ?? process.env.NODE_ENV === 'development';
+
+    // Extract production URLs
+    const prodUrls = {
+      SUPABASE: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
+      ROUTING_SERVICE: process.env.EXPO_PUBLIC_ROUTING_SERVICE_URL || '',
+      IAP_SERVICE_URL: process.env.EXPO_PUBLIC_IAP_SERVICE_URL || '',
+    };
+
+    // Extract development URLs (fallback to prod if not set)
+    const devUrls = {
+      SUPABASE: process.env.EXPO_PUBLIC_SUPABASE_DEV_URL || prodUrls.SUPABASE,
+      ROUTING_SERVICE: process.env.EXPO_PUBLIC_ROUTING_SERVICE_DEV_URL || prodUrls.ROUTING_SERVICE,
+      IAP_SERVICE_URL: process.env.EXPO_PUBLIC_IAP_SERVICE_DEV_URL || prodUrls.IAP_SERVICE_URL,
+    };
+
+    // Merge URLs based on useDevUrls flag
+    const urls = useDevUrls ? devUrls : prodUrls;
+
+    // Keep console logs for analysis
+    console.log('[EnvProvider] useDevUrls:', useDevUrls);
+    console.log('[EnvProvider] devUrls:', devUrls);
+    console.log('[EnvProvider] prodUrls:', prodUrls);
+    console.log('[EnvProvider] merged urls:', urls);
+
+    return {
+      ...urls,
+      MAPBOX_ACCESS_TOKEN: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
+      SUPABASE_KEY: process.env.EXPO_PUBLIC_SUPABASE_KEY || '',
+    };
+  }, [settings?.useDevUrls]);
+
+  return <EnvContext.Provider value={env}>{children}</EnvContext.Provider>;
+}
+
+export function useEnv() {
+  const context = useContext(EnvContext);
+  if (!context) {
+    throw new Error('useEnv must be used within EnvProvider');
   }
-  if (process.env.EXPO_PUBLIC_SUPABASE_KEY) {
-    env.SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY;
-  }
-
-  // Merge URLs based on useDevUrls flag
-  const urls = useDevUrls ? { ...prodUrls, ...devUrls } : prodUrls;
-
-  console.log('useEnv - useDevUrls:', useDevUrls);
-  console.log('useEnv - devUrls:', devUrls);
-  console.log('useEnv - prodUrls:', prodUrls);
-  console.log('useEnv - merged urls:', urls);
-
-  return { ...env, ...urls };
-};
+  return context;
+}

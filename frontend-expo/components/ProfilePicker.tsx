@@ -85,7 +85,7 @@ export default function ProfilePicker({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { settings, updateSettings } = useUserSettings();
-  const { ROUTING_SERVICE } = useEnv(settings?.useDevUrls);
+  const { ROUTING_SERVICE } = useEnv();
   const [availableProfiles, setAvailableProfiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

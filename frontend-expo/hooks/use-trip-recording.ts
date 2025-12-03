@@ -92,7 +92,14 @@ export function useTripRecording(): UseTripRecordingReturn {
 
       if (insertError) {
         console.error('[useTripRecording] Insert error:', insertError);
-        throw insertError;
+        // Preserve the full error object for RLS detection
+        const errorMsg = insertError.message || 'Failed to start trip';
+        setError(errorMsg);
+        // Store the error code for RLS detection
+        if (insertError.code === '42501') {
+          setError(`RLS_POLICY_VIOLATION: ${errorMsg}`);
+        }
+        return null;
       }
 
       console.log('[useTripRecording] Trip started successfully:', data);
