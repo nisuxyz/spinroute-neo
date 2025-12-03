@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useSupabase } from './use-supabase';
+import { useClient } from 'react-supabase';
 import type { Database } from '@/supabase/types';
 
 type StationRow = Database['bikeshare']['Tables']['station']['Row'];
@@ -10,7 +10,7 @@ interface StationDetails extends Omit<StationRow, 'location'> {
 }
 
 export const useStationDetails = () => {
-  const supabase = useSupabase('bikeshare');
+  const supabase = useClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,6 +21,7 @@ export const useStationDetails = () => {
 
       try {
         const { data, error: fetchError } = await supabase
+          .schema('bikeshare')
           .from('station')
           .select(
             `
@@ -47,7 +48,7 @@ export const useStationDetails = () => {
         return null;
       }
     },
-    [supabase],
+    [], // Removed supabase from deps - useClient() is stable
   );
 
   return {

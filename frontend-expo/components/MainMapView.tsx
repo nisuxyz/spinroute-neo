@@ -8,7 +8,7 @@ import MapActionButtons from './MapActionButtons';
 import StationCard from './StationCard';
 import StationMarker from './StationMarker';
 import StationLayers from './StationLayers';
-import { useSupabase } from '@/hooks/use-supabase';
+import { useClient } from 'react-supabase';
 import { useBikeshareStations } from '@/hooks/use-bikeshare-stations';
 import { useMapLocation } from '@/hooks/use-map-location';
 import { useStationVisibility } from '@/hooks/use-station-visibility';
@@ -57,7 +57,7 @@ const MainMapView: React.FC = () => {
   const mapRef = useRef<Mapbox.MapView>(null);
   const cameraRef = useRef<Mapbox.Camera>(null);
   const router = useRouter();
-  const supabase = useSupabase('bikeshare');
+  const supabase = useClient();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -66,7 +66,7 @@ const MainMapView: React.FC = () => {
     stationFeatureCollection,
     fetchStationsError,
     isLoading: isStationDataFetching,
-  } = useBikeshareStations(supabase);
+  } = useBikeshareStations(); // No longer needs supabase param - uses useClient() internally
 
   const { userLocation, locationPermissionGranted } = useMapLocation();
 
@@ -137,7 +137,6 @@ const MainMapView: React.FC = () => {
   const [tripsLoading, setTripsLoading] = useState(true);
 
   // Fetch weekly completed trip count for free users
-  const supabaseRecording = useSupabase('recording');
   React.useEffect(() => {
     if (canRecordUnlimitedTrips) {
       setTripsLoading(false);
@@ -148,7 +147,8 @@ const MainMapView: React.FC = () => {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const { count, error } = await supabaseRecording
+      const { count, error } = await supabase
+        .schema('recording')
         .from('trips')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'completed')
@@ -161,7 +161,7 @@ const MainMapView: React.FC = () => {
     };
 
     fetchWeeklyTripCount();
-  }, [canRecordUnlimitedTrips, supabaseRecording]);
+  }, [canRecordUnlimitedTrips]); // Removed supabaseRecording from deps
 
   // Refetch bikes when screen comes into focus
   useFocusEffect(

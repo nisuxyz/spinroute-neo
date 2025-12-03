@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useAuth } from './use-auth';
-import { supabase } from '@/utils/supabase';
+import { useClient } from 'react-supabase';
 import type { Database } from '@/supabase/types';
 
 type UserSettings = Database['public']['Tables']['user_settings']['Row'];
@@ -62,6 +62,7 @@ function updateDevSettingsState(updates: Partial<DevSettings>) {
 
 export function useUserSettings() {
   const { user } = useAuth();
+  const supabase = useClient();
   const { settings, loading, error } = useSyncExternalStore(
     subscribeToSettings,
     getSettingsSnapshot,

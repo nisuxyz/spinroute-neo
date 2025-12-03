@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
+import { useClient } from 'react-supabase';
 import { Colors, electricPurple } from '@/constants/theme';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useEnv } from '@/hooks/use-env';
-import { supabase } from '@/utils/supabase';
 
 interface Provider {
   name: string;
@@ -82,6 +82,7 @@ export default function ProfilePicker({
   currentProvider,
   onClose,
 }: ProfilePickerProps) {
+  const supabase = useClient();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { settings, updateSettings } = useUserSettings();

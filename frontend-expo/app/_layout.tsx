@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { SubscriptionProvider } from '@/hooks/use-subscription';
 import { IAPProvider } from '@/hooks/use-iap';
 import { EnvProvider, useEnv } from '@/hooks/use-env';
+import { Provider as SupabaseProvider } from 'react-supabase';
+import { supabase } from '@/utils/supabase';
 import Mapbox from '@rnmapbox/maps';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -97,18 +99,20 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <AuthProvider>
-      <EnvProvider>
-        <MapboxInitializer />
-        <SubscriptionProvider>
-          <IAPProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <RootLayoutNav />
-              <StatusBar style="auto" />
-            </ThemeProvider>
-          </IAPProvider>
-        </SubscriptionProvider>
-      </EnvProvider>
-    </AuthProvider>
+    <SupabaseProvider value={supabase}>
+      <AuthProvider>
+        <EnvProvider>
+          <MapboxInitializer />
+          <SubscriptionProvider>
+            <IAPProvider>
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <RootLayoutNav />
+                <StatusBar style="auto" />
+              </ThemeProvider>
+            </IAPProvider>
+          </SubscriptionProvider>
+        </EnvProvider>
+      </AuthProvider>
+    </SupabaseProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { supabase } from '@/utils/supabase';
+import { useClient } from 'react-supabase';
 import type { Database } from '@/supabase/types';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from './use-auth';
@@ -30,6 +30,7 @@ interface SubscriptionProviderProps {
 
 export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const { user } = useAuth();
+  const supabase = useClient();
   const [state, setState] = useState<SubscriptionState>({
     tier: 'free',
     status: 'active',
@@ -86,7 +87,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       console.error('Unexpected error fetching subscription:', error);
       setState((prev) => ({ ...prev, loading: false }));
     }
-  }, [user]);
+  }, [user, supabase]);
 
   // Initial fetch - only run once when user changes
   useEffect(() => {
@@ -103,7 +104,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]); // Only depend on user.id to avoid re-fetching
+  }, [user?.id, fetchSubscription]); // Added fetchSubscription to deps
 
   // Subscribe to realtime updates from webhooks
   useEffect(() => {
@@ -119,7 +120,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           table: 'profiles',
           filter: `id=eq.${user.id}`,
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Subscription updated via webhook:', payload.new);
           const data = payload.new;
           setState({
@@ -141,7 +142,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       channel.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [user?.id]); // Only depend on user.id
+  }, [user?.id, supabase]); // Added supabase to deps
 
   const value: SubscriptionContextValue = {
     ...state,

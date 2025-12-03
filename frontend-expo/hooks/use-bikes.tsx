@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSupabase } from './use-supabase';
-import { supabase as supabaseClient } from '@/utils/supabase';
+import { useClient } from 'react-supabase';
 import type { Database } from '../supabase/types';
 
 export type BikeType = Database['vehicles']['Enums']['bike_type'];
@@ -40,14 +39,12 @@ function convertMiToKm(mi: number): number {
 }
 
 export function useBikes() {
-  const supabase = useSupabase();
+  const supabase = useClient();
   const [bikes, setBikes] = useState<Bike[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBikes = useCallback(async () => {
-    if (!supabase) return;
-
     setLoading(true);
     setError(null);
 
@@ -88,7 +85,7 @@ export function useBikes() {
       // Get current user
       const {
         data: { user },
-      } = await supabaseClient.auth.getUser();
+      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }

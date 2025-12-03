@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDebouncedCallback } from 'use-debounce';
-import { useSupabase } from './use-supabase';
+import { useClient } from 'react-supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const UseBikeshareStationsErrors = {
   FailedToFetchStations: class FailedToFetchStationsError extends Error {
@@ -19,7 +20,9 @@ const UseBikeshareStationsErrors = {
   },
 };
 
-export const useBikeshareStations = (supabase: ReturnType<typeof useSupabase>) => {
+export const useBikeshareStations = () => {
+  const client = useClient();
+  const supabase = client.schema('bikeshare');
   const [stationList, setStationList] = React.useState<any[]>([]);
   const [stationFeatureCollection, setStationFeatureCollection] =
     React.useState<GeoJSON.FeatureCollection>({

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './use-auth';
-import { supabase } from '@/utils/supabase';
+import { useClient } from 'react-supabase';
 import type { Database } from '@/supabase/types';
 
 type Trip = Database['recording']['Tables']['trips']['Row'];
@@ -38,6 +38,7 @@ interface UseTripDetailReturn {
 
 export function useTripDetail(tripId: string): UseTripDetailReturn {
   const { user } = useAuth();
+  const supabase = useClient();
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [tripPoints, setTripPoints] = useState<TripPoint[]>([]);
   const [routeGeoJSON, setRouteGeoJSON] = useState<RouteFeature | null>(null);

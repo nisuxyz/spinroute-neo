@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useClient } from 'react-supabase';
 import { Colors } from '@/constants/theme';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
 import { useBikes } from '@/hooks/use-bikes';
-import { useSupabase } from '@/hooks/use-supabase';
 
 export default function SubscriptionSection() {
   const colorScheme = useColorScheme();
@@ -25,7 +25,7 @@ export default function SubscriptionSection() {
 
   const { freeBikeLimit, freeWeeklyTripLimit } = useFeatureAccess();
   const { bikes } = useBikes();
-  const supabaseRecording = useSupabase('recording');
+  const supabase = useClient();
 
   // Track weekly trip count
   const [weeklyTripCount, setWeeklyTripCount] = useState(0);
@@ -37,7 +37,8 @@ export default function SubscriptionSection() {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const { count, error } = await supabaseRecording
+      const { count, error } = await supabase
+        .schema('recording')
         .from('trips')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'completed')
@@ -50,7 +51,7 @@ export default function SubscriptionSection() {
     };
 
     fetchWeeklyTripCount();
-  }, [supabaseRecording]);
+  }, []); // Empty deps - only fetch once on mount
 
   const handleManageSubscription = () => {
     // Deep link to system subscription management

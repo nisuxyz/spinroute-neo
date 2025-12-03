@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
-import { supabase } from '@/utils/supabase';
+import { useClient } from 'react-supabase';
 import type { Database } from '@/supabase/types';
 
 type TripPointInsert = Database['recording']['Tables']['trip_points']['Insert'];
@@ -39,6 +39,7 @@ export function useLocationTracking({
   batchSize = 10,
   batchTimeout = 30000,
 }: UseLocationTrackingOptions): UseLocationTrackingReturn {
+  const supabase = useClient();
   const [isTracking, setIsTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<LocationPoint | null>(null);
   const [error, setError] = useState<string | null>(null);
