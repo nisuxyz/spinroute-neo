@@ -4,7 +4,9 @@
   "version": "0.0.1",
   "scripts": {
     "format": "biome format --write",
-    "prepare": "husky"
+    "prepare": "husky",
+    "deploy:routing": "flyctl deploy -c services/routing/fly.toml --remote-only",
+    "deploy:iap": "flyctl deploy -c services/iap/fly.toml --remote-only"
   },
   "workspaces": {
     "packages": [
