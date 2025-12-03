@@ -1,0 +1,16 @@
+# deps
+node_modules/
+
+# pglite
+pglite/
+
+.env
+.env.local
+.env.*.local
+
+.DS_Store
+
+Dockerfile
+.env.example
+
+README.md

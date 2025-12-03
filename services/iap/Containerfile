@@ -1,0 +1,21 @@
+FROM docker.io/oven/bun:latest AS builder
+
+# Create app directory
+WORKDIR /app
+
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+COPY ../../ ./
+
+# Install app dependencies
+RUN bun install
+
+FROM docker.io/oven/bun:alpine AS runner
+
+WORKDIR /app
+
+COPY --from=builder /app ./
+
+WORKDIR /app/services/iap
+
+EXPOSE 3000
+CMD [ "bun", "run", "start" ]
