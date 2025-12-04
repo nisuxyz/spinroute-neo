@@ -9,3 +9,5 @@ pglite/
 .env.*.local
 
 .DS_Store
+
+*.p8

@@ -9,6 +9,12 @@ interface Config {
   apple: {
     sharedSecret: string;
     bundleId: string;
+    environment: 'sandbox' | 'production';
+    // Optional: For App Store Server API
+    keyId?: string;
+    issuerId?: string;
+    privateKey?: string;
+    appId?: string;
   };
   google: {
     packageName: string;
@@ -29,6 +35,11 @@ function getConfig(): Config {
     apple: {
       sharedSecret: process.env.APPLE_SHARED_SECRET || '',
       bundleId: process.env.APPLE_BUNDLE_ID || 'com.itsnisu.spinrouteneo',
+      environment: (process.env.APPLE_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
+      keyId: process.env.APPLE_KEY_ID,
+      issuerId: process.env.APPLE_ISSUER_ID,
+      privateKey: process.env.APPLE_PRIVATE_KEY,
+      appId: process.env.APPLE_APP_ID,
     },
     google: {
       packageName: process.env.GOOGLE_PACKAGE_NAME || 'com.itsnisu.spinrouteneo',
