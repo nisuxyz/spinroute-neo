@@ -321,11 +321,24 @@ router.post('/', zValidator('json', webhookSchema), async (c) => {
       environment: data.environment,
     });
 
-    // Handle test notifications immediately
+    // Handle test notifications - log them but don't process further
     if (notificationType === NotificationTypeV2.TEST) {
       logger.info('Received test notification from Apple', {
         notificationUUID: payload.notificationUUID,
       });
+
+      // Log test notification to webhook_events
+      await supabase.from('webhook_events').insert({
+        notification_type: notificationType,
+        notification_subtype: subtype || null,
+        notification_uuid: payload.notificationUUID,
+        environment: data.environment,
+        raw_payload: payload,
+        request_id: requestId,
+        processed: true,
+        signature_verified: !!verifier,
+      });
+
       return c.json({ success: true, message: 'Test notification received' });
     }
 
