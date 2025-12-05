@@ -3,26 +3,22 @@ import {
   View,
   StyleSheet,
   TextInput,
-  Platform,
   useColorScheme,
   Keyboard,
   Text,
   ActivityIndicator,
-} from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetFlatList,
+  FlatList,
   TouchableOpacity,
-} from '@gorhom/bottom-sheet';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+} from 'react-native';
+import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useDebounce } from 'use-debounce';
 import { useEnv } from '@/hooks/use-env';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 import { useSearchHistory, type SearchHistoryItem } from '@/hooks/use-search-history';
 import { fuzzySearch } from '@/utils/fuzzy-search';
+import { GlassView } from 'expo-glass-effect';
 
 interface SearchSheetProps {
   visible: boolean;
@@ -62,47 +58,19 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
   const { settings } = useUserSettings();
   const { history, addToHistory, removeFromHistory } = useSearchHistory();
   const colors = Colors[colorScheme ?? 'light'];
-  const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
   const env = useEnv();
 
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['90%'], []);
+  const sheetRef = useRef<TrueSheet>(null);
 
   // Generate a new session token when the sheet opens
   useEffect(() => {
     if (visible) {
       setSessionToken(generateUUID());
-      bottomSheetRef.current?.present();
+      sheetRef.current?.present();
     } else {
-      bottomSheetRef.current?.dismiss();
+      sheetRef.current?.dismiss();
     }
   }, [visible]);
-
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index === -1) {
-        onClose();
-      }
-    },
-    [onClose],
-  );
-
-  const handleDismiss = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
 
   useEffect(() => {
     if (debouncedQuery.trim().length < 2) {
@@ -267,8 +235,6 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
     }
   };
 
-  const GlassContainer = hasGlassEffect ? GlassView : View;
-
   const renderItem = useCallback(
     ({ item }: { item: CombinedResult }) => {
       const isHistory = item.type === 'history';
@@ -320,50 +286,41 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
   );
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={snapPoints}
-      enableDynamicSizing={false}
-      onChange={handleSheetChanges}
-      onDismiss={handleDismiss}
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      backgroundStyle={[
-        styles.sheetBackground,
-        hasGlassEffect
-          ? { backgroundColor: 'transparent' }
-          : { backgroundColor: colors.buttonBackground },
-      ]}
-      handleIndicatorStyle={{ backgroundColor: colors.text + '40' }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      enableBlurKeyboardOnGesture
+    <TrueSheet
+      name="SearchSheet"
+      ref={sheetRef}
+      detents={[0.45, 0.9]}
+      cornerRadius={24}
+      onDidDismiss={onClose}
+      scrollable
+      keyboardMode="pan"
     >
-      <GlassContainer
-        style={styles.glassSheet}
-        {...(hasGlassEffect && { glassEffectStyle: 'regular' })}
-      >
-        {/* Search Input */}
-        <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={24} color={colors.text} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search for places..."
-            placeholderTextColor={colors.text + '80'}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoFocus={visible}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <MaterialIcons name="close" size={20} color={colors.text} />
-            </TouchableOpacity>
-          )}
+      <View style={styles.container}>
+        {/* Search Input - Fixed header */}
+        <View style={styles.searchHeader}>
+          <View style={styles.searchContainer}>
+            <MaterialIcons name="search" size={24} color={colors.text} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search for places..."
+              placeholderTextColor={colors.text + '80'}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus={visible}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <MaterialIcons name="close" size={20} color={colors.text} />
+              </TouchableOpacity>
+            )}
+          </View>
+          {/* <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+            <MaterialIcons name="keyboard-arrow-down" size={32} color={colors.text} />
+          </TouchableOpacity> */}
         </View>
 
-        {/* Results List */}
+        {/* Results List - Scrollable */}
         {loading && searchQuery.length >= 2 && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={colors.text} />
@@ -371,11 +328,12 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
         )}
 
         {combinedResults.length > 0 && (
-          <BottomSheetFlatList
+          <FlatList
             data={combinedResults}
             keyExtractor={(item: CombinedResult) => `${item.type}-${item.data.mapbox_id}`}
             contentContainerStyle={styles.resultsContent}
             keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
             renderItem={renderItem}
             ListHeaderComponent={
               searchQuery.length < 2 && history.length > 0 ? (
@@ -402,35 +360,25 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
             </Text>
           </View>
         )}
-
-        {/* Close button */}
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-          <MaterialIcons name="keyboard-arrow-down" size={32} color={colors.text} />
-        </TouchableOpacity>
-      </GlassContainer>
-    </BottomSheetModal>
+      </View>
+    </TrueSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  sheetBackground: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  glassSheet: {
+  container: {
     flex: 1,
-    padding: 20,
-    paddingTop: 12,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
+  },
+  searchHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 12,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingRight: 48,
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     gap: 12,
@@ -442,8 +390,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 16,
-    right: 24,
+    top: 0,
+    right: 0,
     width: 40,
     height: 40,
     justifyContent: 'center',
@@ -452,9 +400,12 @@ const styles = StyleSheet.create({
   loadingContainer: {
     marginTop: 20,
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   resultsContent: {
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   resultItem: {
     flexDirection: 'row',
@@ -484,6 +435,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 60,
+    paddingHorizontal: 20,
   },
   emptyText: {
     fontSize: 16,

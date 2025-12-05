@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { Menu, MenuTrigger, MenuOptions, MenuOption } from 'react-native-popup-menu';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 
 interface RoutePreferencesMenuProps {
   children: React.ReactNode;

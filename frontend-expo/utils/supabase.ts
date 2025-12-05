@@ -6,6 +6,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY!;
 
+console.log('[Supabase] Initializing client with URL:', supabaseUrl);
+console.log('[Supabase] Key present:', !!supabaseKey, 'Length:', supabaseKey?.length);
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('[Supabase] Missing configuration!', { supabaseUrl, hasKey: !!supabaseKey });
+}
+
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     storage: localStorage,
@@ -14,3 +21,5 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     detectSessionInUrl: false,
   },
 });
+
+console.log('[Supabase] Client initialized');

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useClient } from 'react-supabase';
 import type { Database } from '../supabase/types';
+import { useAuth } from './use-auth';
 
 export type BikeType = Database['vehicles']['Enums']['bike_type'];
 export type Bike = Database['vehicles']['Tables']['user_bike']['Row'];
@@ -40,6 +41,7 @@ function convertMiToKm(mi: number): number {
 
 export function useBikes() {
   const supabase = useClient();
+  const { user } = useAuth();
   const [bikes, setBikes] = useState<Bike[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -225,7 +227,7 @@ export function useBikes() {
   };
 
   useEffect(() => {
-    fetchBikes();
+    if (user) fetchBikes();
   }, [fetchBikes]);
 
   return {

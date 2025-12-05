@@ -118,18 +118,13 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
     }
   };
 
-  // Active: solid background with button color
-  // Inactive: glass effect (iOS 26+) or dark gray background with colored icon and border
-  const buttonAccentColor = lightenColor(buttonColor, 100);
-  const backgroundColor = isActive
-    ? buttonColor
-    : useGlass
-      ? 'transparent'
-      : colors.buttonBackground;
+  // Both active and inactive use glass effect (iOS 26+) or dark gray background
+  // Active state: 'regular' glass effect with icon glow
+  // Inactive state: 'clear' glass effect
+  const backgroundColor = useGlass ? 'transparent' : colors.buttonBackground;
   const borderColor = buttonColor;
-  const borderWidth = isActive ? 0 : useGlass ? 0 : 2;
-  // const iconColor = isActive ? '#FFFFFF' : buttonColor;
-  const iconColor = isActive ? buttonAccentColor : buttonColor;
+  const borderWidth = useGlass ? 0 : 2;
+  const iconColor = buttonColor;
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
@@ -142,7 +137,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
     const iconProps = {
       name: iconName as any,
       size: 24,
-      color: iconColor,
+      color: isActive ? iconColor : lightenColor(iconColor, 20),
       testID: `${testID}-icon`,
     };
 
@@ -176,18 +171,28 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
         IconComponent = <MaterialIcons {...iconProps} />;
     }
 
+    const iconWithGlow = isActive ? (
+      <View style={styles.iconGlow}>{IconComponent}</View>
+    ) : (
+      IconComponent
+    );
+
     if (isLoading && customLoadingIcon) {
       return (
-        <Animated.View style={{ transform: [{ rotate: spin }] }}>{IconComponent}</Animated.View>
+        <Animated.View style={{ transform: [{ rotate: spin }] }}>{iconWithGlow}</Animated.View>
       );
     }
 
-    return IconComponent;
+    return iconWithGlow;
   };
 
-  const ButtonWrapper = useGlass && !isActive ? GlassView : View;
-  const wrapperProps =
-    useGlass && !isActive ? { glassEffectStyle: 'regular' as const, isInteractive: true } : {};
+  const ButtonWrapper = useGlass ? GlassView : View;
+  const wrapperProps = useGlass
+    ? {
+        glassEffectStyle: (isActive ? 'regular' : 'clear') as const,
+        isInteractive: true,
+      }
+    : {};
 
   return (
     <TouchableOpacity
@@ -217,18 +222,25 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
               isLoading && customLoadingIcon ? (
                 <Animated.Image
                   source={iconImage}
-                  style={[styles.icon, { tintColor: iconColor, transform: [{ rotate: spin }] }]}
+                  style={[
+                    styles.icon,
+                    { tintColor: iconColor, transform: [{ rotate: spin }] },
+                    isActive && styles.iconGlow,
+                  ]}
                   testID={`${testID}-icon`}
                 />
               ) : (
                 <Image
                   source={iconImage}
-                  style={[styles.icon, { tintColor: iconColor }]}
+                  style={[styles.icon, { tintColor: iconColor }, isActive && styles.iconGlow]}
                   testID={`${testID}-icon`}
                 />
               )
             ) : iconText ? (
-              <Text style={[styles.iconText, { color: iconColor }]} testID={`${testID}-icon`}>
+              <Text
+                style={[styles.iconText, { color: iconColor }, isActive && styles.iconGlow]}
+                testID={`${testID}-icon`}
+              >
                 {iconText}
               </Text>
             ) : null}
@@ -248,7 +260,7 @@ const styles = StyleSheet.create({
   container: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: 24,
     elevation: 6,
     shadowOffset: {
       width: 0,
@@ -263,7 +275,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 24,
   },
   icon: {
     width: 24,
@@ -278,6 +290,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     marginTop: 2,
+  },
+  iconGlow: {
+    shadowColor: '#8B5CF6', // electricPurple
+    shadowOffset: {
+      width: 2,
+      height: 2,
+    },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 1,
   },
 });
 

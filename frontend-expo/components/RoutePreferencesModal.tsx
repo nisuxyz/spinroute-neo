@@ -14,7 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import ProviderPicker from './ProviderPicker';
 import ProfilePicker from './ProfilePicker';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 import GetDirectionsButton from './GetDirectionsButton';
 
 interface RoutePreferencesModalProps {

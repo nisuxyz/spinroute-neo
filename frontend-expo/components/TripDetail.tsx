@@ -12,9 +12,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useTripDetail } from '@/hooks/use-trip-detail';
-import { useUserSettings } from '@/hooks/use-user-settings';
-import { useSubscription } from '@/hooks/use-subscription';
+import { useUserSettings } from '@/contexts/user-settings-context';
+import { useSubscription } from '@/contexts/user-settings-context';
 import Mapbox from '@rnmapbox/maps';
+import { TrueSheet } from '@lodev09/react-native-true-sheet';
 
 interface TripDetailProps {
   tripId: string;
@@ -319,7 +320,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
             styles.lockedCard,
             { backgroundColor: colors.buttonBackground },
           ]}
-          onPress={() => router.push('/paywall')}
+          onPress={() => TrueSheet.present('paywall')}
           activeOpacity={0.7}
         >
           <View style={styles.lockedHeader}>

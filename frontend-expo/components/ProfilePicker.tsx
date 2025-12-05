@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import { useClient } from 'react-supabase';
 import { Colors, electricPurple } from '@/constants/theme';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 import { useEnv } from '@/hooks/use-env';
 
 interface Provider {

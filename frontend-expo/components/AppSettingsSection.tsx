@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { Picker } from '@react-native-picker/picker';
-import { GlassContainer, GlassView } from 'expo-glass-effect';
+import { GlassView } from 'expo-glass-effect';
 import { Colors, electricPurple } from '@/constants/theme';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 import { useBikes } from '@/hooks/use-bikes';
 import { useRouter } from 'expo-router';
 import { lightenColor } from '@/utils/lighten-color';

@@ -1,32 +1,24 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from './use-auth';
 import { useEnv } from './use-env';
-import { useUserSettings } from './use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 
 interface Coordinate {
   latitude: number;
   longitude: number;
 }
 
-enum RouteProfile {
-  WALKING = 'walking',
-  CYCLING = 'cycling',
-  DRIVING = 'driving',
-  PUBLIC_TRANSPORT = 'public-transport',
-}
-
-enum BikeType {
-  ROAD = 'road',
-  MOUNTAIN = 'mountain',
-  EBIKE = 'ebike',
-  GENERIC = 'generic',
-}
-
+/**
+ * DirectionsRequest for calculating routes
+ * Profile is now a provider-specific string identifier (e.g., "cycling-road", "foot-walking")
+ * instead of a generic enum. The available profiles depend on the selected provider.
+ */
 interface DirectionsRequest {
   origin: Coordinate;
   destination: Coordinate;
-  profile?: RouteProfile;
-  bikeType?: BikeType;
+  /** Provider-specific profile identifier (e.g., "cycling-road", "driving-traffic") */
+  profile?: string;
+  /** Routing provider name (e.g., "mapbox", "openrouteservice") */
   provider?: string;
 }
 
@@ -117,13 +109,9 @@ export const useDirections = (): UseDirectionsResult => {
 
       try {
         // Use user preferences as defaults, but allow override via request parameters
-        const profile =
-          request.profile ||
-          (settings?.preferred_routing_profile as RouteProfile) ||
-          RouteProfile.CYCLING;
-
-        const bikeType =
-          request.bikeType || (settings?.preferred_bike_type as BikeType) || BikeType.GENERIC;
+        // Profile is now a provider-specific string (e.g., "cycling-road", "foot-walking")
+        // If not specified, the backend will use the provider's default profile
+        const profile = request.profile || settings?.preferred_routing_profile || undefined;
 
         const provider = request.provider || settings?.preferred_routing_provider || undefined;
 
@@ -139,7 +127,6 @@ export const useDirections = (): UseDirectionsResult => {
             },
           ],
           profile,
-          bikeType,
           provider,
         };
 
@@ -181,7 +168,6 @@ export const useDirections = (): UseDirectionsResult => {
       env.ROUTING_SERVICE,
       env.SUPABASE,
       settings?.preferred_routing_profile,
-      settings?.preferred_bike_type,
       settings?.preferred_routing_provider,
     ],
   );
@@ -200,6 +186,17 @@ export const useDirections = (): UseDirectionsResult => {
   };
 };
 
+/**
+ * @deprecated RouteProfile enum is deprecated. Use provider-specific profile strings instead.
+ * This enum is kept for backward compatibility with existing components.
+ * Components should be updated to use the useProviderProfiles hook to get available profiles.
+ */
+export enum RouteProfile {
+  WALKING = 'walking',
+  CYCLING = 'cycling',
+  DRIVING = 'driving',
+  PUBLIC_TRANSPORT = 'public-transport',
+}
+
 // Export types for use in components
 export type { DirectionsRequest, DirectionsResponse, Route, RouteStep, RouteLeg };
-export { RouteProfile, BikeType };

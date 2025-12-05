@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { useUserSettings } from './use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 
 interface EnvConfig {
   SUPABASE: string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,9 +16,9 @@ import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import type { DirectionsResponse } from '@/hooks/use-directions';
-import { RouteProfile } from '@/hooks/use-directions';
 import RoutePreferencesCard from './RoutePreferencesCard';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
+import { useProviderProfiles, type ProfileMetadata } from '@/hooks/use-provider-profiles';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -26,10 +26,11 @@ interface RouteInfoCardProps {
   route: DirectionsResponse | null;
   loading: boolean;
   error: string | null;
-  profile: RouteProfile;
+  /** Provider-specific profile ID (e.g., "cycling-road", "foot-walking") */
+  profile: string;
   units: 'metric' | 'imperial';
   onClearRoute: () => void;
-  onRecalculate?: (provider?: string, profile?: RouteProfile) => void;
+  onRecalculate?: (provider?: string, profile?: string) => void;
 }
 
 const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
@@ -49,6 +50,18 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
   const hasGlassEffect = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
   const GlassContainer = hasGlassEffect ? GlassView : View;
+
+  // Get the current provider from settings
+  const currentProvider = settings?.preferred_routing_provider || 'openrouteservice';
+
+  // Fetch profiles for the current provider to get metadata
+  const { profiles } = useProviderProfiles(currentProvider);
+
+  // Find the profile metadata for the current profile
+  const profileMetadata = useMemo((): ProfileMetadata | null => {
+    if (!profile || profiles.length === 0) return null;
+    return profiles.find((p) => p.id === profile) || null;
+  }, [profile, profiles]);
 
   const handleRecalculateClick = () => {
     setShowPreferences(true);
@@ -78,34 +91,57 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
     return `${minutes}m`;
   };
 
-  const getProfileIcon = (prof: RouteProfile): any => {
-    switch (prof) {
-      case RouteProfile.WALKING:
-        return 'directions-walk';
-      case RouteProfile.CYCLING:
-        return 'directions-bike';
-      case RouteProfile.DRIVING:
-        return 'directions-car';
-      case RouteProfile.PUBLIC_TRANSPORT:
-        return 'directions-transit';
-      default:
-        return 'directions';
+  // Get the icon for the current profile from metadata or fallback based on profile string
+  const getProfileIcon = (): keyof typeof MaterialIcons.glyphMap => {
+    // Use metadata if available
+    if (profileMetadata?.icon) {
+      const iconMap: Record<string, keyof typeof MaterialIcons.glyphMap> = {
+        'directions-bike': 'directions-bike',
+        'directions-walk': 'directions-walk',
+        'directions-car': 'directions-car',
+        'local-shipping': 'local-shipping',
+        terrain: 'terrain',
+        'electric-bike': 'electric-bike',
+        hiking: 'hiking',
+        accessible: 'accessible',
+        traffic: 'traffic',
+        directions: 'directions',
+        'directions-transit': 'directions-transit',
+      };
+      return iconMap[profileMetadata.icon] || 'directions';
     }
+
+    // Fallback: infer from profile string
+    if (profile.includes('walk') || profile.includes('foot') || profile.includes('hiking')) {
+      return 'directions-walk';
+    }
+    if (profile.includes('cycling') || profile.includes('bike')) {
+      return 'directions-bike';
+    }
+    if (profile.includes('driving') || profile.includes('car')) {
+      return 'directions-car';
+    }
+    if (profile.includes('wheelchair') || profile.includes('accessible')) {
+      return 'accessible';
+    }
+    return 'directions';
   };
 
-  const getProfileLabel = (prof: RouteProfile): string => {
-    switch (prof) {
-      case RouteProfile.WALKING:
-        return 'Walking';
-      case RouteProfile.CYCLING:
-        return 'Cycling';
-      case RouteProfile.DRIVING:
-        return 'Driving';
-      case RouteProfile.PUBLIC_TRANSPORT:
-        return 'Transit';
-      default:
-        return 'Route';
+  // Get the label for the current profile from metadata or fallback
+  const getProfileLabel = (): string => {
+    // Use metadata title if available
+    if (profileMetadata?.title) {
+      return profileMetadata.title;
     }
+
+    // Fallback: format the profile string
+    if (!profile) return 'Route';
+
+    // Convert profile ID to readable label (e.g., "cycling-road" -> "Cycling Road")
+    return profile
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   const getManeuverIcon = (type: string, modifier?: string): any => {
@@ -201,7 +237,9 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
         >
           <View style={styles.loadingContent}>
             <ActivityIndicator size="small" color={colors.text} />
-            <Text style={[styles.loadingText, { color: colors.text }]}>Calculating route...</Text>
+            <Text style={[styles.loadingText, { color: colors.text }]}>
+              [RouteInfo] Calculating route...
+            </Text>
           </View>
         </GlassContainer>
       </View>
@@ -301,11 +339,11 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
                   { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
                 ]}
               >
-                <MaterialIcons name={getProfileIcon(profile)} size={32} color="white" />
+                <MaterialIcons name={getProfileIcon()} size={32} color="white" />
               </View>
               <View style={styles.summaryInfo}>
                 <Text style={[styles.summaryLabel, { color: colors.text + '99' }]}>
-                  {getProfileLabel(profile)}
+                  {getProfileLabel()}
                 </Text>
                 <View style={styles.summaryStats}>
                   <View style={styles.summaryStat}>
@@ -395,12 +433,12 @@ const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
                 { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
               ]}
             >
-              <MaterialIcons name={getProfileIcon(profile)} size={24} color="white" />
+              <MaterialIcons name={getProfileIcon()} size={24} color="white" />
             </View>
             <View style={styles.infoContainer}>
               <View style={styles.profileRow}>
                 <Text style={[styles.profileLabel, { color: colors.text + '99' }]}>
-                  {getProfileLabel(profile)}
+                  {getProfileLabel()}
                 </Text>
                 {route.provider && (
                   <Text style={[styles.providerLabel, { color: colors.text + '66' }]}>

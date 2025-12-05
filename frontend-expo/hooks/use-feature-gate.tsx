@@ -1,4 +1,4 @@
-import { useSubscription } from './use-subscription';
+import { useSubscription } from '@/contexts/user-settings-context';
 
 /**
  * Feature gates for controlling access to premium features

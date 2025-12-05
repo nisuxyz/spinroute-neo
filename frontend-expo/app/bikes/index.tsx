@@ -13,7 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { FlatList } from 'react-native-gesture-handler';
 import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
 import { usePaywall } from '@/hooks/use-paywall';
 

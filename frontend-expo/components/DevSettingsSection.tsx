@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, useColorScheme, Switch } from 'react-native';
 import { Colors } from '@/constants/theme';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 import { lightenColor } from '@/utils/lighten-color';
 
 export default function DevSettingsSection() {

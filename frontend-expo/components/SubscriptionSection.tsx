@@ -12,7 +12,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useClient } from 'react-supabase';
 import { Colors } from '@/constants/theme';
-import { useSubscription } from '@/hooks/use-subscription';
+import { useSubscription } from '@/contexts/user-settings-context';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
 import { useBikes } from '@/hooks/use-bikes';
 import { usePaywall } from '@/hooks/use-paywall';
@@ -72,6 +72,10 @@ export default function SubscriptionSection() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      hour: '2-digit',
+      hour12: true,
+      minute: '2-digit',
+      second: '2-digit',
     });
   };
 

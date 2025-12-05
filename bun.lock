@@ -24,6 +24,7 @@
       "dependencies": {
         "@expo/vector-icons": "^15.0.3",
         "@gorhom/bottom-sheet": "^5",
+        "@lodev09/react-native-true-sheet": "^3.0.4",
         "@react-native-async-storage/async-storage": "2.2.0",
         "@react-native-picker/picker": "2.11.1",
         "@react-native-segmented-control/segmented-control": "2.5.7",
@@ -684,6 +685,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.30", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-GQ7Nw5G2lTu/BtHTKfXhKHok2WGetd4XYcVKGx00SjAk8GMwgJM3zr6zORiPGuOE+/vkc90KtTosSSvaCjKb2Q=="],
+
+    "@lodev09/react-native-true-sheet": ["@lodev09/react-native-true-sheet@3.0.4", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-reanimated": ">=4.0.0", "react-native-worklets": "*" }, "optionalPeers": ["react-native-reanimated", "react-native-worklets"] }, "sha512-FfBmEfnt0jD5+dng6u/dt90BBgr9BHDfW8NE1LgaRTsaZLGs/5bc+sDYjMEgKoKVKhuDZGxftAG2k/rGU+BsoA=="],
 
     "@mapbox/polyline": ["@mapbox/polyline@1.2.1", "", { "dependencies": { "meow": "^9.0.0" }, "bin": { "polyline": "bin/polyline.bin.js" } }, "sha512-sn0V18O3OzW4RCcPoUIVDWvEGQaBNH9a0y5lgqrf5hUycyw1CzrhEoxV5irzrMNXKCkw1xRsZXcaVbsVZggHXA=="],
 

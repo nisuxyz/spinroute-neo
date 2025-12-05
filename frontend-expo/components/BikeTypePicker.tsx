@@ -13,7 +13,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import { Colors, electricPurple } from '@/constants/theme';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 
 interface BikeTypeOption {
   value: string;

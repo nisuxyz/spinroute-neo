@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, useColorScheme, Alert } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
@@ -23,7 +23,6 @@ import { Colors } from '@/constants/theme';
 import SearchButton from './SearchButton';
 import SearchSheet from './SearchSheet';
 import LocationSheet from './LocationSheet';
-import FancySheet, { type FancySheetRef } from './FancySheet';
 import MapStylePicker from './MapStylePicker';
 import ActiveBikeIndicator from './ActiveBikeIndicator';
 import RouteInfoSheet from './RouteInfoSheet';
@@ -31,9 +30,11 @@ import RoutePreferencesSheet from './RoutePreferencesSheet';
 import { useDirections } from '@/hooks/use-directions';
 import { useAuth } from '@/hooks/use-auth';
 
+// Sheet visibility state type - only one info sheet can be active at a time
+type ActiveInfoSheet = 'none' | 'station' | 'location' | 'route';
+
 // Feature flags
 const ENABLE_LAYER_RENDERING_TOGGLE = false;
-const ENABLE_FANCY_SHEET = true;
 
 // Constants
 const DEFAULT_LOCATION: [number, number] = [-122.4194, 37.7749];
@@ -57,19 +58,9 @@ interface SelectedStation {
   networkName?: string;
 }
 
-interface SearchedLocation {
-  name: string;
-  display_name: string;
-  lat: number;
-  lon: number;
-  type: string;
-  mapbox_id: string;
-}
-
 const MainMapView: React.FC = () => {
   const mapRef = useRef<Mapbox.MapView>(null);
   const cameraRef = useRef<Mapbox.Camera>(null);
-  const fancySheetRef = useRef<FancySheetRef>(null);
   const router = useRouter();
   const { showPaywall } = usePaywall();
   const supabase = useClient();
@@ -82,7 +73,7 @@ const MainMapView: React.FC = () => {
     stationFeatureCollection,
     fetchStationsError,
     isLoading: isStationDataFetching,
-  } = useBikeshareStations();
+  } = useBikeshareStations(); // No longer needs supabase param - uses useClient() internally
 
   const { userLocation, locationPermissionGranted } = useMapLocation();
 
@@ -97,12 +88,7 @@ const MainMapView: React.FC = () => {
     },
   );
 
-  // Core data state
   const [selectedStation, setSelectedStation] = useState<SelectedStation | null>(null);
-  const [searchedLocation, setSearchedLocation] = useState<SearchedLocation | null>(null);
-  const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null);
-
-  // UI state
   const [useMarkerView, setUseMarkerView] = useState(true);
   const [is3DMode, setIs3DMode] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
@@ -111,6 +97,18 @@ const MainMapView: React.FC = () => {
   const [isSearchSheetVisible, setIsSearchSheetVisible] = useState(false);
   const [isMapStylePickerVisible, setIsMapStylePickerVisible] = useState(false);
   const [isRoutePreferencesSheetVisible, setIsRoutePreferencesSheetVisible] = useState(false);
+  const [searchedLocation, setSearchedLocation] = useState<{
+    name: string;
+    display_name: string;
+    lat: number;
+    lon: number;
+    type: string;
+    mapbox_id: string;
+  } | null>(null);
+  const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null);
+
+  // Track which info sheet should be active - prevents race conditions
+  const [activeInfoSheet, setActiveInfoSheet] = useState<ActiveInfoSheet>('none');
 
   // Directions hook
   const {
@@ -125,100 +123,98 @@ const MainMapView: React.FC = () => {
   const { fetchStationDetails } = useStationDetails();
 
   // Trip recording hook
-  const { activeTrip, error: tripError, startTrip, stopTrip } = useTripRecording();
+  const {
+    activeTrip,
+    loading: tripLoading,
+    error: tripError,
+    startTrip,
+    stopTrip,
+  } = useTripRecording();
 
-  // User settings
+  // User settings for capture interval and map style
   const { settings, updateSettings } = useUserSettings();
   const captureInterval = settings?.capture_interval_seconds || 5;
   const mapStyle = settings?.map_style || 'mapbox://styles/mapbox/standard';
 
-  // Bikes
+  // Get bikes and find active bike
   const { bikes, loading: bikesLoading, fetchBikes } = useBikes();
-  const activeBike = bikes.find((bike: any) => bike.id === settings?.active_bike_id);
+  const activeBike = bikes.find((bike) => bike.id === settings?.active_bike_id);
 
-  // Feature access
+  // Feature access for trip limits
   const { canRecordUnlimitedTrips, freeWeeklyTripLimit, isPro } = useFeatureAccess();
+
+  // Track weekly completed trips for free users (for proactive limit check)
   const [weeklyTripCount, setWeeklyTripCount] = useState(0);
+  const [tripsLoading, setTripsLoading] = useState(true);
 
-  // Location tracking
-  const { permissionStatus, requestPermissions, syncAllPoints } = useLocationTracking({
-    tripId: activeTrip?.id || null,
-    captureInterval,
-  });
-
-  // Fetch weekly trip count for free users
+  // Fetch weekly completed trip count for free users
   React.useEffect(() => {
-    if (canRecordUnlimitedTrips) return;
-    const fetchCount = async () => {
+    if (canRecordUnlimitedTrips) {
+      setTripsLoading(false);
+      return;
+    }
+
+    const fetchWeeklyTripCount = async () => {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
       const { count, error } = await supabase
         .schema('recording')
         .from('trips')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'completed')
         .gte('started_at', oneWeekAgo.toISOString());
-      if (!error && count !== null) setWeeklyTripCount(count);
-    };
-    fetchCount();
-  }, [canRecordUnlimitedTrips, supabase]);
 
-  // Refetch bikes on focus
+      if (!error && count !== null) {
+        setWeeklyTripCount(count);
+      }
+      setTripsLoading(false);
+    };
+
+    fetchWeeklyTripCount();
+  }, [canRecordUnlimitedTrips]); // Removed supabaseRecording from deps
+
+  // Refetch bikes when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (user) fetchBikes();
-    }, [fetchBikes, user]),
+    }, [fetchBikes]),
   );
 
-  // Determine which sheet to show based on state
-  // Priority: route > location > station (route takes precedence when active)
-  const hasActiveRoute = !!(directionsRoute || directionsLoading || directionsError);
-  const showRouteSheet = hasActiveRoute;
-  const showLocationSheet = !hasActiveRoute && !!searchedLocation && !selectedStation;
-  const showStationSheet = !hasActiveRoute && !!selectedStation && !searchedLocation;
+  // Location tracking hook - auto-starts when activeTrip exists
+  const {
+    isTracking,
+    currentLocation,
+    permissionStatus,
+    requestPermissions,
+    syncAllPoints,
+    queuedPointsCount,
+  } = useLocationTracking({
+    tripId: activeTrip?.id || null,
+    captureInterval,
+  });
 
-  // Update route geometry when route changes
-  React.useEffect(() => {
-    if (directionsRoute?.routes?.[0]?.geometry) {
-      const geometry = directionsRoute.routes[0].geometry;
-      if (typeof geometry === 'object' && geometry.type === 'LineString') {
-        setRouteGeometry(geometry as GeoJSON.LineString);
-        // Fit camera to route
-        if (geometry.coordinates?.length > 0) {
-          const coords = geometry.coordinates as [number, number][];
-          const lons = coords.map((c) => c[0]);
-          const lats = coords.map((c) => c[1]);
-          cameraRef.current?.fitBounds(
-            [Math.min(...lons), Math.min(...lats)],
-            [Math.max(...lons), Math.max(...lats)],
-            [80, 40, 280, 40],
-            1000,
-          );
-        }
-      }
-    } else if (!directionsRoute && !directionsLoading) {
-      // Clear geometry when route is cleared
-      setRouteGeometry(null);
-    }
-  }, [directionsRoute, directionsLoading]);
-
-  // Follow mode
-  React.useEffect(() => {
-    if (isFollowModeActive && liveUserLocation) {
-      cameraRef.current?.setCamera({ centerCoordinate: liveUserLocation, animationDuration: 300 });
-    }
-  }, [isFollowModeActive, liveUserLocation]);
+  // Note: Trip limit is enforced by RLS policy at database level
+  // We rely on catching the RLS error in handleStartRecording
 
   const handleRegionIsChanging = (regionFeature: any) => {
+    // Disable follow mode when user manually interacts with the map
     if (regionFeature?.properties?.isUserInteraction && isFollowModeActive) {
       setIsFollowModeActive(false);
     }
+
     if (regionFeature?.properties?.isUserInteraction && isStationsVisible) {
       const visibleBounds = regionFeature.properties.visibleBounds;
       if (visibleBounds?.length >= 2) {
-        updateStationList({
-          properties: { bounds: { ne: visibleBounds[0], sw: visibleBounds[1] } },
-        });
+        const feature = {
+          properties: {
+            bounds: {
+              ne: visibleBounds[0],
+              sw: visibleBounds[1],
+            },
+          },
+        };
+        updateStationList(feature);
       }
     }
   };
@@ -226,15 +222,16 @@ const MainMapView: React.FC = () => {
   const handleStationPress = async (event: any) => {
     const feature = event.features[0];
     if (!feature?.properties) return;
+
     const { id, message, classicBikes, electricBikes, availableDocks, availabilityStatus } =
       feature.properties;
     const coordinates = feature.geometry.coordinates;
 
     if (selectedStation?.id === id) {
       setSelectedStation(null);
+      setActiveInfoSheet('none');
     } else {
-      // Clear location when selecting station
-      setSearchedLocation(null);
+      // Set basic info immediately and activate station sheet
       setSelectedStation({
         id,
         name: message,
@@ -244,7 +241,9 @@ const MainMapView: React.FC = () => {
         availableDocks,
         availabilityStatus,
       });
-      // Fetch details in background
+      setActiveInfoSheet('station');
+
+      // Fetch detailed info in the background
       const details = await fetchStationDetails(id);
       if (details) {
         setSelectedStation((prev) => {
@@ -275,8 +274,9 @@ const MainMapView: React.FC = () => {
   ) => {
     if (selectedStation?.id === id) {
       setSelectedStation(null);
+      setActiveInfoSheet('none');
     } else {
-      setSearchedLocation(null);
+      // Set basic info immediately and activate station sheet
       setSelectedStation({
         id,
         name,
@@ -286,6 +286,9 @@ const MainMapView: React.FC = () => {
         availableDocks,
         availabilityStatus,
       });
+      setActiveInfoSheet('station');
+
+      // Fetch detailed info in the background
       const details = await fetchStationDetails(id);
       if (details) {
         setSelectedStation((prev) => {
@@ -306,8 +309,10 @@ const MainMapView: React.FC = () => {
   };
 
   const handleMapPress = () => {
-    if (selectedStation && !hasActiveRoute) {
+    // Only clear station if station sheet is active (don't interfere with route/location sheets)
+    if (activeInfoSheet === 'station') {
       setSelectedStation(null);
+      setActiveInfoSheet('none');
     }
   };
 
@@ -316,29 +321,66 @@ const MainMapView: React.FC = () => {
       Alert.alert('Location Required', 'Unable to calculate route without your location');
       return;
     }
-    if (!searchedLocation && !selectedStation) {
-      Alert.alert('Destination Required', 'Select a destination first');
+
+    const dest = searchedLocation;
+    if (!dest) {
+      Alert.alert('Destination Required', 'Unable to calculate route without a destination');
       return;
     }
+
+    // Show RoutePreferencesSheet to let user select provider and profile
+    setIsRoutePreferencesSheetVisible(true);
+  };
+
+  const handleGetStationDirections = () => {
+    if (!selectedStation) return;
+    if (!userLocation) {
+      Alert.alert('Location Required', 'Unable to calculate route without your location');
+      return;
+    }
+
+    // Show RoutePreferencesSheet to let user select provider and profile
     setIsRoutePreferencesSheetVisible(true);
   };
 
   const handleConfirmRoutePreferences = async () => {
     if (!userLocation) return;
+
+    // Determine destination based on what's selected
     const dest = selectedStation
       ? { lat: selectedStation.coordinates[1], lon: selectedStation.coordinates[0] }
       : searchedLocation;
+
     if (!dest) return;
 
+    // Set route sheet as active before calculating
+    setActiveInfoSheet('route');
+
+    // Calculate route with user's selected preferences
     await calculateRoute({
-      origin: { latitude: userLocation[1], longitude: userLocation[0] },
-      destination: { latitude: dest.lat, longitude: dest.lon },
+      origin: {
+        latitude: userLocation[1],
+        longitude: userLocation[0],
+      },
+      destination: {
+        latitude: dest.lat,
+        longitude: dest.lon,
+      },
     });
   };
 
+  const handleRecalculateRoute = () => {
+    // Show RoutePreferencesSheet in recalculate mode
+    setIsRoutePreferencesSheetVisible(true);
+  };
+
   const handleClearRoute = useCallback(() => {
+    // First set active sheet to none to prevent flashing
+    setActiveInfoSheet('none');
+    // Then clear the route data
     clearRoute();
     setRouteGeometry(null);
+    // Clear related selections
     setSelectedStation(null);
     setSearchedLocation(null);
     if (userLocation) {
@@ -350,9 +392,52 @@ const MainMapView: React.FC = () => {
     }
   }, [clearRoute, userLocation]);
 
+  // Update route geometry when directions route changes
+  React.useEffect(() => {
+    if (directionsRoute?.routes?.[0]?.geometry) {
+      const geometry = directionsRoute.routes[0].geometry;
+      if (typeof geometry === 'object' && geometry.type === 'LineString') {
+        setRouteGeometry(geometry as GeoJSON.LineString);
+
+        // Fit camera to route bounds
+        if (geometry.coordinates && geometry.coordinates.length > 0) {
+          const coords = geometry.coordinates as [number, number][];
+          const lons = coords.map((c) => c[0]);
+          const lats = coords.map((c) => c[1]);
+
+          const bounds: [number, number, number, number] = [
+            Math.min(...lons), // west
+            Math.min(...lats), // south
+            Math.max(...lons), // east
+            Math.max(...lats), // north
+          ];
+
+          cameraRef.current?.fitBounds(
+            [bounds[0], bounds[1]], // southwest
+            [bounds[2], bounds[3]], // northeast
+            [80, 40, 280, 40], // padding [top, right, bottom, left] - extra bottom padding for RouteInfoSheet
+            1000, // animation duration
+          );
+        }
+      }
+    }
+  }, [directionsRoute]);
+
+  // Follow user location when follow mode is active
+  React.useEffect(() => {
+    if (isFollowModeActive && liveUserLocation) {
+      cameraRef.current?.setCamera({
+        centerCoordinate: liveUserLocation,
+        animationDuration: 300,
+      });
+    }
+  }, [isFollowModeActive, liveUserLocation]);
+
+  // Handler for location updates from LocationPuck
   const handleUserLocationUpdate = (location: Mapbox.Location) => {
     if (location?.coords) {
-      setLiveUserLocation([location.coords.longitude, location.coords.latitude]);
+      const newLocation: [number, number] = [location.coords.longitude, location.coords.latitude];
+      setLiveUserLocation(newLocation);
     }
   };
 
@@ -361,7 +446,12 @@ const MainMapView: React.FC = () => {
       Alert.alert('Location unavailable', 'Unable to get your current location');
       return;
     }
-    setIsFollowModeActive(!isFollowModeActive);
+
+    // Toggle follow mode
+    const newFollowMode = !isFollowModeActive;
+    setIsFollowModeActive(newFollowMode);
+
+    // Center on user location
     setIsRecentering(true);
     cameraRef.current?.setCamera({
       centerCoordinate: userLocation,
@@ -371,22 +461,52 @@ const MainMapView: React.FC = () => {
     setTimeout(() => setIsRecentering(false), 1000);
   };
 
+  const handleDisableFollowMode = () => {
+    setIsFollowModeActive(false);
+  };
+
   const handleToggle3D = () => {
     const newMode = !is3DMode;
     setIs3DMode(newMode);
-    cameraRef.current?.setCamera({ pitch: newMode ? 60 : 0, animationDuration: 500 });
+    cameraRef.current?.setCamera({
+      pitch: newMode ? 60 : 0,
+      animationDuration: 500,
+    });
+  };
+
+  const handleOpenSettings = () => {
+    router.push('/settings');
+  };
+
+  const handleOpenBikeManagement = () => {
+    router.push('/bikes');
+  };
+
+  const handleOpenRecordedTrips = () => {
+    router.push('/trips');
+  };
+
+  const handleOpenMapStyle = () => {
+    setIsMapStylePickerVisible(true);
   };
 
   const handleSelectMapStyle = async (styleUrl: string) => {
     const success = await updateSettings({ map_style: styleUrl });
-    if (!success) Alert.alert('Error', 'Failed to update map style');
+    if (!success) {
+      Alert.alert('Error', 'Failed to update map style');
+    }
   };
 
   const handleStartRecording = async () => {
+    // Proactive check: Show paywall immediately if limit reached
+    // This provides better UX than waiting for RLS error
     if (!canRecordUnlimitedTrips && weeklyTripCount >= freeWeeklyTripLimit) {
+      console.log('[MainMapView] Trip limit reached (proactive check), showing paywall');
       showPaywall();
       return;
     }
+
+    // Check and request location permissions
     if (permissionStatus !== 'granted') {
       const granted = await requestPermissions();
       if (!granted) {
@@ -394,17 +514,30 @@ const MainMapView: React.FC = () => {
         return;
       }
     }
+
+    // Try to start trip - RLS policy enforces limits as security boundary
     const trip = await startTrip();
     if (trip) {
       Alert.alert('Recording Started', 'Your trip is now being recorded');
     } else if (tripError) {
+      // Fallback: Catch RLS errors (race conditions, edge cases)
+      // RLS error could be auth failure OR limit exceeded - we assume limit for free users
       if (
+        tripError.includes('RLS_POLICY_VIOLATION') ||
         tripError.includes('policy') ||
         tripError.includes('42501') ||
-        tripError.includes('row-level security')
+        tripError.includes('row-level security') ||
+        tripError.includes('new row violates')
       ) {
-        if (!isPro) showPaywall();
-        else Alert.alert('Error', 'Unable to start trip. Please try again.');
+        if (!isPro) {
+          // Free user hit RLS error - likely the limit (could be race condition)
+          console.log('[MainMapView] RLS error for free user, showing paywall');
+          showPaywall();
+        } else {
+          // Pro user hit RLS error - something else is wrong (auth?)
+          console.error('[MainMapView] RLS error for pro user:', tripError);
+          Alert.alert('Error', 'Unable to start trip. Please try again or contact support.');
+        }
       } else {
         Alert.alert('Error', tripError);
       }
@@ -412,22 +545,17 @@ const MainMapView: React.FC = () => {
   };
 
   const handleStopRecording = async () => {
+    // First, sync all queued location points
+    console.log('[MainMapView] Syncing queued points before stopping trip...');
     await syncAllPoints();
-    const success = await stopTrip();
-    if (success) Alert.alert('Recording Stopped', 'Your trip has been saved');
-    else if (tripError) Alert.alert('Error', tripError);
-  };
 
-  const handleSearchSelect = (location: SearchedLocation) => {
-    clearRoute();
-    setRouteGeometry(null);
-    setSelectedStation(null);
-    setSearchedLocation(location);
-    cameraRef.current?.setCamera({
-      centerCoordinate: [location.lon, location.lat],
-      zoomLevel: 15,
-      animationDuration: 1000,
-    });
+    // Then stop the trip (which will mark it as completed)
+    const success = await stopTrip();
+    if (success) {
+      Alert.alert('Recording Stopped', 'Your trip has been saved');
+    } else if (tripError) {
+      Alert.alert('Error', tripError);
+    }
   };
 
   return (
@@ -441,10 +569,8 @@ const MainMapView: React.FC = () => {
         compassEnabled={true}
         compassPosition={{ right: 14, top: 2 }}
         scaleBarPosition={{ left: 20, top: 8 }}
-        // logoPosition={{ left: 20, bottom: 64 }}
-        logoEnabled={false}
-        // attributionPosition={{ left: 14, bottom: 64 }}
-        attributionEnabled={false}
+        logoPosition={{ left: 20, bottom: -16 }}
+        attributionPosition={{ right: 12, bottom: -16 }}
       >
         <Mapbox.Camera
           ref={cameraRef}
@@ -462,10 +588,11 @@ const MainMapView: React.FC = () => {
 
         {isStationsVisible &&
           useMarkerView &&
-          stationFeatureCollection.features.map((feature: any) => {
+          stationFeatureCollection.features.map((feature) => {
             const { id, message, classicBikes, electricBikes, availableDocks, availabilityStatus } =
-              feature.properties;
-            const coordinates = feature.geometry.coordinates as [number, number];
+              feature.properties as any;
+            const coordinates = (feature.geometry as any).coordinates as [number, number];
+
             return (
               <StationMarker
                 key={id}
@@ -496,8 +623,13 @@ const MainMapView: React.FC = () => {
             <Mapbox.LocationPuck
               puckBearing="heading"
               puckBearingEnabled={true}
-              pulsing={{ isEnabled: true, color: colors.buttonIcon, radius: 30.0 }}
+              pulsing={{
+                isEnabled: true,
+                color: colors.buttonIcon,
+                radius: 30.0,
+              }}
             />
+            {/* Hidden UserLocation component to track location updates */}
             <Mapbox.UserLocation
               visible={false}
               onUpdate={handleUserLocationUpdate}
@@ -506,24 +638,20 @@ const MainMapView: React.FC = () => {
           </>
         )}
 
-        {/* Searched location marker */}
         {searchedLocation && (
-          <>
-            <Mapbox.MarkerView
-              id="searchedLocation"
-              coordinate={[searchedLocation.lon, searchedLocation.lat]}
-              anchor={{ x: 0.5, y: 1 }}
-            >
-              <View style={styles.searchPinContainer}>
-                <View style={[styles.searchPin, { backgroundColor: colors.buttonIcon }]}>
-                  <MaterialIcons name="place" size={32} color="white" />
-                </View>
+          <Mapbox.MarkerView
+            id="searchedLocation"
+            coordinate={[searchedLocation.lon, searchedLocation.lat]}
+            anchor={{ x: 0.5, y: 1 }}
+          >
+            <View style={styles.searchPinContainer}>
+              <View style={[styles.searchPin, { backgroundColor: colors.buttonIcon }]}>
+                <MaterialIcons name="place" size={32} color="white" />
               </View>
-            </Mapbox.MarkerView>
-          </>
+            </View>
+          </Mapbox.MarkerView>
         )}
 
-        {/* Route line and markers */}
         {routeGeometry && (
           <>
             <Mapbox.ShapeSource id="routeSource" shape={routeGeometry}>
@@ -563,20 +691,6 @@ const MainMapView: React.FC = () => {
                 </View>
               </Mapbox.MarkerView>
             )}
-
-            {selectedStation && (
-              <Mapbox.MarkerView
-                id="stationDestination"
-                coordinate={selectedStation.coordinates}
-                anchor={{ x: 0.5, y: 1 }}
-              >
-                <View style={styles.searchPinContainer}>
-                  <View style={[styles.searchPin, { backgroundColor: colors.buttonIcon }]}>
-                    <MaterialIcons name="pedal-bike" size={32} color="white" />
-                  </View>
-                </View>
-              </Mapbox.MarkerView>
-            )}
           </>
         )}
       </Mapbox.MapView>
@@ -585,14 +699,14 @@ const MainMapView: React.FC = () => {
         onRecenter={handleRecenter}
         isRecentering={isRecentering}
         isFollowModeActive={isFollowModeActive}
-        onDisableFollowMode={() => setIsFollowModeActive(false)}
+        onDisableFollowMode={handleDisableFollowMode}
         is3DMode={is3DMode}
         onToggle3D={handleToggle3D}
         currentMapStyle={mapStyle}
-        onOpenMapStyle={() => setIsMapStylePickerVisible(true)}
-        onOpenSettings={() => router.push('/settings')}
-        onOpenBikeManagement={() => router.push('/bikes')}
-        onOpenRecordedTrips={() => router.push('/trips')}
+        onOpenMapStyle={handleOpenMapStyle}
+        onOpenSettings={handleOpenSettings}
+        onOpenBikeManagement={handleOpenBikeManagement}
+        onOpenRecordedTrips={handleOpenRecordedTrips}
         isRecording={!!activeTrip}
         onStartRecording={handleStartRecording}
         onStopRecording={handleStopRecording}
@@ -610,42 +724,43 @@ const MainMapView: React.FC = () => {
         </TouchableOpacity>
       )}
 
-      {!ENABLE_FANCY_SHEET && <SearchButton onPress={() => setIsSearchSheetVisible(true)} />}
+      <SearchButton onPress={() => setIsSearchSheetVisible(true)} />
 
-      {/* Fancy Sheet (Apple Maps-like) - Always present, non-dismissible */}
-      {ENABLE_FANCY_SHEET && (
-        <FancySheet ref={fancySheetRef} onSearch={(query) => console.log('Search:', query)} />
+      {activeInfoSheet === 'station' && selectedStation && (
+        <StationSheet
+          station={selectedStation}
+          onClose={() => {
+            setSelectedStation(null);
+            setActiveInfoSheet('none');
+          }}
+          onGetDirections={handleGetStationDirections}
+          isLoadingDirections={directionsLoading}
+        />
       )}
 
-      {/* Station Sheet */}
-      <StationSheet
-        visible={showStationSheet}
-        station={selectedStation}
-        onClose={() => setSelectedStation(null)}
-        onGetDirections={handleGetDirections}
-        isLoadingDirections={directionsLoading}
-      />
+      {activeInfoSheet === 'location' && searchedLocation && (
+        <LocationSheet
+          location={searchedLocation}
+          onClose={() => {
+            setSearchedLocation(null);
+            setActiveInfoSheet('none');
+          }}
+          onGetDirections={() => handleGetDirections()}
+          isLoadingDirections={directionsLoading}
+        />
+      )}
 
-      {/* Location Sheet */}
-      <LocationSheet
-        visible={showLocationSheet}
-        location={searchedLocation}
-        onClose={() => setSearchedLocation(null)}
-        onGetDirections={handleGetDirections}
-        isLoadingDirections={directionsLoading}
-      />
-
-      {/* Route Info Sheet */}
-      <RouteInfoSheet
-        visible={showRouteSheet}
-        route={directionsRoute}
-        loading={directionsLoading}
-        error={directionsError}
-        profile={settings?.preferred_routing_profile || 'cycling'}
-        units={(settings?.units as 'metric' | 'imperial') || 'metric'}
-        onClearRoute={handleClearRoute}
-        onRecalculate={() => setIsRoutePreferencesSheetVisible(true)}
-      />
+      {activeInfoSheet === 'route' && (
+        <RouteInfoSheet
+          route={directionsRoute}
+          loading={directionsLoading}
+          error={directionsError}
+          profile={settings?.preferred_routing_profile || 'cycling'}
+          units={(settings?.units as 'metric' | 'imperial') || 'metric'}
+          onClearRoute={handleClearRoute}
+          onRecalculate={handleRecalculateRoute}
+        />
+      )}
 
       <RoutePreferencesSheet
         visible={isRoutePreferencesSheetVisible}
@@ -654,13 +769,24 @@ const MainMapView: React.FC = () => {
         mode={directionsRoute ? 'recalculate' : 'initial'}
       />
 
-      {!ENABLE_FANCY_SHEET && (
-        <SearchSheet
-          visible={isSearchSheetVisible}
-          onClose={() => setIsSearchSheetVisible(false)}
-          onSelectLocation={handleSearchSelect}
-        />
-      )}
+      <SearchSheet
+        visible={isSearchSheetVisible}
+        onClose={() => setIsSearchSheetVisible(false)}
+        onSelectLocation={(location) => {
+          // Clear any existing route data but don't reset camera yet
+          clearRoute();
+          setRouteGeometry(null);
+          setSelectedStation(null);
+          // Set the new location and activate location sheet
+          setSearchedLocation(location);
+          setActiveInfoSheet('location');
+          cameraRef.current?.setCamera({
+            centerCoordinate: [location.lon, location.lat],
+            zoomLevel: 15,
+            animationDuration: 1000,
+          });
+        }}
+      />
 
       <MapStylePicker
         visible={isMapStylePickerVisible}
@@ -669,16 +795,26 @@ const MainMapView: React.FC = () => {
         onSelectStyle={handleSelectMapStyle}
       />
 
+      {/* Active Bike Indicator */}
       {(activeBike || (bikesLoading && settings?.active_bike_id)) && (
         <ActiveBikeIndicator bike={activeBike} loading={bikesLoading} isRecording={!!activeTrip} />
       )}
+
+      {/* Recording Status Indicator */}
+      {/* {activeTrip && (
+        <RecordingIndicator isTracking={isTracking} queuedPointsCount={queuedPointsCount} />
+      )} */}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  mapView: { flex: 1 },
+  container: {
+    flex: 1,
+  },
+  mapView: {
+    flex: 1,
+  },
   renderModeToggle: {
     position: 'absolute',
     top: 60,
@@ -693,8 +829,14 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  renderModeText: { fontSize: 12, fontWeight: '600', color: Colors.light.calloutText },
-  searchPinContainer: { alignItems: 'center' },
+  renderModeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.calloutText,
+  },
+  searchPinContainer: {
+    alignItems: 'center',
+  },
   searchPin: {
     width: 48,
     height: 48,

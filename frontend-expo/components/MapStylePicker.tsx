@@ -1,9 +1,7 @@
-import React, { useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, Platform } from 'react-native';
+import React, { useCallback, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { Colors, electricPurple, Spacing, BorderRadius, Typography } from '@/constants/theme';
 
 export interface MapStyle {
@@ -112,40 +110,23 @@ export default function MapStylePicker({
 }: MapStylePickerProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const sheetRef = useRef<TrueSheet>(null);
 
-  // Check if glass effect is available
-  const glassAvailable = Platform.OS === 'ios' && isLiquidGlassAvailable();
-
-  // Snap points for the bottom sheet
-  const snapPoints = useMemo(() => ['65%'], []);
-
-  // Present modal when visible becomes true
+  // Present/dismiss sheet when visible changes
   useEffect(() => {
     if (visible) {
-      bottomSheetModalRef.current?.present();
+      sheetRef.current?.present();
+    } else {
+      sheetRef.current?.dismiss();
     }
   }, [visible]);
 
   const handleSelectStyle = useCallback(
     (styleUrl: string) => {
       onSelectStyle(styleUrl);
-      onClose();
+      sheetRef.current?.dismiss();
     },
-    [onSelectStyle, onClose],
-  );
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
+    [onSelectStyle],
   );
 
   const renderIcon = useCallback(
@@ -158,95 +139,73 @@ export default function MapStylePicker({
     [colors.text],
   );
 
-  const content = (
-    <>
-      {/* <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Map Style</Text>
-      </View> */}
-      <BottomSheetScrollView contentContainerStyle={styles.content}>
-        {MAP_STYLES.map((style) => {
-          const isSelected = style.url === currentStyle;
-          return (
-            <TouchableOpacity
-              key={style.url}
-              style={[
-                styles.styleItem,
-                { backgroundColor: colors.buttonBackground },
-                isSelected && { borderColor: electricPurple, borderWidth: 2 },
-              ]}
-              onPress={() => handleSelectStyle(style.url)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.styleIcon}>{renderIcon(style, 28)}</View>
-              <View style={styles.styleInfo}>
-                <Text style={[styles.styleName, { color: colors.text }]}>{style.name}</Text>
-                <Text style={[styles.styleDescription, { color: colors.icon }]}>
-                  {style.description}
-                </Text>
-              </View>
-              {isSelected && <MaterialIcons name="check" size={24} color={electricPurple} />}
-            </TouchableOpacity>
-          );
-        })}
-      </BottomSheetScrollView>
-    </>
-  );
-
   return (
-    <BottomSheetModal
-      ref={bottomSheetModalRef}
-      snapPoints={snapPoints}
-      enablePanDownToClose
-      onDismiss={onClose}
-      backdropComponent={renderBackdrop}
-      style={{ marginTop: 16 }}
-      backgroundStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.background }}
-      handleIndicatorStyle={{ backgroundColor: glassAvailable ? 'transparent' : colors.icon }}
+    <TrueSheet
+      name="MapStylePicker"
+      ref={sheetRef}
+      detents={[0.65, 0.95]}
+      cornerRadius={24}
+      onDidDismiss={onClose}
+      scrollable
     >
-      {glassAvailable ? (
-        <GlassView style={styles.glassBackground} glassEffectStyle="regular">
-          <View style={styles.handleContainer}>
-            <View style={[styles.handle, { backgroundColor: colors.icon }]} />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text, textAlign: 'center' }]}>Map Style</Text>
+        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} nestedScrollEnabled>
+          <View style={styles.content}>
+            {MAP_STYLES.map((style) => {
+              const isSelected = style.url === currentStyle;
+              return (
+                <TouchableOpacity
+                  key={style.url}
+                  style={[
+                    styles.styleItem,
+                    { backgroundColor: colors.buttonBackground },
+                    isSelected && { borderColor: electricPurple, borderWidth: 2 },
+                  ]}
+                  onPress={() => handleSelectStyle(style.url)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.styleIcon}>{renderIcon(style, 28)}</View>
+                  <View style={styles.styleInfo}>
+                    <Text style={[styles.styleName, { color: colors.text }]}>{style.name}</Text>
+                    <Text style={[styles.styleDescription, { color: colors.icon }]}>
+                      {style.description}
+                    </Text>
+                  </View>
+                  {isSelected && <MaterialIcons name="check" size={24} color={electricPurple} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          {content}
-        </GlassView>
-      ) : (
-        content
-      )}
-    </BottomSheetModal>
+        </ScrollView>
+      </View>
+    </TrueSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  glassBackground: {
+  container: {
     flex: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'hidden',
-  },
-  handleContainer: {
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
   },
   header: {
     paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.xxxl,
+    paddingBottom: Spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
+  scrollContent: {
+    // paddingBottom: Spacing.xl,
+  },
   title: {
-    ...Typography.h1,
+    ...Typography.h2,
   },
   content: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xxxl * 12,
+    padding: Spacing.lg,
     gap: Spacing.sm,
+    paddingBottom: Spacing.xxxl,
   },
   styleItem: {
     flexDirection: 'row',

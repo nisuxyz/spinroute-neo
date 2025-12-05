@@ -118,6 +118,7 @@ export const BorderRadius = {
   lg: 16,
   xl: 20,
   xxl: 24,
+  xxxl: 32,
   round: 9999, // For fully rounded elements
 } as const;
 
@@ -241,20 +242,33 @@ export const CardStyles = {
 } as const;
 
 /**
+ * Common input styles
+ */
+export const InputStyles = {
+  default: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.xxl,
+    padding: Spacing.lg,
+    ...Typography.bodyMedium,
+    fontSize: 16,
+  },
+} as const;
+
+/**
  * Common button styles
  */
 export const ButtonStyles = {
   primary: {
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.xxl,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
   secondary: {
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.xxl,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,

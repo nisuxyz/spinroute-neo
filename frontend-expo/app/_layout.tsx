@@ -5,7 +5,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
-import { SubscriptionProvider } from '@/hooks/use-subscription';
+import { UserSettingsProvider } from '@/contexts/user-settings-context';
 import { IAPProvider } from '@/hooks/use-iap';
 import { EnvProvider, useEnv } from '@/hooks/use-env';
 import { PaywallProvider, usePaywall } from '@/hooks/use-paywall';
@@ -16,7 +16,6 @@ import Mapbox from '@rnmapbox/maps';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { MenuProvider } from 'react-native-popup-menu';
 
 export const unstable_settings = {
@@ -53,25 +52,23 @@ function RootLayoutNav() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <MenuProvider>
-          <Stack>
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Map' }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-            <Stack.Screen
-              name="trip/[id]"
-              options={{
-                presentation: 'card',
-                animation: 'slide_from_right',
-              }}
-            />
-          </Stack>
-          {/* Global Paywall - controlled by context */}
-          <Paywall visible={isVisible} onClose={hidePaywall} />
-        </MenuProvider>
-      </BottomSheetModalProvider>
+      <MenuProvider>
+        <Stack>
+          <Stack.Screen name="auth" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Map' }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+          <Stack.Screen
+            name="trip/[id]"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+        </Stack>
+        {/* Global Paywall - controlled by context */}
+        <Paywall visible={isVisible} onClose={hidePaywall} />
+      </MenuProvider>
     </GestureHandlerRootView>
   );
 }
@@ -99,9 +96,9 @@ export default function RootLayout() {
   return (
     <SupabaseProvider value={supabase}>
       <AuthProvider>
-        <EnvProvider>
-          <MapboxInitializer />
-          <SubscriptionProvider>
+        <UserSettingsProvider>
+          <EnvProvider>
+            <MapboxInitializer />
             <IAPProvider>
               <PaywallProvider>
                 <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -110,8 +107,8 @@ export default function RootLayout() {
                 </ThemeProvider>
               </PaywallProvider>
             </IAPProvider>
-          </SubscriptionProvider>
-        </EnvProvider>
+          </EnvProvider>
+        </UserSettingsProvider>
       </AuthProvider>
     </SupabaseProvider>
   );

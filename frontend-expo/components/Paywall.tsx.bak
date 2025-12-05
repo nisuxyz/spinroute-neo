@@ -12,28 +12,13 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
-import { useIAPContext, SUBSCRIPTION_SKUS, getSubscriptionPrice } from '@/hooks/use-iap';
-import { useSubscription } from '@/contexts/user-settings-context';
+import { useIAPContext, SUBSCRIPTION_SKUS } from '@/hooks/use-iap';
+import { useSubscription } from '@/hooks/use-subscription';
 import { Colors, electricPurple, Spacing, BorderRadius, Typography } from '@/constants/theme';
 import type { ProductSubscription } from 'expo-iap';
 
 const TERMS_URL = 'https://spinroute.app/terms';
 const PRIVACY_URL = 'https://spinroute.app/privacy';
-
-// Utility to lighten a hex color
-function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const r = Math.min(255, Math.floor((num >> 16) + ((255 - (num >> 16)) * percent) / 100));
-  const g = Math.min(
-    255,
-    Math.floor(((num >> 8) & 0x00ff) + ((255 - ((num >> 8) & 0x00ff)) * percent) / 100),
-  );
-  const b = Math.min(
-    255,
-    Math.floor((num & 0x0000ff) + ((255 - (num & 0x0000ff)) * percent) / 100),
-  );
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-}
 
 interface PaywallProps {
   visible: boolean;
@@ -94,13 +79,6 @@ export function Paywall({ visible, onClose }: PaywallProps) {
     return 'Subscription';
   };
 
-  const getSubscriptionDeal = (productId: string): string | null => {
-    if (productId.includes('weekly')) return '1st week free';
-    if (productId.includes('monthly')) return '1st month $1.99';
-    if (productId.includes('yearly')) return '1st year $49.99';
-    return null;
-  };
-
   const getBadgeColor = (productId: string): string => {
     if (productId.includes('yearly')) return '#10b981';
     return electricPurple;
@@ -108,7 +86,6 @@ export function Paywall({ visible, onClose }: PaywallProps) {
 
   return (
     <TrueSheet
-      name="Paywall"
       ref={sheetRef}
       detents={detents}
       cornerRadius={24}
@@ -117,7 +94,7 @@ export function Paywall({ visible, onClose }: PaywallProps) {
     >
       <View style={styles.container}>
         {isPro ? (
-          // Pro user content - no scrolling needed
+          // Pro user content
           <View style={styles.proContainer}>
             <View style={[styles.proIconContainer, { backgroundColor: `${electricPurple}15` }]}>
               <MaterialIcons name="workspace-premium" size={64} color={electricPurple} />
@@ -134,7 +111,7 @@ export function Paywall({ visible, onClose }: PaywallProps) {
             </TouchableOpacity>
           </View>
         ) : (
-          // Purchase flow - needs scrolling
+          // Purchase flow content
           <ScrollView contentContainerStyle={styles.scrollContent} nestedScrollEnabled>
             {/* Header */}
             <View style={styles.header}>
@@ -149,7 +126,7 @@ export function Paywall({ visible, onClose }: PaywallProps) {
 
             {/* Features */}
             <View style={[styles.featuresCard, { backgroundColor: colors.buttonBackground }]}>
-              {/* <Text style={[styles.sectionTitle, { color: colors.text }]}>What you'll get</Text> */}
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>What you'll get</Text>
               <View style={styles.featuresList}>
                 <FeatureItem icon="pedal-bike" text="Unlimited bikes" colors={colors} />
                 <FeatureItem icon="route" text="Unlimited trip recording" colors={colors} />
@@ -181,7 +158,6 @@ export function Paywall({ visible, onClose }: PaywallProps) {
                     key={subscription.id}
                     subscription={subscription}
                     label={getSubscriptionLabel(subscription.id)}
-                    deal={getSubscriptionDeal(subscription.id)}
                     badgeColor={getBadgeColor(subscription.id)}
                     onPress={() => handlePurchase(subscription.id)}
                     disabled={purchasing || restoring || !connected}
@@ -214,10 +190,10 @@ export function Paywall({ visible, onClose }: PaywallProps) {
 
             {/* Legal Text */}
             <Text style={[styles.legal, { color: colors.icon }]}>
-              Payment will be charged to your Apple ID account at confirmation of purchase.
-              Subscription automatically renews unless canceled at least 24 hours before the end of
-              the current period. Your account will be charged for renewal within 24 hours prior to
-              the end of the current period.
+              Payment will be charged to your Apple ID account at confirmation of purchase. Subscription
+              automatically renews unless canceled at least 24 hours before the end of the current period.
+              Your account will be charged for renewal within 24 hours prior to the end of the current
+              period.
             </Text>
 
             {/* Legal Links */}
@@ -257,7 +233,6 @@ function FeatureItem({ icon, text, colors }: FeatureItemProps) {
 interface SubscriptionCardProps {
   subscription: ProductSubscription;
   label: string;
-  deal: string | null;
   badgeColor: string;
   onPress: () => void;
   disabled: boolean;
@@ -268,7 +243,6 @@ interface SubscriptionCardProps {
 function SubscriptionCard({
   subscription,
   label,
-  deal,
   badgeColor,
   onPress,
   disabled,
@@ -276,7 +250,6 @@ function SubscriptionCard({
   colors,
 }: SubscriptionCardProps) {
   const isYearly = label === 'Yearly';
-  const dealBadgeColor = lightenColor(electricPurple, 60);
 
   return (
     <TouchableOpacity
@@ -290,15 +263,8 @@ function SubscriptionCard({
       disabled={disabled}
       activeOpacity={0.7}
     >
-      {/* Deal badge for all plans */}
-      {deal && (
-        <View style={[styles.badge, { backgroundColor: dealBadgeColor }]}>
-          <Text style={[styles.badgeText, { color: electricPurple }]}>{deal}</Text>
-        </View>
-      )}
-      {/* Best Value badge for yearly (positioned on left side) */}
       {isYearly && (
-        <View style={[styles.badgeLeft, { backgroundColor: badgeColor }]}>
+        <View style={[styles.badge, { backgroundColor: badgeColor }]}>
           <Text style={styles.badgeText}>Best Value</Text>
         </View>
       )}
@@ -313,7 +279,7 @@ function SubscriptionCard({
         </View>
         <View style={styles.planPriceContainer}>
           <Text style={[styles.planPrice, { color: colors.text }]}>
-            {getSubscriptionPrice(subscription)}
+            {subscription.displayPrice}
           </Text>
           {loading && (
             <ActivityIndicator style={styles.planLoading} size="small" color={electricPurple} />
@@ -358,10 +324,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.xl,
     paddingTop: Spacing.xxxl,
+    paddingBottom: Spacing.xxxl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.xxl,
   },
   iconContainer: {
     width: 80,
@@ -369,30 +336,30 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   title: {
     ...Typography.displayLarge,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
     ...Typography.bodyLarge,
     textAlign: 'center',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
   },
   // Features
   featuresCard: {
     borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
-    marginBottom: Spacing.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xxl,
   },
   sectionTitle: {
     ...Typography.h2,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   featuresList: {
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   featureItem: {
     flexDirection: 'row',
@@ -414,9 +381,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    padding: Spacing.md,
+    padding: Spacing.lg,
     borderRadius: BorderRadius.md,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   errorText: {
     flex: 1,
@@ -426,20 +393,20 @@ const styles = StyleSheet.create({
   // Loading
   loadingContainer: {
     alignItems: 'center',
-    paddingVertical: Spacing.xl,
+    paddingVertical: Spacing.xxxl,
   },
   loadingText: {
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
     ...Typography.bodyMedium,
   },
   // Plans
   plans: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
   planCard: {
     borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+    padding: Spacing.lg,
     position: 'relative',
     ...Platform.select({
       ios: {
@@ -489,16 +456,8 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -10,
-    right: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  badgeLeft: {
-    position: 'absolute',
-    top: -10,
-    right: Spacing.xxxl * 4,
-    paddingHorizontal: Spacing.sm,
+    right: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 4,
     borderRadius: BorderRadius.sm,
   },
@@ -509,29 +468,27 @@ const styles = StyleSheet.create({
   },
   // Buttons
   primaryButton: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xxl,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xxxl,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
   },
   primaryButtonText: {
     color: '#fff',
     ...Typography.bodyLarge,
-    fontWeight: '600',
   },
   restoreButton: {
     alignItems: 'center',
-    paddingVertical: Spacing.md,
-    marginBottom: Spacing.xs,
+    paddingVertical: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   restoreButtonText: {
     ...Typography.bodyMedium,
-    fontWeight: '600',
   },
   skipButton: {
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.lg,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.xl,
   },
   skipButtonText: {
     ...Typography.bodyMedium,
@@ -541,19 +498,18 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     textAlign: 'center',
     lineHeight: 16,
-    paddingHorizontal: Spacing.xs,
-    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
   },
   legalLinks: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.sm,
+    marginTop: Spacing.md,
     marginBottom: Spacing.lg,
+    gap: Spacing.sm,
   },
   legalLink: {
     ...Typography.bodySmall,
-    fontWeight: '600',
   },
   legalSeparator: {
     ...Typography.bodySmall,

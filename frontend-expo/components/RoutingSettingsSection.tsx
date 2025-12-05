@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
-import { useUserSettings } from '@/hooks/use-user-settings';
+import { useUserSettings } from '@/contexts/user-settings-context';
 import ProviderPicker from './ProviderPicker';
 import ProfilePicker from './ProfilePicker';
 import BikeTypePicker from './BikeTypePicker';

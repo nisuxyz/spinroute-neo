@@ -3,11 +3,13 @@ import { Platform, Alert } from 'react-native';
 import {
   useIAP,
   ErrorCode,
+  getAvailablePurchases as getAvailablePurchasesNative,
   type Purchase,
   type ProductSubscription,
   type ProductSubscriptionAndroid,
+  type ProductSubscriptionIOS,
 } from 'expo-iap';
-import { useSubscription } from './use-subscription';
+import { useSubscription } from '@/contexts/user-settings-context';
 import { useAuth } from './use-auth';
 import { useEnv } from './use-env';
 
@@ -19,6 +21,57 @@ export const SUBSCRIPTION_SKUS = {
 } as const;
 
 const ALL_SUBSCRIPTION_SKUS = Object.values(SUBSCRIPTION_SKUS);
+
+// Helper to get subscription price with proper platform handling
+export function getSubscriptionPrice(subscription: ProductSubscription): string {
+  // iOS: displayPrice is always available and correct
+  if (subscription.platform === 'ios') {
+    return subscription.displayPrice || '$0.00';
+  }
+
+  // Android: Access price from subscriptionOfferDetails for accurate pricing
+  if (subscription.platform === 'android') {
+    const androidSubscription = subscription as ProductSubscriptionAndroid;
+    const offers = androidSubscription.subscriptionOfferDetailsAndroid;
+
+    if (offers && offers.length > 0) {
+      const firstOffer = offers[0];
+      const pricingPhases = firstOffer.pricingPhases?.pricingPhaseList;
+
+      if (pricingPhases && pricingPhases.length > 0) {
+        return pricingPhases[0].formattedPrice || '$0.00';
+      }
+    }
+  }
+
+  // Fallback to displayPrice if available
+  return subscription.displayPrice || '$0.00';
+}
+
+// Helper to check if subscription has introductory offer
+export function hasIntroductoryOffer(subscription: ProductSubscription): boolean {
+  // Check platform field on the subscription object
+  if (subscription.platform === 'ios') {
+    // iOS: Check if subscriptionInfoIOS exists and has introductory offer
+    const iosSubscription = subscription as ProductSubscriptionIOS;
+    return !!iosSubscription.subscriptionInfoIOS?.introductoryOffer;
+  }
+
+  // Android: Check for offers with intro pricing
+  if (subscription.platform === 'android') {
+    const androidSubscription = subscription as ProductSubscriptionAndroid;
+    const offers = androidSubscription.subscriptionOfferDetailsAndroid;
+
+    if (offers && offers.length > 0) {
+      return offers.some((offer) => {
+        const phases = offer.pricingPhases?.pricingPhaseList;
+        return phases && phases.length > 1; // Multiple phases indicate intro pricing
+      });
+    }
+  }
+
+  return false;
+}
 
 interface IAPContextValue {
   // Connection state
@@ -45,7 +98,7 @@ interface IAPProviderProps {
 }
 
 export function IAPProvider({ children }: IAPProviderProps) {
-  const { purchaseUUID, refresh: refreshSubscription } = useSubscription();
+  const { purchaseUUID } = useSubscription();
   const { session } = useAuth();
   const env = useEnv();
 
@@ -56,21 +109,23 @@ export function IAPProvider({ children }: IAPProviderProps) {
   // Validate receipt on our backend
   const validateReceipt = useCallback(
     async (purchase: Purchase) => {
+      console.log('[validateReceipt] Starting validation...');
+
       if (!purchaseUUID) {
-        console.error('No purchase UUID available for validation');
+        console.error('[validateReceipt] ERROR: No purchase UUID available');
         return false;
       }
 
       if (!session?.access_token) {
-        console.error('No auth session available for validation');
+        console.error('[validateReceipt] ERROR: No auth session available');
         return false;
       }
 
       try {
         // Log purchase object to debug
-        console.log('[validateReceipt] Purchase object:', {
+        console.log('[validateReceipt] Purchase details:', {
           productId: purchase.productId,
-          purchaseToken: purchase.purchaseToken,
+          purchaseToken: purchase.purchaseToken ? 'present' : 'missing',
           transactionId: purchase.transactionId,
           platform: Platform.OS,
         });
@@ -103,9 +158,9 @@ export function IAPProvider({ children }: IAPProviderProps) {
 
         if (!hasRequiredData) {
           console.error('[validateReceipt] No purchase data available');
-          // In sandbox/development, data might not be immediately available
-          // Return true to allow transaction to complete, webhook will handle validation
-          return true;
+          // Don't validate without data - this indicates a problem
+          // The webhook will handle validation when Apple sends the notification
+          return false;
         }
 
         const response = await fetch(`${env.IAP_SERVICE_URL}/api/subscription/validate-receipt`, {
@@ -119,15 +174,28 @@ export function IAPProvider({ children }: IAPProviderProps) {
 
         if (!response.ok) {
           const error = await response.json();
-          console.error('Receipt validation failed:', error);
+          console.error('[validateReceipt] ERROR: API returned error:', {
+            status: response.status,
+            error,
+          });
           return false;
         }
 
         const result = await response.json();
-        console.log('Receipt validated:', result);
+        console.log('[validateReceipt] ✅ Validation successful:', {
+          success: result.success,
+          tier: result.subscription?.tier,
+          status: result.subscription?.status,
+          expiresAt: result.subscription?.expiresAt,
+          productId: result.subscription?.productId,
+        });
+
+        // Return true if validation succeeded
+        // The subscription status (active/expired) is updated in the database
+        // and will be reflected automatically via realtime subscription
         return result.success === true;
       } catch (error) {
-        console.error('Error validating receipt:', error);
+        console.error('[validateReceipt] ERROR: Exception during validation:', error);
         return false;
       }
     },
@@ -139,68 +207,198 @@ export function IAPProvider({ children }: IAPProviderProps) {
     async (
       purchase: Purchase,
       finishTransaction: (params: { purchase: Purchase }) => Promise<void>,
+      isNewPurchase = true, // Flag to distinguish new purchases from unfinished transactions
     ) => {
-      console.log('Purchase successful:', purchase.productId);
+      console.log('[IAP] 🎉 Purchase successful:', {
+        productId: purchase.productId,
+        transactionId: purchase.transactionId,
+        isNewPurchase,
+      });
       setPurchasing(false);
 
       try {
-        // Validate on our backend
+        // IMPORTANT: Validate receipt on server BEFORE finishing transaction
+        // This is crucial for security and fraud prevention
+        console.log('[IAP] Step 1: Validating receipt...');
         const isValid = await validateReceipt(purchase);
 
         if (isValid) {
-          // Finish the transaction with the store
+          console.log('[IAP] ✅ Receipt validation successful');
+
+          // Valid purchase - finish transaction
+          console.log('[IAP] Step 2: Finishing transaction...');
           await finishTransaction({ purchase });
+          console.log('[IAP] ✅ Transaction finished');
 
-          // Refresh local subscription state
-          await refreshSubscription();
+          // Note: Subscription state will update automatically via realtime subscription
+          // No need for manual refresh - the database update triggers realtime push
+          console.log('[IAP] ✅ Purchase flow complete - realtime will update UI');
 
-          Alert.alert('Success!', 'Your Pro subscription is now active.');
+          // Only show success alert for NEW purchases, not for unfinished transactions
+          if (isNewPurchase) {
+            Alert.alert('Success!', 'Your Pro subscription is now active.');
+          }
         } else {
-          // Don't finish transaction if validation failed
-          // This allows the user to restore/retry
-          Alert.alert(
-            'Verification Failed',
-            'Your purchase could not be verified. Please try restoring purchases or contact support if this persists.',
-          );
+          console.log('[IAP] ❌ Receipt validation failed');
+          // Validation failed - check if we have receipt data
+          const hasReceiptData =
+            Platform.OS === 'ios' ? !!purchase.purchaseToken : !!purchase.purchaseToken;
+
+          if (!hasReceiptData) {
+            // No receipt data yet - finish transaction anyway
+            // The webhook will handle validation when Apple sends the notification
+            console.warn(
+              '[IAP] No receipt data available yet, finishing transaction for webhook processing',
+            );
+            await finishTransaction({ purchase });
+
+            // Note: Realtime subscription will update UI when webhook processes
+            console.log('[IAP] Waiting for webhook to process - realtime will update UI');
+
+            // Only show processing alert for NEW purchases
+            if (isNewPurchase) {
+              Alert.alert(
+                'Processing Purchase',
+                'Your purchase is being processed. It may take a moment to activate.',
+              );
+            }
+          } else {
+            // Have receipt data but validation failed
+            // For renewals/resubscriptions, we should still finish the transaction
+            // and let the webhook handle it, otherwise the purchase gets stuck
+            console.error('[IAP] Receipt validation failed with data present');
+            console.log('[IAP] Finishing transaction anyway to prevent stuck purchase');
+
+            await finishTransaction({ purchase });
+
+            // Note: Realtime subscription will update UI when webhook processes
+            console.log('[IAP] Waiting for webhook to process - realtime will update UI');
+
+            // Only show processing alert for NEW purchases
+            if (isNewPurchase) {
+              Alert.alert(
+                'Processing Purchase',
+                "Your purchase is being processed. This may take a moment. If your subscription doesn't activate, try restarting the app.",
+              );
+            }
+          }
         }
       } catch (error) {
-        console.error('Error in purchase success handler:', error);
-        Alert.alert(
-          'Error',
-          'An error occurred while processing your purchase. Please try restoring purchases.',
-        );
+        console.error('[IAP] Error in purchase success handler:', error);
+        // Don't finish transaction on error - will retry on next launch
+
+        // Only show error alert for NEW purchases
+        if (isNewPurchase) {
+          Alert.alert(
+            'Error',
+            'An error occurred while processing your purchase. Please restart the app or try restoring purchases.',
+          );
+        }
       }
     },
-    [validateReceipt, refreshSubscription],
+    [validateReceipt],
   );
 
   // Handle purchase error
   const handlePurchaseError = useCallback((error: { code?: ErrorCode; message?: string }) => {
     setPurchasing(false);
 
+    console.error('[IAP] Purchase error:', {
+      code: error.code,
+      message: error.message,
+    });
+
     // Don't show alert for user cancellation
     if (error.code === ErrorCode.UserCancelled) {
-      console.log('User cancelled purchase');
+      console.log('[IAP] User cancelled purchase');
       return;
     }
 
-    console.error('Purchase error:', error);
-    Alert.alert('Purchase Failed', error.message || 'An unexpected error occurred.');
+    // Handle "already owned" error - suggest restore
+    if (error.code === ErrorCode.AlreadyOwned) {
+      console.log('[IAP] Product already owned - suggesting restore');
+      Alert.alert(
+        'Subscription Already Active',
+        'You already have an active subscription. Try using "Restore Purchases" to sync your subscription status.',
+      );
+      return;
+    }
+
+    // Generic error
+    Alert.alert(
+      'Purchase Failed',
+      error.message || 'An unexpected error occurred. Please try again or contact support.',
+    );
   }, []);
 
+  // Track if we're in an active purchase flow (user-initiated)
+  const [isActivePurchaseFlow, setIsActivePurchaseFlow] = useState(false);
+
   // Use the useIAP hook with callbacks
-  const {
-    connected,
-    subscriptions,
-    fetchProducts,
-    requestPurchase,
-    finishTransaction,
-    getAvailablePurchases,
-    availablePurchases,
-  } = useIAP({
-    onPurchaseSuccess: (purchase) => handlePurchaseSuccess(purchase, finishTransaction),
-    onPurchaseError: handlePurchaseError,
+  const { connected, subscriptions, fetchProducts, requestPurchase, finishTransaction } = useIAP({
+    onPurchaseSuccess: (purchase) => {
+      // Only show alert if this is an active user-initiated purchase
+      handlePurchaseSuccess(purchase, finishTransaction, isActivePurchaseFlow);
+      setIsActivePurchaseFlow(false);
+    },
+    onPurchaseError: (error) => {
+      handlePurchaseError(error);
+      setIsActivePurchaseFlow(false);
+    },
   });
+
+  // Handle unfinished transactions on app startup (iOS)
+  // This prevents onPurchaseSuccess from triggering on every app launch
+  useEffect(() => {
+    if (!connected) return;
+
+    const handleUnfinishedTransactions = async () => {
+      try {
+        console.log('[IAP] Checking for unfinished transactions...');
+        // Use native function directly to get the actual purchases array
+        const purchases = await getAvailablePurchasesNative();
+
+        if (!purchases || purchases.length === 0) {
+          console.log('[IAP] No unfinished transactions found');
+          return;
+        }
+
+        console.log(`[IAP] Found ${purchases.length} unfinished transaction(s)`);
+
+        // Process each unfinished transaction
+        for (const purchase of purchases) {
+          console.log(`[IAP] Processing unfinished transaction: ${purchase.productId}`);
+
+          try {
+            // Validate the purchase (pass false to suppress alerts)
+            const isValid = await validateReceipt(purchase);
+
+            if (isValid) {
+              console.log(`[IAP] Valid unfinished transaction: ${purchase.productId}`);
+              // Finish the transaction to prevent replay
+              await finishTransaction({ purchase });
+            } else {
+              console.warn(
+                `[IAP] Invalid unfinished transaction: ${purchase.productId} - will retry on next launch`,
+              );
+              // Don't finish invalid transactions - they'll be retried
+            }
+          } catch (error) {
+            console.error(`[IAP] Error processing unfinished transaction:`, error);
+            // Don't finish on error - will retry on next launch
+          }
+        }
+
+        // Note: Subscription state will update automatically via realtime
+        console.log('[IAP] Unfinished transactions processed - realtime will update UI');
+      } catch (error) {
+        console.error('[IAP] Error handling unfinished transactions:', error);
+      }
+    };
+
+    // Run on mount when connected
+    handleUnfinishedTransactions();
+  }, [connected, finishTransaction, validateReceipt]);
 
   // Fetch subscription products when connected
   const refreshProducts = useCallback(async () => {
@@ -245,16 +443,30 @@ export function IAPProvider({ children }: IAPProviderProps) {
       }
 
       // Build Android subscription offers if available
-      const androidSubscription = subscription as ProductSubscriptionAndroid;
-      const subscriptionOffers =
-        androidSubscription.subscriptionOfferDetailsAndroid?.map((offer) => ({
-          sku: subscription.id,
-          offerToken: offer.offerToken,
-        })) || [];
+      let subscriptionOffers: Array<{ sku: string; offerToken: string }> = [];
+      if (subscription.platform === 'android') {
+        const androidSubscription = subscription as ProductSubscriptionAndroid;
+        subscriptionOffers =
+          androidSubscription.subscriptionOfferDetailsAndroid?.map((offer) => ({
+            sku: subscription.id,
+            offerToken: offer.offerToken,
+          })) || [];
+      }
+
+      console.log('[IAP] Initiating purchase request:', {
+        productId,
+        purchaseUUID,
+        platform: Platform.OS,
+        hasOffers: subscriptionOffers.length > 0,
+      });
 
       setPurchasing(true);
+      setIsActivePurchaseFlow(true); // Mark this as a user-initiated purchase
 
       try {
+        // requestPurchase returns void in the hook
+        // Results are handled via onPurchaseSuccess/onPurchaseError callbacks
+        console.log('[IAP] Calling requestPurchase...');
         await requestPurchase({
           request: {
             ios: {
@@ -265,7 +477,7 @@ export function IAPProvider({ children }: IAPProviderProps) {
             },
             android: {
               skus: [productId],
-              // Android requires subscriptionOffers for subscriptions
+              // Android requires subscriptionOffers for subscriptions when available
               ...(subscriptionOffers.length > 0 && { subscriptionOffers }),
               // Pass purchaseUUID for linking (stored in obfuscatedAccountIdAndroid)
               obfuscatedAccountIdAndroid: purchaseUUID,
@@ -273,11 +485,20 @@ export function IAPProvider({ children }: IAPProviderProps) {
           },
           type: 'subs',
         });
+        console.log('[IAP] requestPurchase completed (waiting for callbacks)');
         // Purchase result handled in onPurchaseSuccess/onPurchaseError callbacks
-      } catch (error) {
+      } catch (error: any) {
         setPurchasing(false);
+        setIsActivePurchaseFlow(false);
+
+        // Handle user cancellation
+        if (error?.code === ErrorCode.UserCancelled) {
+          console.log('User cancelled purchase');
+          return;
+        }
+
         console.error('Purchase request error:', error);
-        Alert.alert('Error', 'Failed to initiate purchase. Please try again.');
+        Alert.alert('Error', error?.message || 'Failed to initiate purchase. Please try again.');
       }
     },
     [connected, purchaseUUID, subscriptions, requestPurchase],
@@ -293,27 +514,40 @@ export function IAPProvider({ children }: IAPProviderProps) {
     setRestoring(true);
 
     try {
-      // Trigger fetch of available purchases
-      await getAvailablePurchases();
+      // Use native function directly to get the actual purchases array
+      const purchases = await getAvailablePurchasesNative();
 
       // Check if there are any purchases to restore
-      if (!availablePurchases || availablePurchases.length === 0) {
+      if (!purchases || purchases.length === 0) {
         Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
         setRestoring(false);
         return;
       }
 
+      console.log(`[IAP] Restoring ${purchases.length} purchase(s)...`);
+
       // Validate each purchase with our backend
       let restoredCount = 0;
-      for (const purchase of availablePurchases) {
-        const isValid = await validateReceipt(purchase);
-        if (isValid) {
-          restoredCount++;
+      for (const purchase of purchases) {
+        try {
+          const isValid = await validateReceipt(purchase);
+
+          if (isValid) {
+            restoredCount++;
+            // IMPORTANT: Finish the transaction after successful validation
+            // This prevents the purchase from being replayed on every app launch
+            await finishTransaction({ purchase });
+            console.log(`[IAP] Restored and finished: ${purchase.productId}`);
+          } else {
+            console.warn(`[IAP] Could not validate purchase: ${purchase.productId}`);
+          }
+        } catch (error) {
+          console.error(`[IAP] Error restoring purchase ${purchase.productId}:`, error);
         }
       }
 
-      // Refresh subscription state
-      await refreshSubscription();
+      // Note: Subscription state will update automatically via realtime
+      console.log('[IAP] Restore complete - realtime will update UI');
 
       if (restoredCount > 0) {
         Alert.alert('Success!', 'Your purchases have been restored.');
@@ -324,12 +558,12 @@ export function IAPProvider({ children }: IAPProviderProps) {
         );
       }
     } catch (error) {
-      console.error('Restore error:', error);
+      console.error('[IAP] Restore error:', error);
       Alert.alert('Error', 'Failed to restore purchases. Please try again.');
     } finally {
       setRestoring(false);
     }
-  }, [connected, getAvailablePurchases, availablePurchases, validateReceipt, refreshSubscription]);
+  }, [connected, validateReceipt, finishTransaction]);
 
   const value: IAPContextValue = {
     connected,

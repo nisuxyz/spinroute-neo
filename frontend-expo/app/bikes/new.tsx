@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
+import { TrueSheet } from '@lodev09/react-native-true-sheet';
 
 const BIKE_TYPES: { value: BikeType; label: string; icon: string }[] = [
   { value: 'road', label: 'Road', icon: 'directions-bike' },
@@ -85,7 +86,7 @@ export default function NewBikeScreen() {
         if (!isPro) {
           // Free user hit RLS error - likely the limit (could be race condition)
           console.log('[NewBike] RLS error for free user, showing paywall');
-          router.replace('/paywall');
+          TrueSheet.present('paywall');
         } else {
           // Pro user hit RLS error - something else is wrong (auth?)
           console.error('[NewBike] RLS error for pro user:', bikeError);

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
+import { GlassContainer, GlassView } from 'expo-glass-effect';
 import MapActionButton from './MapActionButton';
-import { Colors, electricPurple } from '@/constants/theme';
+import { Colors, electricPurple, Spacing } from '@/constants/theme';
 import { getMapStyleIcon } from './MapStylePicker';
 
 interface MapActionButtonsProps {
@@ -63,8 +64,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.buttonGroup}>
-        {/* Recenter on user location / Follow mode */}
+      <GlassContainer spacing={8} style={[styles.buttonGroup, { paddingTop: 110 }]}>
         <MapActionButton
           icon="my-location"
           iconFamily="MaterialIcons"
@@ -79,11 +79,9 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           testID="recenter-button"
         />
 
-        {/* 3D/2D toggle */}
         <MapActionButton
           icon={is3DMode ? 'video-3d' : 'video-3d-off'}
           iconFamily="MaterialCommunityIcons"
-          // text={is3DMode ? '3D' : '2D'}
           isActive={is3DMode}
           buttonColor={electricPurple}
           onActivate={onToggle3D}
@@ -92,7 +90,6 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           testID="3d-toggle"
         />
 
-        {/* Map style selector */}
         <MapActionButton
           icon={mapStyleIcon.icon}
           iconFamily={mapStyleIcon.iconFamily}
@@ -103,7 +100,6 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           testID="map-style-button"
         />
 
-        {/* Station visibility toggle */}
         <MapActionButton
           icon={isStationsVisible ? 'attach-money' : 'money-off'}
           iconFamily="MaterialIcons"
@@ -117,9 +113,9 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           }
           testID="station-toggle"
         />
-      </View>
-      <View style={styles.buttonGroup}>
-        {/* Settings */}
+      </GlassContainer>
+
+      <GlassContainer spacing={8} style={[styles.buttonGroup, { paddingBottom: 100 }]}>
         <MapActionButton
           icon="settings"
           iconFamily="MaterialIcons"
@@ -130,7 +126,6 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           testID="settings-button"
         />
 
-        {/* Bike management */}
         <MapActionButton
           icon="bike-pedal"
           iconFamily="MaterialCommunityIcons"
@@ -141,7 +136,6 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           testID="bike-management-button"
         />
 
-        {/* Recorded trips */}
         <MapActionButton
           icon="chart-line"
           iconFamily="MaterialCommunityIcons"
@@ -152,7 +146,6 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           testID="recorded-trips-button"
         />
 
-        {/* Record trip */}
         <MapActionButton
           icon="record-rec"
           iconFamily="MaterialCommunityIcons"
@@ -163,7 +156,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           accessibilityLabel={isRecording ? 'Stop recording trip' : 'Start recording trip'}
           testID="record-trip-button"
         />
-      </View>
+      </GlassContainer>
     </View>
   );
 };
@@ -172,20 +165,21 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0,
-    right: 10,
-    gap: 12,
+    right: 0,
     zIndex: 1,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
     height: '100%',
-    paddingTop: 100,
-    paddingBottom: 130,
+    // paddingTop: 100,
+    // paddingBottom: 130,
   },
   buttonGroup: {
-    display: 'flex',
     flexDirection: 'column',
-    gap: 8,
+    alignItems: 'center',
+    paddingRight: Spacing.md,
+    paddingTop: Spacing.xxxl,
+    paddingLeft: Spacing.xxl,
   },
 });
 
