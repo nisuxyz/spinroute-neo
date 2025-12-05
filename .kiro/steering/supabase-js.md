@@ -12,6 +12,10 @@ Supabase Reference (JavaScript)
 
 Initializing
 
+You can initialize a new Supabase client using the `createClient()` method.
+
+The Supabase client is your entrypoint to the rest of the Supabase functionality
+and is the easiest way to interact with everything we offer within the Supabase ecosystem.
 
 
 ## Examples
@@ -165,15 +169,6 @@ const supabase = createClient("https://xyzcompany.supabase.co", "publishable-or-
 });
 ```
 
-
-### Example 8
-
-```ts
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient('https://xyzcompany.supabase.co', 'public-anon-key')
-const { data } = await supabase.from('profiles').select('*')
-```
 
 # JavaScript Reference
 
@@ -512,6 +507,16 @@ const response = await supabase
 
 Postgres functions: rpc()
 
+You can call Postgres functions as _Remote Procedure Calls_, logic in your database that you can execute from anywhere.
+Functions are useful when the logic rarely changes—like for password resets and updates.
+
+```sql
+create or replace function hello_world() returns text as $$
+  select 'Hello world';
+$$ language sql;
+```
+
+To call Postgres functions on [Read Replicas](/docs/guides/platform/read-replicas), use the `get: true` option.
 
 
 ## Examples
@@ -1311,7 +1316,7 @@ range()
 
 ```ts
 const { data, error } = await supabase
-  .from('characters')
+  .from('countries')
   .select('name')
   .range(0, 1)
 ```
@@ -1482,26 +1487,17 @@ const { data } = await supabase
 ```
 
 
-### Example 5
-
-```typescript
-// Merge with existing types (default behavior)
-const query = supabase
-  .from('users')
-  .select()
-  .overrideTypes<{ custom_field: string }>()
-
-// Replace existing types completely
-const replaceQuery = supabase
-  .from('users')
-  .select()
-  .overrideTypes<{ id: number; name: string }, { merge: false }>()
-```
-
 # JavaScript Reference
 
 Using Explain
 
+For debugging slow queries, you can get the [Postgres `EXPLAIN` execution plan](https://www.postgresql.org/docs/current/sql-explain.html) of a query
+using the `explain()` method. This works on any query, even for `rpc()` or writes.
+
+Explain is not enabled by default as it can reveal sensitive information about your database.
+It's best to only enable this for testing environments but if you wish to enable it for production you can provide additional protection by using a `pre-request` function.
+
+Follow the [Performance Debugging Guide](/docs/guides/database/debugging-performance) to enable the functionality on your project.
 
 
 ## Examples
@@ -2994,6 +2990,7 @@ const { data, error } = await supabase.auth.admin.mfa.deleteFactor({
 
 invoke()
 
+Invoke a Supabase Edge Function.
 
 
 ## Examples
@@ -3078,14 +3075,6 @@ const { data, error } = await supabase.functions.invoke('hello', {
 })
 ```
 
-
-### Example 7
-
-```ts
-const { data, error } = await functions.invoke('hello-world', {
-  body: { name: 'Ada' },
-})
-```
 
 # JavaScript Reference
 
@@ -3293,6 +3282,7 @@ const channels = supabase.getChannels()
 
 broadcastMessage()
 
+Broadcast a message to all connected clients to a channel.
 
 
 ## Examples
@@ -3319,58 +3309,13 @@ supabase
 ```js
 supabase
   .channel('room1')
-  .httpSend('cursor-pos', { x: Math.random(), y: Math.random() })
+  .send({
+    type: 'broadcast',
+    event: 'cursor-pos',
+    payload: { x: Math.random(), y: Math.random()
+    },
+  })
 ```
-
-
-# JavaScript Reference
-
-new StorageClient()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-Overview
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-StorageClient.from()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-listBuckets()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-getBucket()
-
-
-
-## Examples
-
 
 
 # JavaScript Reference
@@ -3381,16 +3326,51 @@ createBucket()
 
 ## Examples
 
+### Create bucket
+
+```js
+const { data, error } = await supabase
+  .storage
+  .createBucket('avatars', {
+    public: false,
+    allowedMimeTypes: ['image/png'],
+    fileSizeLimit: 1024
+  })
+```
 
 
 # JavaScript Reference
 
-emptyBucket()
+getBucket()
 
 
 
 ## Examples
 
+### Get bucket
+
+```js
+const { data, error } = await supabase
+  .storage
+  .getBucket('avatars')
+```
+
+
+# JavaScript Reference
+
+listBuckets()
+
+
+
+## Examples
+
+### List buckets
+
+```ts
+const { data, error } = await supabase
+  .storage
+  .listBuckets()
+```
 
 
 # JavaScript Reference
@@ -3401,6 +3381,17 @@ updateBucket()
 
 ## Examples
 
+### Update bucket
+
+```js
+const { data, error } = await supabase
+  .storage
+  .updateBucket('avatars', {
+    public: false,
+    allowedMimeTypes: ['image/png'],
+    fileSizeLimit: 1024
+  })
+```
 
 
 # JavaScript Reference
@@ -3411,6 +3402,30 @@ deleteBucket()
 
 ## Examples
 
+### Delete bucket
+
+```js
+const { data, error } = await supabase
+  .storage
+  .deleteBucket('avatars')
+```
+
+
+# JavaScript Reference
+
+emptyBucket()
+
+
+
+## Examples
+
+### Empty bucket
+
+```js
+const { data, error } = await supabase
+  .storage
+  .emptyBucket('avatars')
+```
 
 
 # JavaScript Reference
@@ -3421,86 +3436,32 @@ from.upload()
 
 ## Examples
 
+### Upload file
+
+```js
+const avatarFile = event.target.files[0]
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .upload('public/avatar1.png', avatarFile, {
+    cacheControl: '3600',
+    upsert: false
+  })
+```
 
 
-# JavaScript Reference
+### Upload file using `ArrayBuffer` from base64 file data
 
-from.update()
+```js
+import { decode } from 'base64-arraybuffer'
 
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-from.move()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-from.copy()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-from.createSignedUrl()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-from.createSignedUrls()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-from.createSignedUploadUrl()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-from.uploadToSignedUrl()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-from.getPublicUrl()
-
-
-
-## Examples
-
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .upload('public/avatar1.png', decode('base64FileData'), {
+    contentType: 'image/png'
+  })
+```
 
 
 # JavaScript Reference
@@ -3511,16 +3472,30 @@ from.download()
 
 ## Examples
 
+### Download file
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .download('folder/avatar1.png')
+```
 
 
-# JavaScript Reference
+### Download file with transformations
 
-from.remove()
-
-
-
-## Examples
-
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .download('folder/avatar1.png', {
+    transform: {
+      width: 100,
+      height: 100,
+      quality: 80
+    }
+  })
+```
 
 
 # JavaScript Reference
@@ -3531,393 +3506,264 @@ from.list()
 
 ## Examples
 
+### List files in a bucket
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .list('folder', {
+    limit: 100,
+    offset: 0,
+    sortBy: { column: 'name', order: 'asc' },
+  })
+```
+
+
+### Search files in a bucket
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .list('folder', {
+    limit: 100,
+    offset: 0,
+    sortBy: { column: 'name', order: 'asc' },
+    search: 'jon'
+  })
+```
 
 
 # JavaScript Reference
 
-Overview
+from.update()
 
 
 
 ## Examples
 
+### Update file
+
+```js
+const avatarFile = event.target.files[0]
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .update('public/avatar1.png', avatarFile, {
+    cacheControl: '3600',
+    upsert: true
+  })
+```
+
+
+### Update file using `ArrayBuffer` from base64 file data
+
+```js
+import {decode} from 'base64-arraybuffer'
+
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .update('public/avatar1.png', decode('base64FileData'), {
+    contentType: 'image/png'
+  })
+```
 
 
 # JavaScript Reference
 
-Create a new analytics bucket
+from.move()
 
 
 
 ## Examples
 
+### Move file
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .move('public/avatar1.png', 'private/avatar2.png')
+```
 
 
 # JavaScript Reference
 
-List analytics buckets
+from.copy()
 
 
 
 ## Examples
 
+### Copy file
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .copy('public/avatar1.png', 'private/avatar2.png')
+```
 
 
 # JavaScript Reference
 
-Delete an analytics bucket
+from.remove()
 
 
 
 ## Examples
 
+### Delete file
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .remove(['folder/avatar1.png'])
+```
 
 
 # JavaScript Reference
 
-Overview
+from.createSignedUrl()
 
 
 
 ## Examples
 
+### Create Signed URL
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .createSignedUrl('folder/avatar1.png', 60)
+```
+
+
+### Create a signed URL for an asset with transformations
+
+```js
+const { data } = await supabase
+  .storage
+  .from('avatars')
+  .createSignedUrl('folder/avatar1.png', 60, {
+    transform: {
+      width: 100,
+      height: 100,
+    }
+  })
+```
+
+
+### Create a signed URL which triggers the download of the asset
+
+```js
+const { data } = await supabase
+  .storage
+  .from('avatars')
+  .createSignedUrl('folder/avatar1.png', 60, {
+    download: true,
+  })
+```
 
 
 # JavaScript Reference
 
-new StorageVectorsClient()
+from.createSignedUrls()
 
 
 
 ## Examples
 
+### Create Signed URLs
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .createSignedUrls(['folder/avatar1.png', 'folder/avatar2.png'], 60)
+```
 
 
 # JavaScript Reference
 
-StorageVectorsClient.from()
+from.createSignedUploadUrl()
 
 
 
 ## Examples
 
+### Create Signed Upload URL
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .createSignedUploadUrl('folder/cat.jpg')
+```
 
 
 # JavaScript Reference
 
-new VectorBucketApi()
+from.uploadToSignedUrl()
 
 
 
 ## Examples
 
+### Upload to a signed URL
+
+```js
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .uploadToSignedUrl('folder/cat.jpg', 'token-from-createSignedUploadUrl', file)
+```
 
 
 # JavaScript Reference
 
-VectorBucketApi.createBucket()
+from.getPublicUrl()
 
 
 
 ## Examples
 
-
-
-# JavaScript Reference
-
-VectorBucketApi.deleteBucket()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorBucketApi.getBucket()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorBucketApi.listBuckets()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorBucketApi.throwOnError()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-new VectorBucketScope()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorBucketScope.createIndex()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorBucketScope.deleteIndex()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorBucketScope.getIndex()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorBucketScope.listIndexes()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-Overview
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-new VectorDataApi()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorDataApi.deleteVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorDataApi.getVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorDataApi.listVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorDataApi.putVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorDataApi.queryVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorDataApi.throwOnError()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-Overview
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-new VectorIndexApi()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexApi.createIndex()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexApi.deleteIndex()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexApi.getIndex()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexApi.listIndexes()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexApi.throwOnError()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-new VectorIndexScope()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexScope.deleteVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexScope.getVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexScope.listVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexScope.putVectors()
-
-
-
-## Examples
-
-
-
-# JavaScript Reference
-
-VectorIndexScope.queryVectors()
-
-
-
-## Examples
-
+### Returns the URL for an asset in a public bucket
+
+```js
+const { data } = supabase
+  .storage
+  .from('public-bucket')
+  .getPublicUrl('folder/avatar1.png')
+```
+
+
+### Returns the URL for an asset in a public bucket with transformations
+
+```js
+const { data } = supabase
+  .storage
+  .from('public-bucket')
+  .getPublicUrl('folder/avatar1.png', {
+    transform: {
+      width: 100,
+      height: 100,
+    }
+  })
+```
+
+
+### Returns the URL which triggers the download of an asset in a public bucket
+
+```js
+const { data } = supabase
+  .storage
+  .from('public-bucket')
+  .getPublicUrl('folder/avatar1.png', {
+    download: true,
+  })
+```

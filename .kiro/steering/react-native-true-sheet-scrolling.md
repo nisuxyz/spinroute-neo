@@ -1,0 +1,61 @@
+---
+inclusion: manual
+---
+<!------------------------------------------------------------------------------------
+   Add rules to this file or a short description and have Kiro refine them for you.
+   
+   Learn about inclusion modes: https://kiro.dev/docs/steering/#inclusion-modes
+-------------------------------------------------------------------------------------> 
+Scrolling Content
+
+Scrolling content within the sheet requires some special configuration on both iOS and Android. Let's admit, some things just don't work out of the box.
+
+Follow the guide below so you can scroll your content using TrueSheet.
+scrolling
+How?
+
+Enable the scrollable prop and set nestedScrollEnabled on your ScrollView or FlatList to properly handle scrolling within the sheet.
+
+const App = () => {
+  const sheet = useRef<TrueSheet>(null)
+
+  return (
+    <TrueSheet ref={sheet} scrollable>
+      <View>{/* Header content */}</View>
+      <ScrollView nestedScrollEnabled>
+        <View />
+      </ScrollView>
+    </TrueSheet>
+  )
+}
+
+info
+
+By default, scrollable is false. Set it to true to enable automatic ScrollView fitting.
+iOS
+
+On iOS, scrollable automatically pins scroll views (including ScrollView and FlatList) to fit within the sheet's available space. The ScrollView's top edge will be pinned below any top sibling views, and its left, right, and bottom edges will be pinned to the container.
+
+The scroll view detection supports up to 2 levels deep in the view hierarchy, so you can wrap your ScrollView or FlatList in a container View if needed:
+
+<TrueSheet scrollable>
+  <View style={{ flex: 1 }}>
+    <View>{/* Header content */}</View>
+    <FlatList nestedScrollEnabled data={data} renderItem={renderItem} />
+  </View>
+</TrueSheet>
+
+Android
+
+On Android, scrollable ensures the scroll view fills the available sheet space. You must also enable nestedScrollEnabled on your ScrollView or FlatList for scrolling to work properly.
+warning
+
+The auto detent does not work well with scrollable on Android. Use fixed fractional detents (e.g., 0.5, 0.8, 1) instead when using scrollable.
+warning
+
+If your ScrollView content height is smaller than the sheet height, scrolling may not work properly. See Troubleshooting for more details.
+warning
+
+RefreshControl does not work with nestedScrollEnabled on Android due to how SwipeRefreshLayout interferes with the BottomSheetBehavior's nested scrolling coordination. This is a known limitation of the Android platform.
+
+As a workaround, you can disable nestedScrollEnabled to make RefreshControl work, but the sheet will no longer be draggable from within the scroll view. In this case, ensure you have a draggable area outside the scroll view (e.g., a header with a grabber) to allow users to drag the sheet.

@@ -1,3 +1,7 @@
+---
+inclusion: manual
+---
+
 # Expo
 
 Instructions for using RevenueCat with Expo

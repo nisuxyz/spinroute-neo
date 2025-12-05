@@ -204,7 +204,7 @@ Based on the react-native-iap guide, we need a comprehensive subscription model:
 ```typescript
 type InAppSubscription = {
   // Core subscription state
-  subscription_tier: "free" | "premium";
+  subscription_tier: "free" | "pro";
   subscription_status: "active" | "expired" | "cancelled" | "grace_period";
   subscription_expires_at: Date | null;
 
@@ -231,7 +231,7 @@ type InAppSubscription = {
 -- Add subscription columns to profiles
 ALTER TABLE public.profiles
 ADD COLUMN subscription_tier text NOT NULL DEFAULT 'free'
-  CHECK (subscription_tier IN ('free', 'premium')),
+  CHECK (subscription_tier IN ('free', 'pro')),
 ADD COLUMN subscription_status text NOT NULL DEFAULT 'active'
   CHECK (subscription_status IN ('active', 'expired', 'cancelled', 'grace_period')),
 ADD COLUMN subscription_expires_at timestamptz,

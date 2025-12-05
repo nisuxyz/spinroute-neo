@@ -1,0 +1,123 @@
+# Implementation Plan
+
+- [-] 1. Set up TrueSheet and create BaseSheet component
+  - [x] 1.1 Install @lodev09/react-native-true-sheet dependency
+    - Add TrueSheet package to frontend-expo
+    - _Requirements: 2.1, 7.1_
+  - [x] 1.2 Create BaseSheet wrapper component with platform-specific styling
+    - Implement BaseSheetProps interface
+    - Add Liquid Glass detection for iOS 26+
+    - Add blur fallback for older iOS/Android
+    - Support customizable detents and named sheets
+    - _Requirements: 3.1, 3.2, 3.3, 7.1, 7.2, 7.3, 7.4_
+  - [ ]* 1.3 Write property test for profile grouping utility
+    - **Property 1: Profile Grouping Preserves All Profiles**
+    - **Validates: Requirements 1.1**
+
+- [ ] 2. Create route formatting utilities
+  - [ ] 2.1 Create format-route.ts utility with distance and duration formatters
+    - Implement formatDistance(meters, units) function
+    - Implement formatDuration(seconds) function
+    - Support metric and imperial units
+    - _Requirements: 6.1_
+  - [ ]* 2.2 Write property test for distance formatting round-trip
+    - **Property 2: Route Distance Formatting Round-Trip**
+    - **Validates: Requirements 6.1**
+  - [ ]* 2.3 Write property test for duration formatting accuracy
+    - **Property 3: Route Duration Formatting Accuracy**
+    - **Validates: Requirements 6.1**
+
+- [x] 3. Implement StationSheet component
+  - [x] 3.1 Create StationSheet with collapsed/expanded states
+    - Implement StationSheetProps and StationData interfaces
+    - Create collapsed view with station name and bike counts
+    - Create expanded view with full station details
+    - Configure detents: 'auto' for collapsed, 0.7 for expanded
+    - _Requirements: 4.1, 4.2_
+  - [x] 3.2 Add Get Directions button and real-time data updates
+    - Wire up onGetDirections callback
+    - Integrate with Supabase real-time subscription for station updates
+    - _Requirements: 4.3, 4.4_
+  - [ ]* 3.3 Write unit tests for StationSheet
+    - Test rendering with station data
+    - Test Get Directions callback
+    - Test real-time data updates
+    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+
+- [x] 4. Implement LocationSheet component
+  - [x] 4.1 Create LocationSheet with collapsed/expanded states
+    - Implement LocationSheetProps and LocationData interfaces
+    - Create collapsed view with location name and address
+    - Create expanded view with coordinates and type
+    - Configure detents: 'auto' for collapsed, 0.5 for expanded
+    - _Requirements: 5.1, 5.2_
+  - [x] 4.2 Add Get Directions button
+    - Wire up onGetDirections callback
+    - _Requirements: 5.3_
+  - [ ]* 4.3 Write unit tests for LocationSheet
+    - Test rendering with location data
+    - Test Get Directions callback
+    - _Requirements: 5.1, 5.2, 5.3_
+
+- [ ] 5. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Implement RouteInfoSheet component
+  - [x] 6.1 Create RouteInfoSheet with collapsed/expanded states
+    - Implement RouteInfoSheetProps interface
+    - Create collapsed view with distance, duration, profile icon
+    - Create expanded view with turn-by-turn instructions
+    - Configure detents: 'auto' for collapsed, 0.85 for expanded
+    - Use formatDistance and formatDuration utilities
+    - _Requirements: 6.1, 6.2_
+  - [x] 6.2 Add recalculate and close actions
+    - Wire up onRecalculate callback to present RoutePreferencesSheet
+    - Wire up onClearRoute callback for close button
+    - _Requirements: 6.3, 6.4_
+  - [ ]* 6.3 Write property test for instruction completeness
+    - **Property 4: Turn-by-Turn Instruction Completeness**
+    - **Validates: Requirements 6.2**
+  - [ ]* 6.4 Write unit tests for RouteInfoSheet
+    - Test rendering with route data
+    - Test recalculate callback
+    - Test close/clear route callback
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+- [x] 7. Implement RoutePreferencesSheet component
+  - [x] 7.1 Create RoutePreferencesSheet with scrollable profile list
+    - Implement RoutePreferencesSheetProps interface
+    - Create provider selector component
+    - Create scrollable profile list grouped by category
+    - Remove react-native-popup-menu dependency
+    - Configure single 'auto' detent
+    - _Requirements: 1.1, 1.2_
+  - [x] 7.2 Add profile selection and confirmation
+    - Implement profile selection with visual feedback
+    - Wire up onConfirm callback to dismiss and apply preferences
+    - _Requirements: 1.3, 1.4_
+  - [ ]* 7.3 Write unit tests for RoutePreferencesSheet
+    - Test profile list rendering grouped by category
+    - Test profile selection updates state
+    - Test confirm button dismisses and applies preferences
+    - _Requirements: 1.1, 1.2, 1.3, 1.4_
+
+- [ ] 8. Integrate sheets into MainMapView
+  - [x] 8.1 Replace StationCard with StationSheet
+    - Update MainMapView to use StationSheet
+    - Wire up station selection to present StationSheet
+    - _Requirements: 2.1, 4.1_
+  - [x] 8.2 Replace LocationCard with LocationSheet
+    - Update MainMapView to use LocationSheet
+    - Wire up location selection to present LocationSheet
+    - _Requirements: 2.1, 5.1_
+  - [x] 8.3 Replace RouteInfoCard with RouteInfoSheet
+    - Update MainMapView to use RouteInfoSheet
+    - Wire up route calculation to present RouteInfoSheet
+    - _Requirements: 2.1, 6.1_
+  - [x] 8.4 Replace RoutePreferencesCard with RoutePreferencesSheet
+    - Update MainMapView to use RoutePreferencesSheet
+    - Wire up Get Directions buttons to present RoutePreferencesSheet
+    - _Requirements: 2.1, 1.1_
+
+- [ ] 9. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

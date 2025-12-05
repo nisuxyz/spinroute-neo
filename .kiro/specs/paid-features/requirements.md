@@ -28,7 +28,7 @@ This specification covers the complete subscription lifecycle: purchase flow, re
 
 #### Acceptance Criteria
 
-1. THE Database SHALL store subscription_tier on the public.profiles table with values 'free' or 'premium', defaulting to 'free'
+1. THE Database SHALL store subscription_tier on the public.profiles table with values 'free' or 'pro', defaulting to 'free'
 2. THE Database SHALL store subscription_status on the public.profiles table with values 'active', 'expired', 'cancelled', or 'grace_period', defaulting to 'active'
 3. THE Database SHALL store subscription_expires_at as a nullable timestamp on public.profiles for tracking subscription end dates
 4. THE Database SHALL store original_transaction_id as a nullable text field on public.profiles to link Supabase users to App Store subscriptions
@@ -54,7 +54,7 @@ This specification covers the complete subscription lifecycle: purchase flow, re
 
 #### Acceptance Criteria
 
-1. THE Database RLS policy on vehicles.user_bike SHALL allow INSERT when the user has subscription_tier = 'premium' OR the user has fewer than 1 existing bike
+1. THE Database RLS policy on vehicles.user_bike SHALL allow INSERT when the user has subscription_tier = 'pro' OR the user has fewer than 1 existing bike
 2. WHEN a free user attempts to insert a 2nd bike, THE Database SHALL reject the insert with a policy violation error
 3. THE Mobile App SHALL display an upgrade prompt when a free user attempts to add a bike beyond the limit
 4. THE RLS policy SHALL query public.profiles to determine the user's subscription_tier
@@ -65,7 +65,7 @@ This specification covers the complete subscription lifecycle: purchase flow, re
 
 #### Acceptance Criteria
 
-1. THE Database RLS policy on recording.trips SHALL allow INSERT when the user has subscription_tier = 'premium' OR the user has fewer than 1 completed trip in the past 7 days
+1. THE Database RLS policy on recording.trips SHALL allow INSERT when the user has subscription_tier = 'pro' OR the user has fewer than 1 completed trip in the past 7 days
 2. WHEN a free user attempts to start a 2nd trip in the same week, THE Database SHALL reject the insert with a policy violation error
 3. THE Mobile App SHALL display an upgrade prompt when a free user attempts to record a trip beyond the limit
 4. THE RLS policy SHALL count only trips with status 'completed' started within the last 7 days toward the limit
@@ -77,7 +77,7 @@ This specification covers the complete subscription lifecycle: purchase flow, re
 #### Acceptance Criteria
 
 1. THE Database RLS policy on recording.trip_basic_stats SHALL allow SELECT for all authenticated users viewing their own trip stats
-2. THE Database RLS policy on recording.trip_advanced_stats SHALL allow SELECT only when the user has subscription_tier = 'premium'
+2. THE Database RLS policy on recording.trip_advanced_stats SHALL allow SELECT only when the user has subscription_tier = 'pro'
 3. THE Mobile App SHALL display a locked/upgrade indicator on advanced statistics for free users
 4. THE Mobile App SHALL show basic statistics (distance, duration, average speed, max speed) to all users
 
@@ -176,7 +176,7 @@ This specification covers the complete subscription lifecycle: purchase flow, re
 4. Access to Mapbox and OpenRouteService routing providers
 5. Standard cycling profile routing only
 
-**Premium Tier includes:**
+**Pro Tier includes:**
 
 1. Unlimited bikes
 2. Unlimited recorded trips

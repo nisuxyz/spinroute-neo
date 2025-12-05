@@ -11,7 +11,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
 - [x] 1.2 Create helper functions for subscription checks
-  - Create user_has_premium(user_id) function
+  - Create user_has_pro(user_id) function
   - Create get_subscription_tier(user_id) function
   - Set functions as SECURITY DEFINER STABLE
   - _Requirements: 3.4, 4.3, 5.2_
@@ -30,7 +30,7 @@
 - [x] 2.1 Update vehicles.user_bike insert policy for bike limit
   - Drop existing "Users can insert own bikes" policy
   - Create new policy with 1-bike limit for free users
-  - Use user_has_premium() helper function
+  - Use user_has_pro() helper function
   - _Requirements: 3.1, 3.2, 3.4_
 
 - [x] 2.2 Update recording.trips insert policy for trip limit
@@ -39,9 +39,9 @@
   - Count only completed trips started within last 7 days toward limit
   - _Requirements: 4.1, 4.2, 4.4_
 
-- [x] 2.3 Update recording.trip_advanced_stats select policy for premium only
+- [x] 2.3 Update recording.trip_advanced_stats select policy for pro only
   - Drop existing policy if it exists
-  - Create new policy requiring premium subscription
+  - Create new policy requiring pro subscription
   - _Requirements: 5.2_
 
 ## Phase 1B: Extended Database Schema for Webhooks ✅ COMPLETED
@@ -473,7 +473,7 @@
   - Verify cannot view advanced stats
   - _Requirements: 3.1, 3.2, 4.1, 4.2, 5.2_
 
-- [ ] 19.2 Test RLS policies with premium user
+- [ ] 19.2 Test RLS policies with pro user
   - Verify unlimited bikes
   - Verify unlimited trips
   - Verify can view advanced stats
@@ -497,7 +497,7 @@
   - Complete purchase flow with appAccountToken
   - Verify receipt validation succeeds
   - Verify webhook fires and updates database
-  - Verify app reflects premium status via realtime
+  - Verify app reflects pro status via realtime
   - _Requirements: 7.3, 7.4, 8.1_
 
 - [ ] 21.2 Test Android purchase flow (SKIPPED FOR NOW)
@@ -579,6 +579,8 @@ The app uses two tiers:
 
 - **free**: Default tier, limited features (1 bike, 1 trip/week, no advanced stats)
 - **pro**: Paid tier, all features unlocked (unlimited bikes, unlimited trips, advanced stats)
+
+Note: The spec originally used "premium" but was updated to "pro" to match the implementation.
 
 ### Product IDs
 

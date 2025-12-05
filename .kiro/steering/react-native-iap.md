@@ -1,3 +1,7 @@
+---
+inclusion: manual
+---
+
 This guide provides a comprehensive walkthrough for implementing paid subscriptions in a React Native application using the react-native-iap library.
 
 We'll demonstrate how to create two subscription tiers—Basic and Premium—both offering 7-day free trials and monthly auto-renewing models for cross-platform integration across iOS App Store and Google Play Store. While Firebase will serve as the Backend-as-a-Service (BaaS) for this implementation, the techniques can be easily adapted to other backend technologies.
