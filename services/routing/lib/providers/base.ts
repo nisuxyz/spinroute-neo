@@ -7,31 +7,37 @@ export interface Coordinate {
   longitude: number;
 }
 
-export enum RouteProfile {
-  WALKING = 'walking',
+/**
+ * Profile category for grouping related profiles in the UI
+ */
+export enum ProfileCategory {
   CYCLING = 'cycling',
+  WALKING = 'walking',
   DRIVING = 'driving',
-  PUBLIC_TRANSPORT = 'public-transport',
+  OTHER = 'other',
 }
 
-export enum BikeType {
-  ROAD = 'road',
-  MOUNTAIN = 'mountain',
-  EBIKE = 'ebike',
-  GENERIC = 'generic',
-}
-
-export interface ProviderCapabilities {
-  profiles: RouteProfile[];
-  bikeTypes?: BikeType[];
-  multiModal: boolean;
-  requiresPaidPlan: boolean;
+/**
+ * Metadata for a provider-specific routing profile
+ * Used for displaying profile options in the UI
+ */
+export interface ProfileMetadata {
+  /** Provider-specific profile identifier (e.g., "cycling-road") */
+  id: string;
+  /** Human-readable display title (e.g., "Road Cycling") */
+  title: string;
+  /** Icon identifier for UI (e.g., "directions-bike") */
+  icon: string;
+  /** Grouping category for UI organization */
+  category: ProfileCategory;
+  /** Optional detailed description */
+  description?: string;
 }
 
 export interface RouteRequest {
   waypoints: Coordinate[];
-  profile: RouteProfile;
-  bikeType?: BikeType;
+  /** Provider-specific profile identifier (e.g., "cycling-road", "driving-traffic") */
+  profile?: string;
   provider?: string;
   userId?: string;
   userPlan?: 'free' | 'paid';
@@ -115,7 +121,10 @@ export interface Waypoint {
 export interface RouteProvider {
   name: string;
   displayName: string;
-  capabilities: ProviderCapabilities;
+  /** Provider-specific profiles with metadata */
+  profiles: ProfileMetadata[];
+  /** Default profile ID for this provider */
+  defaultProfile: string;
 
   /**
    * Calculate a route between waypoints

@@ -6,9 +6,9 @@ import type {
   RouteProvider,
   RouteRequest,
   MapboxDirectionsResponse,
-  ProviderCapabilities,
+  ProfileMetadata,
 } from './base';
-import { RouteProfile, BikeType } from './base';
+import { ProfileCategory } from './base';
 import { config } from '../config';
 import { ORSClient, ORSApiError } from './ors-client';
 import type { ORSDirectionsRequest } from './ors-client';
@@ -17,15 +17,81 @@ import { normalizeORSResponse } from './normalizer';
 
 const logger = createLogger('OpenRouteService');
 
+/**
+ * OpenRouteService profile definitions with metadata
+ * These are the profiles supported by OpenRouteService Directions API
+ */
+const ORS_PROFILES: ProfileMetadata[] = [
+  {
+    id: 'driving-car',
+    title: 'Car',
+    icon: 'directions-car',
+    category: ProfileCategory.DRIVING,
+    description: 'Standard car routing',
+  },
+  {
+    id: 'driving-hgv',
+    title: 'Heavy Vehicle',
+    icon: 'local-shipping',
+    category: ProfileCategory.DRIVING,
+    description: 'Routing for trucks and heavy goods vehicles',
+  },
+  {
+    id: 'cycling-regular',
+    title: 'Regular Cycling',
+    icon: 'directions-bike',
+    category: ProfileCategory.CYCLING,
+    description: 'Standard cycling profile',
+  },
+  {
+    id: 'cycling-road',
+    title: 'Road Cycling',
+    icon: 'directions-bike',
+    category: ProfileCategory.CYCLING,
+    description: 'Optimized for road bikes',
+  },
+  {
+    id: 'cycling-mountain',
+    title: 'Mountain Biking',
+    icon: 'terrain',
+    category: ProfileCategory.CYCLING,
+    description: 'Optimized for mountain bikes and trails',
+  },
+  {
+    id: 'cycling-electric',
+    title: 'E-Bike',
+    icon: 'electric-bike',
+    category: ProfileCategory.CYCLING,
+    description: 'Optimized for electric bikes',
+  },
+  {
+    id: 'foot-walking',
+    title: 'Walking',
+    icon: 'directions-walk',
+    category: ProfileCategory.WALKING,
+    description: 'Standard walking profile',
+  },
+  {
+    id: 'foot-hiking',
+    title: 'Hiking',
+    icon: 'hiking',
+    category: ProfileCategory.WALKING,
+    description: 'Optimized for hiking trails',
+  },
+  {
+    id: 'wheelchair',
+    title: 'Wheelchair',
+    icon: 'accessible',
+    category: ProfileCategory.OTHER,
+    description: 'Wheelchair accessible routing',
+  },
+];
+
 export class OpenRouteServiceProvider implements RouteProvider {
   name = 'openrouteservice';
   displayName = 'OpenRouteService';
-  capabilities: ProviderCapabilities = {
-    profiles: [RouteProfile.WALKING, RouteProfile.CYCLING, RouteProfile.DRIVING],
-    bikeTypes: [BikeType.ROAD, BikeType.MOUNTAIN, BikeType.EBIKE, BikeType.GENERIC],
-    multiModal: false,
-    requiresPaidPlan: false,
-  };
+  profiles: ProfileMetadata[] = ORS_PROFILES;
+  defaultProfile = 'cycling-regular';
 
   private readonly client: ORSClient;
 
@@ -44,6 +110,15 @@ export class OpenRouteServiceProvider implements RouteProvider {
   }
 
   /**
+   * Validate that a profile is supported by this provider
+   * @param profile Profile ID to validate
+   * @returns true if profile is supported
+   */
+  private isValidProfile(profile: string): boolean {
+    return this.profiles.some((p) => p.id === profile);
+  }
+
+  /**
    * Calculate a route using OpenRouteService Directions API
    */
   async calculateRoute(request: RouteRequest): Promise<MapboxDirectionsResponse> {
@@ -51,8 +126,21 @@ export class OpenRouteServiceProvider implements RouteProvider {
       userId: request.userId,
     });
 
-    // Map profile and bike type to ORS profile
-    const orsProfile = this.mapProfileToORS(request.profile, request.bikeType);
+    // Use provided profile or default
+    const profile = request.profile || this.defaultProfile;
+
+    // Validate profile exists in provider's profile list
+    if (!this.isValidProfile(profile)) {
+      const availableProfiles = this.profiles.map((p) => p.id);
+      const error = new Error(
+        `Profile '${profile}' is not supported by provider 'openrouteservice'. Available profiles: ${availableProfiles.join(', ')}`,
+      );
+      requestLogger.logError('Invalid profile', error, {
+        requestedProfile: profile,
+        availableProfiles,
+      });
+      throw error;
+    }
 
     // Build request body
     const orsRequest: ORSDirectionsRequest = {
@@ -67,13 +155,13 @@ export class OpenRouteServiceProvider implements RouteProvider {
     };
 
     requestLogger.logStart('Calculating route', {
-      profile: orsProfile,
+      profile,
       waypointCount: request.waypoints.length,
-      bikeType: request.bikeType,
     });
 
     try {
-      const response = await this.client.getDirections(orsProfile, orsRequest);
+      // Pass profile directly to ORS API without transformation
+      const response = await this.client.getDirections(profile, orsRequest);
 
       // Validate response has routes
       if (!response.routes || response.routes.length === 0) {
@@ -117,35 +205,6 @@ export class OpenRouteServiceProvider implements RouteProvider {
     } catch (error) {
       logger.error('Availability check failed', error);
       return false;
-    }
-  }
-
-  /**
-   * Map RouteProfile and BikeType to ORS profile identifier
-   */
-  private mapProfileToORS(profile: RouteProfile, bikeType?: BikeType): string {
-    switch (profile) {
-      case RouteProfile.WALKING:
-        return 'foot-walking';
-      case RouteProfile.CYCLING:
-        // Map bike type to specific ORS cycling profile
-        switch (bikeType) {
-          case BikeType.ROAD:
-            return 'cycling-road';
-          case BikeType.MOUNTAIN:
-            return 'cycling-mountain';
-          case BikeType.EBIKE:
-            return 'cycling-electric';
-          case BikeType.GENERIC:
-          default:
-            return 'cycling-regular';
-        }
-      case RouteProfile.DRIVING:
-        return 'driving-car';
-      case RouteProfile.PUBLIC_TRANSPORT:
-        throw new Error('OpenRouteService does not support public transport routing');
-      default:
-        return 'cycling-regular'; // Default to regular cycling
     }
   }
 }

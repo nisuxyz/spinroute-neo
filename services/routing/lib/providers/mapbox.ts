@@ -6,9 +6,9 @@ import type {
   RouteProvider,
   RouteRequest,
   MapboxDirectionsResponse,
-  ProviderCapabilities,
+  ProfileMetadata,
 } from './base';
-import { RouteProfile, BikeType } from './base';
+import { ProfileCategory } from './base';
 import { config } from '../config';
 import { MapboxClient, MapboxApiError } from './mapbox-client';
 import type { MapboxDirectionsRequest } from './mapbox-client';
@@ -16,15 +16,42 @@ import { createLogger, createRequestLogger } from '../logger';
 
 const logger = createLogger('Mapbox');
 
+/**
+ * Mapbox profile definitions with metadata
+ * These are the profiles supported by Mapbox Directions API
+ */
+const MAPBOX_PROFILES: ProfileMetadata[] = [
+  {
+    id: 'cycling',
+    title: 'Cycling',
+    icon: 'directions-bike',
+    category: ProfileCategory.CYCLING,
+  },
+  {
+    id: 'walking',
+    title: 'Walking',
+    icon: 'directions-walk',
+    category: ProfileCategory.WALKING,
+  },
+  {
+    id: 'driving',
+    title: 'Driving',
+    icon: 'directions-car',
+    category: ProfileCategory.DRIVING,
+  },
+  {
+    id: 'driving-traffic',
+    title: 'Driving (Traffic)',
+    icon: 'traffic',
+    category: ProfileCategory.DRIVING,
+  },
+];
+
 export class MapboxProvider implements RouteProvider {
   name = 'mapbox';
   displayName = 'Mapbox';
-  capabilities: ProviderCapabilities = {
-    profiles: [RouteProfile.WALKING, RouteProfile.CYCLING, RouteProfile.DRIVING],
-    bikeTypes: [BikeType.GENERIC], // Mapbox only has generic cycling
-    multiModal: false,
-    requiresPaidPlan: false,
-  };
+  profiles: ProfileMetadata[] = MAPBOX_PROFILES;
+  defaultProfile = 'cycling';
 
   private readonly client: MapboxClient;
 
@@ -43,6 +70,15 @@ export class MapboxProvider implements RouteProvider {
   }
 
   /**
+   * Validate that a profile is supported by this provider
+   * @param profile Profile ID to validate
+   * @returns true if profile is supported
+   */
+  private isValidProfile(profile: string): boolean {
+    return this.profiles.some((p) => p.id === profile);
+  }
+
+  /**
    * Calculate a route using Mapbox Directions API
    */
   async calculateRoute(request: RouteRequest): Promise<MapboxDirectionsResponse> {
@@ -50,15 +86,28 @@ export class MapboxProvider implements RouteProvider {
       userId: request.userId,
     });
 
-    // Map profile to Mapbox profile
-    const mapboxProfile = this.mapProfileToMapbox(request.profile);
+    // Use provided profile or default
+    const profile = request.profile || this.defaultProfile;
+
+    // Validate profile exists in provider's profile list
+    if (!this.isValidProfile(profile)) {
+      const availableProfiles = this.profiles.map((p) => p.id);
+      const error = new Error(
+        `Profile '${profile}' is not supported by provider 'mapbox'. Available profiles: ${availableProfiles.join(', ')}`,
+      );
+      requestLogger.logError('Invalid profile', error, {
+        requestedProfile: profile,
+        availableProfiles,
+      });
+      throw error;
+    }
 
     // Build coordinates string (longitude,latitude pairs)
     const coordinates = request.waypoints.map((wp) => `${wp.longitude},${wp.latitude}`).join(';');
 
-    // Build request parameters
+    // Build request parameters - profile is passed directly to Mapbox API
     const params: MapboxDirectionsRequest = {
-      profile: mapboxProfile,
+      profile,
       coordinates,
       geometries: 'geojson',
       overview: 'full',
@@ -68,7 +117,7 @@ export class MapboxProvider implements RouteProvider {
     };
 
     requestLogger.logStart('Calculating route', {
-      profile: mapboxProfile,
+      profile,
       waypointCount: request.waypoints.length,
     });
 
@@ -116,24 +165,6 @@ export class MapboxProvider implements RouteProvider {
     } catch (error) {
       logger.error('Availability check failed', error);
       return false;
-    }
-  }
-
-  /**
-   * Map RouteProfile to Mapbox profile identifier
-   */
-  private mapProfileToMapbox(profile: RouteProfile): string {
-    switch (profile) {
-      case RouteProfile.WALKING:
-        return 'walking';
-      case RouteProfile.CYCLING:
-        return 'cycling';
-      case RouteProfile.DRIVING:
-        return 'driving';
-      case RouteProfile.PUBLIC_TRANSPORT:
-        throw new Error('Mapbox does not support public transport routing');
-      default:
-        return 'cycling'; // Default to cycling
     }
   }
 }

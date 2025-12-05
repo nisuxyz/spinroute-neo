@@ -1,4 +1,29 @@
-import type { RouteProvider, RouteRequest } from './base';
+import type { RouteProvider, RouteRequest, ProfileMetadata } from './base';
+
+/**
+ * Error thrown when a provider is not found
+ */
+export class ProviderNotFoundError extends Error {
+  constructor(providerName: string) {
+    super(`Provider '${providerName}' not found`);
+    this.name = 'ProviderNotFoundError';
+  }
+}
+
+/**
+ * Error thrown when a profile is not supported by a provider
+ */
+export class InvalidProfileError extends Error {
+  public readonly availableProfiles: string[];
+
+  constructor(profile: string, providerName: string, availableProfiles: string[]) {
+    super(
+      `Profile '${profile}' is not supported by provider '${providerName}'. Available profiles: ${availableProfiles.join(', ')}`,
+    );
+    this.name = 'InvalidProfileError';
+    this.availableProfiles = availableProfiles;
+  }
+}
 
 /**
  * Provider Registry
@@ -32,43 +57,76 @@ export class ProviderRegistry {
   }
 
   /**
+   * Get profiles for a specific provider
+   * @param providerName Provider name
+   * @returns Array of profile metadata for the provider
+   * @throws ProviderNotFoundError if provider not found
+   */
+  getProviderProfiles(providerName: string): ProfileMetadata[] {
+    const provider = this.providers.get(providerName);
+
+    if (!provider) {
+      throw new ProviderNotFoundError(providerName);
+    }
+
+    return provider.profiles;
+  }
+
+  /**
+   * Validate that a profile is supported by a provider
+   * @param providerName Provider name
+   * @param profile Profile ID to validate
+   * @returns true if profile is valid
+   * @throws ProviderNotFoundError if provider not found
+   * @throws InvalidProfileError if profile not supported
+   */
+  validateProfile(providerName: string, profile: string): boolean {
+    const provider = this.providers.get(providerName);
+
+    if (!provider) {
+      throw new ProviderNotFoundError(providerName);
+    }
+
+    const validProfile = provider.profiles.some((p) => p.id === profile);
+
+    if (!validProfile) {
+      const availableProfiles = provider.profiles.map((p) => p.id);
+      throw new InvalidProfileError(profile, providerName, availableProfiles);
+    }
+
+    return true;
+  }
+
+  /**
    * Get all available providers for a user plan
    * @param userPlan User's subscription plan
    * @returns Array of available providers
    */
   getAvailableProviders(userPlan: 'free' | 'paid' = 'free'): RouteProvider[] {
-    const providers = Array.from(this.providers.values());
-
-    // Filter providers based on user plan
-    if (userPlan === 'free') {
-      return providers.filter((p) => !p.capabilities.requiresPaidPlan);
-    }
-
-    return providers;
+    // All providers are currently available for all plans
+    // Future: filter based on provider-specific plan requirements
+    return Array.from(this.providers.values());
   }
 
   /**
    * Select the appropriate provider for a route request
    * @param request Route calculation request
    * @returns The selected provider
-   * @throws Error if provider not found or not available for user plan
+   * @throws ProviderNotFoundError if provider not found
+   * @throws InvalidProfileError if profile not supported by provider
    */
   selectProvider(request: RouteRequest): RouteProvider {
-    const userPlan = request.userPlan || 'free';
-
     // If provider is explicitly specified, use it
     if (request.provider) {
       const provider = this.providers.get(request.provider);
 
       if (!provider) {
-        throw new Error(`Provider '${request.provider}' not found`);
+        throw new ProviderNotFoundError(request.provider);
       }
 
-      // Check if user has access to this provider
-      if (provider.capabilities.requiresPaidPlan && userPlan === 'free') {
-        throw new Error(
-          `Provider '${request.provider}' requires a paid plan. Please upgrade to access this provider.`,
-        );
+      // Validate profile if specified
+      if (request.profile) {
+        this.validateProfile(request.provider, request.profile);
       }
 
       return provider;
@@ -78,17 +136,12 @@ export class ProviderRegistry {
     const defaultProvider = this.providers.get(this.defaultProvider);
 
     if (!defaultProvider) {
-      throw new Error(`Default provider '${this.defaultProvider}' not found`);
+      throw new ProviderNotFoundError(this.defaultProvider);
     }
 
-    // Check if user has access to default provider
-    if (defaultProvider.capabilities.requiresPaidPlan && userPlan === 'free') {
-      // Fall back to first available free provider
-      const freeProviders = this.getAvailableProviders('free');
-      if (freeProviders.length === 0) {
-        throw new Error('No free providers available');
-      }
-      return freeProviders[0]!;
+    // Validate profile if specified against default provider
+    if (request.profile) {
+      this.validateProfile(this.defaultProvider, request.profile);
     }
 
     return defaultProvider;
