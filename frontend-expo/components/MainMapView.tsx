@@ -1,5 +1,13 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, useColorScheme, Alert } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  Alert,
+  useWindowDimensions,
+} from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -145,6 +153,8 @@ const MainMapView: React.FC = () => {
     tripId: activeTrip?.id || null,
     captureInterval,
   });
+
+  const { width } = useWindowDimensions();
 
   // Fetch weekly trip count for free users
   React.useEffect(() => {
@@ -440,7 +450,7 @@ const MainMapView: React.FC = () => {
         onPress={handleMapPress}
         compassEnabled={true}
         compassPosition={{ right: 14, top: 2 }}
-        scaleBarPosition={{ left: 20, top: 8 }}
+        scaleBarPosition={{ left: width / 2 - 96, bottom: -28 }}
         // logoPosition={{ left: 20, bottom: 64 }}
         logoEnabled={false}
         // attributionPosition={{ left: 14, bottom: 64 }}
@@ -670,7 +680,13 @@ const MainMapView: React.FC = () => {
       />
 
       {(activeBike || (bikesLoading && settings?.active_bike_id)) && (
-        <ActiveBikeIndicator bike={activeBike} loading={bikesLoading} isRecording={!!activeTrip} />
+        <ActiveBikeIndicator
+          bike={activeBike}
+          loading={bikesLoading}
+          isRecording={!!activeTrip}
+          latitude={userLocation?.[1] ?? null}
+          longitude={userLocation?.[0] ?? null}
+        />
       )}
     </View>
   );

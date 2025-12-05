@@ -4,11 +4,14 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import { Colors } from '@/constants/theme';
 import type { Bike } from '@/hooks/use-bikes';
+import { useWeather } from '@/hooks/use-weather';
 
 interface ActiveBikeIndicatorProps {
   bike: Bike | undefined;
   loading?: boolean;
   isRecording?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 const bikeTypeIcons: Record<string, keyof typeof MaterialIcons.glyphMap> = {
@@ -24,10 +27,13 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
   bike,
   loading = false,
   isRecording = false,
+  latitude = null,
+  longitude = null,
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const { weather } = useWeather({ latitude, longitude, enabled: !!bike });
 
   // Flashing animation for recording indicator
   useEffect(() => {
@@ -92,6 +98,22 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
               ]}
             />
           )}
+          {weather && (
+            <View style={styles.weatherContainer}>
+              <View style={styles.weatherItem}>
+                <MaterialIcons name="thermostat" size={14} color={colors.text} />
+                <Text style={[styles.weatherText, { color: colors.text }]}>
+                  {Math.round(weather.temperature)}°C
+                </Text>
+              </View>
+              <View style={styles.weatherItem}>
+                <MaterialIcons name="air" size={14} color={colors.text} />
+                <Text style={[styles.weatherText, { color: colors.text }]}>
+                  {Math.round(weather.windSpeed)} km/h
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
       </GlassView>
     </View>
@@ -101,9 +123,9 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    // top: 56,
+    top: 56,
     // right: 80,
-    bottom: 16,
+    // top: 100,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -116,7 +138,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     gap: 6,
-    maxWidth: 200,
+    maxWidth: 300,
   },
   bikeText: {
     fontSize: 13,
@@ -128,6 +150,23 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#ef4444',
     marginLeft: 2,
+  },
+  weatherContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginLeft: 4,
+    paddingLeft: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  weatherItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  weatherText: {
+    fontSize: 11,
+    fontWeight: '500',
   },
 });
 
