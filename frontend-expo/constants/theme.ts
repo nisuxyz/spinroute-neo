@@ -242,12 +242,55 @@ export const CardStyles = {
 } as const;
 
 /**
+ * Common sheet styles
+ */
+export const SheetStyles = {
+  // Sheet container
+  container: {
+    padding: Spacing.xxl,
+    paddingBottom: Spacing.xxxl,
+  },
+  // Sheet title
+  title: {
+    ...Typography.h1,
+    marginBottom: Spacing.sm,
+    textAlign: 'center' as const,
+  },
+  // Sheet subtitle
+  subtitle: {
+    ...Typography.bodyMedium,
+    textAlign: 'center' as const,
+    marginBottom: Spacing.xxl,
+    lineHeight: 20,
+  },
+  // Section container
+  section: {
+    marginBottom: Spacing.xxl,
+  },
+  // Section label
+  sectionLabel: {
+    ...Typography.label,
+    marginBottom: Spacing.md,
+  },
+  // Button container (vertical stack)
+  buttonContainer: {
+    flexDirection: 'column' as const,
+    gap: Spacing.md,
+  },
+  // Button container (horizontal row)
+  buttonRow: {
+    flexDirection: 'row' as const,
+    gap: Spacing.md,
+  },
+} as const;
+
+/**
  * Common input styles
  */
 export const InputStyles = {
   default: {
     borderWidth: 1,
-    borderRadius: BorderRadius.xxl,
+    borderRadius: BorderRadius.round,
     padding: Spacing.lg,
     ...Typography.bodyMedium,
     fontSize: 16,
@@ -259,18 +302,29 @@ export const InputStyles = {
  */
 export const ButtonStyles = {
   primary: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 16,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: BorderRadius.xxl,
+    borderRadius: BorderRadius.round,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
   secondary: {
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: BorderRadius.xxl,
+    borderRadius: BorderRadius.round,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
+  },
+  primaryVariant(variant: 'solid' | 'outline' | 'ghost' = 'solid') {
+    return {
+      ...this.primary,
+      borderWidth: variant === 'outline' ? 1 : 0,
+      borderColor: variant === 'ghost' ? 'none' : electricPurple,
+      backgroundColor: variant === 'solid' ? electricPurple : 'none',
+    };
   },
 } as const;

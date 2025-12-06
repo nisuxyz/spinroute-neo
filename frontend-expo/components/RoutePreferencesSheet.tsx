@@ -4,12 +4,19 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useColorScheme,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
+import {
+  Spacing,
+  BorderRadius,
+  Typography,
+  ButtonStyles,
+  SheetStyles,
+  electricPurple,
+} from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { useUserSettings } from '@/contexts/user-settings-context';
 import GetDirectionsButton from './GetDirectionsButton';
 import BaseSheet, { type BaseSheetRef } from './BaseSheet';
@@ -51,8 +58,12 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
   const sheetRef = useRef<BaseSheetRef>(null);
   const { settings, updateSettings, getProfileForProvider, setProfileForProvider } =
     useUserSettings();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+
+  // Theme colors
+  const textColor = useThemeColor({}, 'text');
+  const tintColor = useThemeColor({}, 'tint');
+  const buttonBackground = useThemeColor({}, 'buttonBackground');
+  const backgroundColor = useThemeColor({}, 'background');
 
   // Get the current provider from settings
   const currentProvider = settings?.preferred_routing_provider || 'openrouteservice';
@@ -250,13 +261,13 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
   // Render provider selector
   const renderProviderSelector = () => {
     const providers = [
-      { id: 'openrouteservice', label: 'OpenRouteService' },
+      { id: 'openrouteservice', label: 'ORS' },
       { id: 'mapbox', label: 'Mapbox' },
     ];
 
     return (
-      <View style={styles.providerContainer}>
-        <Text style={[styles.sectionLabel, { color: colors.text + '99' }]}>Provider</Text>
+      <View style={SheetStyles.section}>
+        <Text style={[SheetStyles.sectionLabel, { color: textColor + '99' }]}>Provider</Text>
         <View style={styles.providerButtons}>
           {providers.map((provider) => {
             const isSelected = selectedProvider === provider.id;
@@ -264,22 +275,16 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
               <TouchableOpacity
                 key={provider.id}
                 style={[
-                  styles.providerButton,
+                  ButtonStyles.primaryVariant(isSelected ? 'solid' : 'outline'),
                   {
-                    backgroundColor: isSelected ? colors.tint : colors.buttonBackground,
-                    borderColor: isSelected ? colors.tint : colors.text + '33',
+                    flex: 1,
+                    // backgroundColor: isSelected ? tintColor : buttonBackground,
+                    borderColor: isSelected ? electricPurple : '#ffffff' + '16',
                   },
                 ]}
                 onPress={() => handleProviderSelect(provider.id)}
               >
-                <Text
-                  style={[
-                    styles.providerButtonText,
-                    { color: isSelected ? '#FFFFFF' : colors.text },
-                  ]}
-                >
-                  {provider.label}
-                </Text>
+                <Text style={[Typography.bodySmall, { color: textColor }]}>{provider.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -293,16 +298,16 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
     if (profilesLoading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.text} />
-          <Text style={[styles.loadingText, { color: colors.text }]}>Loading profiles...</Text>
+          <ActivityIndicator size="small" color={textColor} />
+          <Text style={[Typography.bodyMedium, { color: textColor }]}>Loading profiles...</Text>
         </View>
       );
     }
 
     if (profiles.length === 0) {
       return (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: colors.text }]}>No profiles available</Text>
+        <View style={{ padding: Spacing.xxl, alignItems: 'center' }}>
+          <Text style={[Typography.bodyMedium, { color: textColor }]}>No profiles available</Text>
         </View>
       );
     }
@@ -310,7 +315,7 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
     return (
       <ScrollView
         style={styles.profileList}
-        contentContainerStyle={styles.profileListContent}
+        contentContainerStyle={{ paddingBottom: Spacing.sm }}
         showsVerticalScrollIndicator={true}
         nestedScrollEnabled={true}
       >
@@ -319,8 +324,19 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
           if (categoryProfiles.length === 0) return null;
 
           return (
-            <View key={category} style={styles.categorySection}>
-              <Text style={[styles.categoryHeader, { color: colors.text + '99' }]}>
+            <View key={category} style={{ gap: Spacing.sm, marginBottom: Spacing.lg }}>
+              <Text
+                style={[
+                  Typography.caption,
+                  {
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    marginBottom: Spacing.sm,
+                    paddingHorizontal: Spacing.xs,
+                    color: textColor + '99',
+                  },
+                ]}
+              >
                 {CATEGORY_LABELS[category]}
               </Text>
               {categoryProfiles.map((profile) => {
@@ -328,36 +344,29 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
                 return (
                   <TouchableOpacity
                     key={profile.id}
-                    style={[
-                      styles.profileItem,
-                      {
-                        backgroundColor: isSelected ? colors.tint + '20' : 'transparent',
-                        borderColor: colors.text + '11',
-                      },
-                    ]}
+                    style={[ButtonStyles.primaryVariant(isSelected ? 'solid' : 'ghost')]}
                     onPress={() => handleProfileSelect(profile.id)}
                   >
                     <MaterialIcons
                       name={getProfileIcon(profile)}
                       size={24}
-                      color={isSelected ? colors.tint : colors.text}
+                      color={isSelected ? tintColor : textColor}
                     />
                     <View style={styles.profileTextContainer}>
                       <Text
-                        style={[
-                          styles.profileTitle,
-                          { color: isSelected ? colors.tint : colors.text },
-                        ]}
+                        style={[styles.profileTitle, { color: isSelected ? tintColor : textColor }]}
                       >
                         {profile.title}
                       </Text>
                       {profile.description && (
-                        <Text style={[styles.profileDescription, { color: colors.text + '80' }]}>
+                        <Text
+                          style={[Typography.bodySmall, { marginTop: 2, color: textColor + '80' }]}
+                        >
                           {profile.description}
                         </Text>
                       )}
                     </View>
-                    {isSelected && <MaterialIcons name="check" size={20} color={colors.tint} />}
+                    {isSelected && <MaterialIcons name="check" size={20} color={tintColor} />}
                   </TouchableOpacity>
                 );
               })}
@@ -377,11 +386,11 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
       scrollable={false}
       grabberVisible={true}
     >
-      <View style={styles.container}>
-        <Text style={[styles.title, { color: colors.text }]}>
+      <View style={SheetStyles.container}>
+        <Text style={[SheetStyles.title, { color: textColor }]}>
           {mode === 'initial' ? 'Route Preferences' : 'Recalculate Route'}
         </Text>
-        <Text style={[styles.subtitle, { color: colors.text + 'CC' }]}>
+        <Text style={[SheetStyles.subtitle, { color: textColor + 'CC' }]}>
           {mode === 'initial'
             ? 'Choose your routing provider and travel mode'
             : 'Update your routing preferences'}
@@ -389,19 +398,19 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
 
         {renderProviderSelector()}
 
-        <View style={styles.profileSection}>
-          <Text style={[styles.sectionLabel, { color: colors.text + '99' }]}>Travel Mode</Text>
+        <View style={SheetStyles.section}>
+          <Text style={[SheetStyles.sectionLabel, { color: textColor + '99' }]}>Travel Mode</Text>
           {renderProfileList()}
         </View>
 
-        <View style={styles.buttonContainer}>
+        <View style={SheetStyles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.button, styles.cancelButton, { borderColor: colors.text + '33' }]}
+            style={[ButtonStyles.secondary, { borderColor: textColor + '33' }]}
             onPress={onClose}
           >
-            <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
+            <Text style={[Typography.bodyLarge, { color: textColor }]}>Cancel</Text>
           </TouchableOpacity>
-          <GetDirectionsButton onPress={handleConfirm} mode={mode} style={styles.button} />
+          <GetDirectionsButton onPress={handleConfirm} mode={mode} style={ButtonStyles.primary} />
         </View>
       </View>
     </BaseSheet>
@@ -409,78 +418,12 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    paddingBottom: 32,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  providerContainer: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   providerButtons: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  providerButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  providerButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  profileSection: {
-    marginBottom: 24,
+    gap: Spacing.md,
   },
   profileList: {
     maxHeight: 300,
-  },
-  profileListContent: {
-    paddingBottom: 8,
-  },
-  categorySection: {
-    marginBottom: 16,
-  },
-  categoryHeader: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  profileItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
   },
   profileTextContainer: {
     flex: 1,
@@ -489,44 +432,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  profileDescription: {
-    fontSize: 12,
-    marginTop: 2,
-  },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
-    gap: 8,
-  },
-  loadingText: {
-    fontSize: 14,
-  },
-  emptyContainer: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-  },
-  buttonContainer: {
-    flexDirection: 'column',
-    gap: 12,
-  },
-  button: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  cancelButton: {
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '700',
+    padding: Spacing.xxl,
+    gap: Spacing.sm,
   },
 });
 

@@ -140,20 +140,12 @@ const BaseSheet = forwardRef<BaseSheetRef, BaseSheetProps>(
         scrollable={scrollable}
         {...trueSheetProps}
       >
-        <View style={[styles.content, { backgroundColor: colors.buttonBackground }]}>
-          {children}
-        </View>
+        {children}
       </TrueSheet>
     );
   },
 );
 
 BaseSheet.displayName = 'BaseSheet';
-
-const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-  },
-});
 
 export default BaseSheet;

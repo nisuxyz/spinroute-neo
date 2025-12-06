@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, useColorScheme, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { Spacing, Typography, BorderRadius, CardStyles } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import BaseSheet, { BaseSheetRef } from './BaseSheet';
 import GetDirectionsButton from './GetDirectionsButton';
 
@@ -50,8 +51,8 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
   isLoadingDirections = false,
 }) => {
   const sheetRef = useRef<BaseSheetRef>(null);
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const textColor = useThemeColor({}, 'text');
+  const buttonIcon = useThemeColor({}, 'buttonIcon');
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Preserve the last known location data to prevent race conditions during dismissal
@@ -142,60 +143,50 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
           {!isExpanded ? (
             // Collapsed view - Shows location name and address
             <View style={styles.collapsedContent}>
-              <View
-                style={[
-                  styles.iconCircle,
-                  { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-                ]}
-              >
+              <View style={[styles.iconCircle, { backgroundColor: buttonIcon }]}>
                 <MaterialIcons
                   name={getIconForFeatureType(preservedLocation.type)}
                   size={24}
                   color="white"
                 />
               </View>
-              <View style={styles.infoContainer}>
-                <Text style={[styles.locationName, { color: colors.text }]} numberOfLines={1}>
-                  {preservedLocation.name}
-                </Text>
+              <View style={{ flex: 1 }}>
                 <Text
-                  style={[styles.locationAddress, { color: colors.text + 'CC' }]}
+                  style={[Typography.h3, { marginBottom: 4, color: textColor }]}
                   numberOfLines={1}
                 >
+                  {preservedLocation.name}
+                </Text>
+                <Text style={[{ fontSize: 13, color: textColor + 'CC' }]} numberOfLines={1}>
                   {preservedLocation.display_name}
                 </Text>
               </View>
               {onGetDirections && !isLoadingDirections && (
-                <TouchableOpacity style={styles.directionsIconButton} onPress={onGetDirections}>
-                  <MaterialIcons name="directions" size={20} color={colors.text} />
+                <TouchableOpacity style={{ padding: 4, marginRight: 4 }} onPress={onGetDirections}>
+                  <MaterialIcons name="directions" size={20} color={textColor} />
                 </TouchableOpacity>
               )}
               {onGetDirections && isLoadingDirections && (
-                <TouchableOpacity style={styles.directionsIconButton} disabled>
-                  <MaterialIcons name="hourglass-empty" size={20} color={colors.text} />
+                <TouchableOpacity style={{ padding: 4, marginRight: 4 }} disabled>
+                  <MaterialIcons name="hourglass-empty" size={20} color={textColor} />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
-                <MaterialIcons name="close" size={20} color={colors.text} />
+              <TouchableOpacity style={{ padding: 4 }} onPress={handleClosePress}>
+                <MaterialIcons name="close" size={20} color={textColor} />
               </TouchableOpacity>
             </View>
           ) : (
             // Expanded view - Shows full location details
-            <View style={styles.expandedContentWrapper}>
+            <View style={{ padding: Spacing.lg }}>
               <View style={styles.expandedHeader}>
-                <Text style={[styles.expandedTitle, { color: colors.text }]}>Location Details</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
-                  <MaterialIcons name="close" size={24} color={colors.text} />
+                <Text style={[Typography.h2, { color: textColor }]}>Location Details</Text>
+                <TouchableOpacity style={{ padding: 4 }} onPress={handleClosePress}>
+                  <MaterialIcons name="close" size={24} color={textColor} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.expandedIconContainer}>
-                <View
-                  style={[
-                    styles.expandedIconCircle,
-                    { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-                  ]}
-                >
+              <View style={{ alignItems: 'center', marginBottom: Spacing.xxl }}>
+                <View style={[styles.expandedIconCircle, { backgroundColor: buttonIcon }]}>
                   <MaterialIcons
                     name={getIconForFeatureType(preservedLocation.type)}
                     size={48}
@@ -204,32 +195,59 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
                 </View>
               </View>
 
-              <Text style={[styles.expandedName, { color: colors.text }]}>
+              <Text
+                style={[
+                  Typography.displayLarge,
+                  { marginBottom: Spacing.sm, textAlign: 'center', color: textColor },
+                ]}
+              >
                 {preservedLocation.name}
               </Text>
-              <Text style={[styles.expandedAddress, { color: colors.text + 'CC' }]}>
+              <Text
+                style={[
+                  Typography.bodyLarge,
+                  {
+                    textAlign: 'center',
+                    marginBottom: Spacing.xxxl,
+                    lineHeight: 24,
+                    color: textColor + 'CC',
+                  },
+                ]}
+              >
                 {preservedLocation.display_name}
               </Text>
 
               {/* Location Details */}
-              <View style={styles.detailsSection}>
-                <View style={styles.detailRow}>
-                  <MaterialIcons name="place" size={20} color={colors.text + 'CC'} />
-                  <View style={styles.detailTextContainer}>
-                    <Text style={[styles.detailLabel, { color: colors.text + '99' }]}>
+              <View style={{ gap: Spacing.lg }}>
+                <View
+                  style={[
+                    CardStyles.detailRow,
+                    { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
+                  ]}
+                >
+                  <MaterialIcons name="place" size={20} color={textColor + 'CC'} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}>
                       Coordinates
                     </Text>
-                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                    <Text style={[Typography.bodyLarge, { color: textColor }]}>
                       {preservedLocation.lat.toFixed(6)}, {preservedLocation.lon.toFixed(6)}
                     </Text>
                   </View>
                 </View>
 
-                <View style={styles.detailRow}>
-                  <MaterialIcons name="category" size={20} color={colors.text + 'CC'} />
-                  <View style={styles.detailTextContainer}>
-                    <Text style={[styles.detailLabel, { color: colors.text + '99' }]}>Type</Text>
-                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                <View
+                  style={[
+                    CardStyles.detailRow,
+                    { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
+                  ]}
+                >
+                  <MaterialIcons name="category" size={20} color={textColor + 'CC'} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}>
+                      Type
+                    </Text>
+                    <Text style={[Typography.bodyLarge, { color: textColor }]}>
                       {preservedLocation.type.charAt(0).toUpperCase() +
                         preservedLocation.type.slice(1)}
                     </Text>
@@ -241,7 +259,7 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
                 <GetDirectionsButton
                   onPress={onGetDirections}
                   isLoading={isLoadingDirections}
-                  style={styles.directionsButton}
+                  style={{ marginTop: Spacing.xxl, marginBottom: Spacing.xxl }}
                 />
               )}
             </View>
@@ -262,46 +280,18 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     padding: Spacing.lg,
   },
-  expandedContentWrapper: {
-    padding: Spacing.lg,
-  },
   iconCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: BorderRadius.xxl,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  infoContainer: {
-    flex: 1,
-  },
-  locationName: {
-    ...Typography.h3,
-    marginBottom: 4,
-  },
-  locationAddress: {
-    fontSize: 13,
-  },
-  directionsIconButton: {
-    padding: 4,
-    marginRight: 4,
-  },
-  closeButton: {
-    padding: 4,
   },
   expandedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  expandedTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  expandedIconContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xxl,
   },
   expandedIconCircle: {
     width: 96,
@@ -309,47 +299,6 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  expandedName: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  expandedAddress: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  detailsSection: {
-    gap: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  detailTextContainer: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  directionsButton: {
-    marginTop: 24,
-    marginBottom: 24,
   },
 });
 
