@@ -230,7 +230,7 @@ export function useLocationTracking({
           distanceInterval: 0, // Capture based on time only
           mayShowUserSettingsDialog: true,
           // Enable background location updates
-          showsBackgroundLocationIndicator: true,
+          // showsBackgroundLocationIndicator: true,
         },
         (location) => {
           const { latitude, longitude, altitude, accuracy, speed } = location.coords;
