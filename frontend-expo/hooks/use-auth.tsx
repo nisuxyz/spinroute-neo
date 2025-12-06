@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { useClient, useAuthStateChange } from 'react-supabase';
+import { useClient } from 'react-supabase';
 
 type AuthContextType = {
   session: Session | null;
@@ -34,14 +34,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('[Auth] Get session exception:', err);
         setLoading(false);
       });
-  }, [supabase]);
 
-  // Use react-supabase's auth state change listener
-  useAuthStateChange((event, session) => {
-    console.log('[Auth] State change:', event, session);
-    setSession(session);
-    setUser(session?.user ?? null);
-  });
+    // Use native Supabase auth state change listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth] State change:', event, session);
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
     console.log('[Auth] Attempting sign in for:', email);
