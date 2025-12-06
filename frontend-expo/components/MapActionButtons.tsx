@@ -64,13 +64,13 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
 
   return (
     <View style={styles.container}>
-      <GlassContainer spacing={8} style={[styles.buttonGroup, { paddingTop: 110 }]}>
+      <GlassContainer spacing={32} style={[styles.buttonGroup, { paddingTop: 110 }]}>
         <MapActionButton
           icon="my-location"
           iconFamily="MaterialIcons"
           isActive={isFollowModeActive}
           isLoading={isRecentering}
-          buttonColor={electricPurple}
+          // buttonColor={electricPurple}
           onActivate={onRecenter}
           onDeactivate={onDisableFollowMode}
           accessibilityLabel={
@@ -83,7 +83,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           icon={is3DMode ? 'video-3d' : 'video-3d-off'}
           iconFamily="MaterialCommunityIcons"
           isActive={is3DMode}
-          buttonColor={electricPurple}
+          // buttonColor={electricPurple}
           onActivate={onToggle3D}
           onDeactivate={onToggle3D}
           accessibilityLabel={is3DMode ? 'Switch to 2D view' : 'Switch to 3D view'}
@@ -94,7 +94,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           icon={mapStyleIcon.icon}
           iconFamily={mapStyleIcon.iconFamily}
           isActive={false}
-          buttonColor={electricPurple}
+          // buttonColor={electricPurple}
           onActivate={onOpenMapStyle}
           accessibilityLabel="Change map style"
           testID="map-style-button"
@@ -105,7 +105,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           iconFamily="MaterialIcons"
           isActive={isStationsVisible}
           isLoading={isStationsLoading}
-          buttonColor={electricPurple}
+          // buttonColor={electricPurple}
           onActivate={onToggleStations}
           onDeactivate={onToggleStations}
           accessibilityLabel={
@@ -115,12 +115,12 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
         />
       </GlassContainer>
 
-      <GlassContainer spacing={8} style={[styles.buttonGroup, { paddingBottom: 100 }]}>
+      <GlassContainer spacing={32} style={[styles.buttonGroup, { paddingBottom: 100 }]}>
         <MapActionButton
           icon="settings"
           iconFamily="MaterialIcons"
           isActive={false}
-          buttonColor={electricPurple}
+          // buttonColor={electricPurple}
           onActivate={onOpenSettings}
           accessibilityLabel="Open settings"
           testID="settings-button"
@@ -130,7 +130,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           icon="bike-pedal"
           iconFamily="MaterialCommunityIcons"
           isActive={false}
-          buttonColor={electricPurple}
+          // buttonColor={electricPurple}
           onActivate={onOpenBikeManagement}
           accessibilityLabel="Manage bikes"
           testID="bike-management-button"
@@ -140,7 +140,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           icon="chart-line"
           iconFamily="MaterialCommunityIcons"
           isActive={false}
-          buttonColor={electricPurple}
+          // buttonColor={electricPurple}
           onActivate={onOpenRecordedTrips}
           accessibilityLabel="View recorded trips"
           testID="recorded-trips-button"
@@ -150,7 +150,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
           icon="record-rec"
           iconFamily="MaterialCommunityIcons"
           isActive={isRecording}
-          buttonColor={electricPurple}
+          // buttonColor={electricPurple}
           onActivate={onStartRecording}
           onDeactivate={onStopRecording}
           accessibilityLabel={isRecording ? 'Stop recording trip' : 'Start recording trip'}

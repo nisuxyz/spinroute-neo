@@ -11,6 +11,7 @@ export interface MapStyle {
   description: string;
   icon: string;
   iconFamily: 'MaterialIcons' | 'MaterialCommunityIcons';
+  isDark: boolean;
 }
 
 export const MAP_STYLES: MapStyle[] = [
@@ -20,6 +21,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Modern default style with dynamic features',
     icon: 'map',
     iconFamily: 'MaterialIcons',
+    isDark: false,
   },
   {
     name: 'Standard Satellite',
@@ -27,6 +29,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Satellite imagery with labels',
     icon: 'satellite-variant',
     iconFamily: 'MaterialCommunityIcons',
+    isDark: false,
   },
   {
     name: 'Streets',
@@ -34,6 +37,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Classic street map',
     icon: 'map-outline',
     iconFamily: 'MaterialCommunityIcons',
+    isDark: false,
   },
   {
     name: 'Outdoors',
@@ -41,6 +45,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Topographic style for outdoor activities',
     icon: 'terrain',
     iconFamily: 'MaterialIcons',
+    isDark: false,
   },
   {
     name: 'Light',
@@ -48,6 +53,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Minimalist light theme',
     icon: 'wb-sunny',
     iconFamily: 'MaterialIcons',
+    isDark: false,
   },
   {
     name: 'Dark',
@@ -55,6 +61,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Minimalist dark theme',
     icon: 'nightlight-round',
     iconFamily: 'MaterialIcons',
+    isDark: false,
   },
   {
     name: 'Satellite',
@@ -62,6 +69,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Pure satellite imagery',
     icon: 'satellite',
     iconFamily: 'MaterialIcons',
+    isDark: false,
   },
   {
     name: 'Satellite Streets',
@@ -69,6 +77,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Satellite with street overlays',
     icon: 'satellite-alt',
     iconFamily: 'MaterialIcons',
+    isDark: false,
   },
   {
     name: 'Navigation Day',
@@ -76,6 +85,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Optimized for daytime navigation',
     icon: 'navigation',
     iconFamily: 'MaterialIcons',
+    isDark: false,
   },
   {
     name: 'Navigation Night',
@@ -83,6 +93,7 @@ export const MAP_STYLES: MapStyle[] = [
     description: 'Optimized for nighttime navigation',
     icon: 'navigation',
     iconFamily: 'MaterialIcons',
+    isDark: false,
   },
 ];
 

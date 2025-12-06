@@ -13,7 +13,7 @@ import {
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { Picker } from '@react-native-picker/picker';
 import { GlassView } from 'expo-glass-effect';
-import { Colors, electricPurple } from '@/constants/theme';
+import { BorderRadius, Colors, electricPurple } from '@/constants/theme';
 import { useUserSettings } from '@/contexts/user-settings-context';
 import { useBikes } from '@/hooks/use-bikes';
 import { useRouter } from 'expo-router';
@@ -101,7 +101,7 @@ export default function AppSettingsSection() {
               const index = event.nativeEvent.selectedSegmentIndex;
               handleUnitsChange(index === 0 ? 'metric' : 'imperial');
             }}
-            style={styles.segmentedControl}
+            style={[styles.segmentedControl, { backgroundColor: colors.icon + '40' }]}
           />
         </View>
 
@@ -162,7 +162,10 @@ export default function AppSettingsSection() {
                   <Picker.Item key={seconds} label={`${seconds} seconds`} value={seconds} />
                 ))}
               </Picker>
-              <TouchableOpacity style={[styles.modalButton]} onPress={confirmIntervalChange}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.buttonIcon }]}
+                onPress={confirmIntervalChange}
+              >
                 <Text style={styles.modalButtonText}>Save</Text>
               </TouchableOpacity>
             </GlassView>
@@ -199,6 +202,7 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     width: 120,
+    borderRadius: BorderRadius.lg,
   },
   modalOverlay: {
     flex: 1,
@@ -230,7 +234,6 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     borderRadius: 12,
-    backgroundColor: electricPurple,
     padding: 16,
     alignItems: 'center',
   },

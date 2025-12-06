@@ -325,7 +325,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
         >
           <View style={styles.lockedHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Advanced Statistics</Text>
-            <View style={styles.proBadge}>
+            <View style={[styles.proBadge, { backgroundColor: colors.buttonIcon }]}>
               <MaterialIcons name="lock" size={14} color="#fff" />
               <Text style={styles.proBadgeText}>PRO</Text>
             </View>
@@ -349,7 +349,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
               <Text style={[styles.upgradeText, { color: colors.text }]}>
                 Upgrade to Pro for detailed insights
               </Text>
-              <View style={styles.upgradeButton}>
+              <View style={[styles.upgradeButton, { backgroundColor: colors.buttonIcon }]}>
                 <Text style={styles.upgradeButtonText}>Unlock</Text>
                 <MaterialIcons name="arrow-forward" size={16} color="#fff" />
               </View>
@@ -507,7 +507,6 @@ const styles = StyleSheet.create({
   proBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6366f1',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -549,7 +548,7 @@ const styles = StyleSheet.create({
   upgradeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6366f1',
+    // backgroundColor: '#6366f1',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,

@@ -23,6 +23,7 @@ import {
 } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { GlassContainer, GlassView } from 'expo-glass-effect';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function AuthScreen() {
   const colorScheme = useColorScheme();
@@ -70,7 +71,7 @@ export default function AuthScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: electricPurple }]}>spinroute</Text>
+            <Text style={[styles.title, { color: colors.primary }]}>spinroute</Text>
             <Image
               source={require('@/assets/images/splash.png')}
               style={styles.logo}
@@ -83,17 +84,10 @@ export default function AuthScreen() {
 
           <GlassContainer>
             <View style={styles.form}>
-              <GlassView>
+              <GlassView style={InputStyles.container}>
+                <MaterialCommunityIcons name="email" size={24} color={colors.icon} />
                 <TextInput
-                  style={[
-                    InputStyles.default,
-                    {
-                      color: colors.text,
-                      borderColor: colors.icon,
-                      backgroundColor: colors.buttonBackground,
-                      marginBottom: Spacing.lg,
-                    },
-                  ]}
+                  style={InputStyles.inputText}
                   placeholder="Email"
                   placeholderTextColor={colors.icon}
                   value={email}
@@ -104,17 +98,10 @@ export default function AuthScreen() {
                   autoComplete="email"
                 />
               </GlassView>
-              <GlassView>
+              <GlassView style={InputStyles.container}>
+                <MaterialCommunityIcons name="lock" size={24} color={colors.icon} />
                 <TextInput
-                  style={[
-                    InputStyles.default,
-                    {
-                      color: colors.text,
-                      borderColor: colors.icon,
-                      backgroundColor: colors.buttonBackground,
-                      marginBottom: Spacing.lg,
-                    },
-                  ]}
+                  style={InputStyles.inputText}
                   placeholder="Password"
                   placeholderTextColor={colors.icon}
                   value={password}
@@ -189,5 +176,6 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+    gap: Spacing.md,
   },
 });

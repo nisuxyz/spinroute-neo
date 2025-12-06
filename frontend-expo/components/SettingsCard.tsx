@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, useColorScheme, ViewStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
+import { lightenColor } from '@/utils/lighten-color';
 
 interface SettingsCardProps {
   title?: string;
@@ -15,7 +16,9 @@ export default function SettingsCard({ title, icon, children, style }: SettingsC
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.buttonBackground }, style]}>
+    <View
+      style={[styles.container, { backgroundColor: lightenColor(colors.background, 40) }, style]}
+    >
       {(title || icon) && (
         <View style={[styles.header, { borderBottomColor: colors.background }]}>
           {icon && <MaterialIcons name={icon} size={22} color={colors.icon} />}

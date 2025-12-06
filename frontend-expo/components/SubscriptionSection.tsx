@@ -375,8 +375,6 @@ const styles = StyleSheet.create({
   // Usage section styles
   usageSection: {
     paddingTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.1)',
     gap: 16,
   },
   usageSectionTitle: {

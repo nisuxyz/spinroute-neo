@@ -64,7 +64,7 @@ export default function SettingsRow({
               onValueChange={onSwitchChange}
               trackColor={{
                 false: colors.icon + '40',
-                true: lightenColor(colors.buttonBackground, 100),
+                true: colors.primary,
               }}
               thumbColor="#fff"
             />

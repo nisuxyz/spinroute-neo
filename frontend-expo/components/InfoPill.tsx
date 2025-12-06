@@ -1,12 +1,12 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Pressable, useColorScheme } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
-import { Spacing, BorderRadius, Typography } from '@/constants/theme';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { Spacing, BorderRadius, Typography, Colors } from '@/constants/theme';
 import type { Bike } from '@/hooks/use-bikes';
 import { useWeather } from '@/hooks/use-weather';
 import RecordingIndicator from './RecordingIndicator';
+import { lightenColor } from '@/utils/lighten-color';
 
 interface InfoPillProps {
   bike: Bike | undefined;
@@ -34,7 +34,9 @@ const InfoPill: React.FC<InfoPillProps> = ({
   longitude = null,
   onPress,
 }) => {
-  const textColor = useThemeColor({}, 'text');
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  const textColor = lightenColor(colorScheme === 'dark' ? colors.textInverse : colors.text, 120);
   const { weather } = useWeather({ latitude, longitude, enabled: !!bike });
 
   // Always show loading indicator when loading
@@ -63,7 +65,7 @@ const InfoPill: React.FC<InfoPillProps> = ({
       <Pressable onPress={onPress} disabled={!onPress}>
         <GlassView
           style={{ borderRadius: BorderRadius.xxxl }}
-          glassEffectStyle="clear"
+          glassEffectStyle="regular"
           isInteractive={!!onPress}
         >
           <View style={styles.content}>

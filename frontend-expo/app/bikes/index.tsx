@@ -189,7 +189,7 @@ export default function BikesScreen() {
             headerBackButtonDisplayMode: 'minimal',
             headerRight: () => (
               <TouchableOpacity onPress={handleAddBike}>
-                <Text style={[styles.saveButton]}>New Bike</Text>
+                <Text style={[styles.saveButton, { color: colors.text }]}>New Bike</Text>
               </TouchableOpacity>
             ),
           }}
@@ -212,7 +212,7 @@ export default function BikesScreen() {
           headerBackButtonDisplayMode: 'minimal',
           headerRight: () => (
             <TouchableOpacity onPress={handleAddBike}>
-              <Text style={[styles.saveButton]}>New Bike</Text>
+              <Text style={[styles.saveButton, { color: colors.text }]}>New Bike</Text>
             </TouchableOpacity>
           ),
         }}
@@ -361,7 +361,6 @@ const styles = StyleSheet.create({
   saveButton: {
     fontSize: 17,
     fontWeight: '600',
-    color: 'white',
     paddingHorizontal: 16,
   },
 });

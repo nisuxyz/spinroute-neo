@@ -23,7 +23,7 @@ import {
   Entypo,
 } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import { Colors } from '@/constants/theme';
+import { Colors, Glows } from '@/constants/theme';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { lightenColor } from '@/utils/lighten-color';
 
@@ -65,7 +65,7 @@ interface MapActionButtonProps {
   isLoading?: boolean;
   customLoadingIcon?: boolean;
   loadingSpinSpeed?: number;
-  buttonColor: string;
+  // buttonColor: string;
   onActivate?: () => void;
   onDeactivate?: () => void;
   accessibilityLabel: string;
@@ -82,7 +82,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
   isLoading = false,
   customLoadingIcon = false,
   loadingSpinSpeed = 1000,
-  buttonColor,
+  // buttonColor,
   onActivate,
   onDeactivate,
   accessibilityLabel,
@@ -122,9 +122,9 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
   // Active state: 'regular' glass effect with icon glow
   // Inactive state: 'clear' glass effect
   const backgroundColor = useGlass ? 'transparent' : colors.buttonBackground;
-  const borderColor = buttonColor;
+  const borderColor = colors.primary;
   const borderWidth = useGlass ? 0 : 2;
-  const iconColor = buttonColor;
+  const iconColor = colors.primary;
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
@@ -172,7 +172,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
     }
 
     const iconWithGlow = isActive ? (
-      <View style={styles.iconGlow}>{IconComponent}</View>
+      <View style={Glows.iconGlow(colors.primary)}>{IconComponent}</View>
     ) : (
       IconComponent
     );

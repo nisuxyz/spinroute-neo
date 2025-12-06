@@ -5,15 +5,28 @@
 
 import { Platform } from 'react-native';
 
-export const tintColorLight = '#0a7ea4';
+export const tintColorLight = '#248a3d';
 export const tintColorDark = '#fff';
 export const electricPurple = '#8B5CF6';
+export const systemGreen = '#248a3d';
 export const darkGray = '#2A2A2A';
 
 export const Colors = {
   light: {
+    // Named colors
+    primary: systemGreen,
+    primaryVariant: '#1e6f31',
+    secondary: '#ff9800',
+    secondaryVariant: '#c66900',
+    accent: electricPurple,
+    error: '#B00020',
+    warning: '#FFAB00',
+    info: '#2196F3',
+    success: '#4CAF50',
+    // General colors
     text: '#11181C',
-    background: '#fff',
+    textInverse: '#ECEDEE',
+    background: '#cccccc',
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',
@@ -27,9 +40,9 @@ export const Colors = {
     stationText: '#ffffff', // White text on markers
     stationTextShadow: '#000000', // Black text shadow
     // Button colors
-    buttonBackground: '#ffffff',
-    buttonBorder: electricPurple, // Electric purple
-    buttonIcon: electricPurple,
+    buttonBackground: darkGray,
+    buttonBorder: systemGreen, // System green
+    buttonIcon: systemGreen,
     buttonIconInactive: '#9A9A9A',
     // Callout colors
     calloutBackground: '#ffffff',
@@ -41,7 +54,19 @@ export const Colors = {
     shadow: '#000000',
   },
   dark: {
+    // Named colors
+    primary: electricPurple,
+    primaryVariant: '#7c3aed',
+    secondary: '#ff9800',
+    secondaryVariant: '#c66900',
+    accent: systemGreen,
+    error: '#CF6679',
+    warning: '#FFAB00',
+    info: '#2196F3',
+    success: '#4CAF50',
+    // General colors
     text: '#ECEDEE',
+    textInverse: '#11181C',
     background: '#151718',
     tint: tintColorDark,
     icon: '#9BA1A6',
@@ -185,6 +210,24 @@ export const Typography = {
 } as const;
 
 /**
+ * Common glow styles
+ */
+export const Glows = {
+  iconGlow(color: string, size: 'sm' | 'md' | 'lg' = 'md') {
+    return {
+      shadowColor: color, // electricPurple
+      shadowOffset: {
+        width: size === 'sm' ? 1 : size === 'md' ? 2 : 3,
+        height: size === 'sm' ? 1 : size === 'md' ? 2 : 3,
+      },
+      shadowOpacity: 1,
+      shadowRadius: size === 'sm' ? 4 : size === 'md' ? 6 : 8,
+      elevation: size === 'sm' ? 1 : size === 'md' ? 2 : 3,
+    };
+  },
+} as const;
+
+/**
  * Common shadow styles
  */
 export const Shadows = {
@@ -288,10 +331,17 @@ export const SheetStyles = {
  * Common input styles
  */
 export const InputStyles = {
-  default: {
+  container: {
     borderWidth: 1,
     borderRadius: BorderRadius.round,
-    padding: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: Spacing.md,
+  },
+  inputText: {
+    flex: 1,
     ...Typography.bodyMedium,
     fontSize: 16,
   },

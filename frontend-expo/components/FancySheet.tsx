@@ -85,13 +85,11 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
 
   const textColor = useThemeColor({}, 'text');
   const iconColor = useThemeColor({}, 'icon');
-  const calloutBg = useThemeColor({}, 'calloutBackground');
   const secondaryTextColor = useThemeColor({}, 'calloutTextSecondary');
 
   const env = useEnv();
   const { history, addToHistory, removeFromHistory } = useSearchHistory();
 
-  const blurTint = getBlurTint();
   const inputBgColor = colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
 
   const { height } = useWindowDimensions();
