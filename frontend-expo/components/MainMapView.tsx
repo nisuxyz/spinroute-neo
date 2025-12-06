@@ -34,10 +34,12 @@ import LocationSheet from './LocationSheet';
 import FancySheet, { type FancySheetRef } from './FancySheet';
 import MapStylePicker from './MapStylePicker';
 import InfoPill from './InfoPill';
+import InfoPillSheet from './InfoPillSheet';
 import RouteInfoSheet from './RouteInfoSheet';
 import RoutePreferencesSheet from './RoutePreferencesSheet';
 import { useDirections } from '@/hooks/use-directions';
 import { useAuth } from '@/hooks/use-auth';
+import { useWeather } from '@/hooks/use-weather';
 
 // Feature flags
 const ENABLE_LAYER_RENDERING_TOGGLE = false;
@@ -119,6 +121,7 @@ const MainMapView: React.FC = () => {
   const [isSearchSheetVisible, setIsSearchSheetVisible] = useState(false);
   const [isMapStylePickerVisible, setIsMapStylePickerVisible] = useState(false);
   const [isRoutePreferencesSheetVisible, setIsRoutePreferencesSheetVisible] = useState(false);
+  const [isInfoPillSheetVisible, setIsInfoPillSheetVisible] = useState(false);
 
   // Directions hook
   const {
@@ -143,6 +146,13 @@ const MainMapView: React.FC = () => {
   // Bikes
   const { bikes, loading: bikesLoading, fetchBikes } = useBikes();
   const activeBike = bikes.find((bike: any) => bike.id === settings?.active_bike_id);
+
+  // Weather
+  const { weather } = useWeather({
+    latitude: userLocation?.[1] ?? null,
+    longitude: userLocation?.[0] ?? null,
+    enabled: !!activeBike,
+  });
 
   // Feature access
   const { canRecordUnlimitedTrips, freeWeeklyTripLimit, isPro } = useFeatureAccess();
@@ -700,8 +710,17 @@ const MainMapView: React.FC = () => {
           isRecording={!!activeTrip}
           latitude={userLocation?.[1] ?? null}
           longitude={userLocation?.[0] ?? null}
+          onPress={() => setIsInfoPillSheetVisible(true)}
         />
       )}
+
+      <InfoPillSheet
+        visible={isInfoPillSheetVisible}
+        bike={activeBike}
+        weather={weather}
+        isRecording={!!activeTrip}
+        onClose={() => setIsInfoPillSheetVisible(false)}
+      />
     </View>
   );
 };
