@@ -349,16 +349,30 @@ const MainMapView: React.FC = () => {
   const handleClearRoute = useCallback(() => {
     clearRoute();
     setRouteGeometry(null);
-    setSelectedStation(null);
+
+    // Don't clear destination markers - keep them visible after route is cleared
+    // setSelectedStation(null);
     // setSearchedLocation(null);
-    if (userLocation) {
+
+    // Center camera on destination if available, otherwise user location
+    let centerCoordinate: [number, number] | null = null;
+
+    if (selectedStation) {
+      centerCoordinate = selectedStation.coordinates;
+    } else if (searchedLocation) {
+      centerCoordinate = [searchedLocation.lon, searchedLocation.lat];
+    } else if (userLocation) {
+      centerCoordinate = userLocation;
+    }
+
+    if (centerCoordinate) {
       cameraRef.current?.setCamera({
-        centerCoordinate: userLocation,
-        zoomLevel: USER_LOCATION_ZOOM,
+        centerCoordinate,
+        zoomLevel: 15,
         animationDuration: 1000,
       });
     }
-  }, [clearRoute, userLocation]);
+  }, [clearRoute, selectedStation, searchedLocation, userLocation]);
 
   const handleUserLocationUpdate = (location: Mapbox.Location) => {
     if (location?.coords) {
