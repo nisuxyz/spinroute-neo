@@ -23,6 +23,7 @@ import {
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { MaterialIcons } from '@expo/vector-icons';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
+import { usePathname } from 'expo-router';
 import { Colors, Spacing, Typography, BorderRadius, InputStyles } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useDebounce } from 'use-debounce';
@@ -104,10 +105,17 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
     },
   }));
 
-  // Present sheet on mount (collapsed state)
+  const pathname = usePathname();
+
+  // Auto-present/dismiss based on current route
   useEffect(() => {
-    sheetRef.current?.present(0);
-  }, []);
+    // Only show on the main map screen
+    if (pathname === '/' || pathname === '/(tabs)') {
+      sheetRef.current?.present(0);
+    } else {
+      setTimeout(() => sheetRef.current?.dismiss(), 100);
+    }
+  }, [pathname]);
 
   // Generate a new session token when the sheet opens
   useEffect(() => {

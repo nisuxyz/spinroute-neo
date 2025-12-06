@@ -98,7 +98,7 @@ interface IAPProviderProps {
 }
 
 export function IAPProvider({ children }: IAPProviderProps) {
-  const { purchaseUUID } = useSubscription();
+  const { purchaseUUID, loading: subscriptionLoading } = useSubscription();
   const { session } = useAuth();
   const env = useEnv();
 
@@ -109,10 +109,19 @@ export function IAPProvider({ children }: IAPProviderProps) {
   // Validate receipt on our backend
   const validateReceipt = useCallback(
     async (purchase: Purchase) => {
-      console.log('[validateReceipt] Starting validation...');
+      console.log('[validateReceipt] Starting validation...', {
+        hasPurchaseUUID: !!purchaseUUID,
+        hasSession: !!session?.access_token,
+        subscriptionLoading,
+      });
 
       if (!purchaseUUID) {
-        console.error('[validateReceipt] ERROR: No purchase UUID available');
+        console.error('[validateReceipt] ERROR: No purchase UUID available', {
+          subscriptionLoading,
+          hint: subscriptionLoading
+            ? 'Subscription data still loading - this should not happen'
+            : 'User profile may not have purchase_uuid set',
+        });
         return false;
       }
 
@@ -199,7 +208,7 @@ export function IAPProvider({ children }: IAPProviderProps) {
         return false;
       }
     },
-    [purchaseUUID, session?.access_token, env.IAP_SERVICE_URL],
+    [purchaseUUID, session?.access_token, env.IAP_SERVICE_URL, subscriptionLoading],
   );
 
   // Handle successful purchase
@@ -350,7 +359,15 @@ export function IAPProvider({ children }: IAPProviderProps) {
   // Handle unfinished transactions on app startup (iOS)
   // This prevents onPurchaseSuccess from triggering on every app launch
   useEffect(() => {
-    if (!connected) return;
+    // Wait for both IAP connection AND subscription data to be loaded
+    if (!connected || subscriptionLoading) {
+      console.log('[IAP] Waiting for initialization...', {
+        connected,
+        subscriptionLoading,
+        hasPurchaseUUID: !!purchaseUUID,
+      });
+      return;
+    }
 
     const handleUnfinishedTransactions = async () => {
       try {
@@ -396,9 +413,9 @@ export function IAPProvider({ children }: IAPProviderProps) {
       }
     };
 
-    // Run on mount when connected
+    // Run on mount when connected AND subscription data is loaded
     handleUnfinishedTransactions();
-  }, [connected, finishTransaction, validateReceipt]);
+  }, [connected, subscriptionLoading, purchaseUUID, finishTransaction, validateReceipt]);
 
   // Fetch subscription products when connected
   const refreshProducts = useCallback(async () => {
