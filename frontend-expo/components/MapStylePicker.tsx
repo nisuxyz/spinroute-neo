@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, ScrollView } 
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { Colors, electricPurple, Spacing, BorderRadius, Typography } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export interface MapStyle {
   name: string;
@@ -110,6 +111,7 @@ export default function MapStylePicker({
 }: MapStylePickerProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const textColor = useThemeColor({}, 'text');
   const sheetRef = useRef<TrueSheet>(null);
 
   // Present/dismiss sheet when visible changes
@@ -151,6 +153,9 @@ export default function MapStylePicker({
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text, textAlign: 'center' }]}>Map Style</Text>
+          <TouchableOpacity style={{ padding: 4 }} onPress={onClose}>
+            <MaterialIcons name="close" size={24} color={textColor} />
+          </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent} nestedScrollEnabled>
           <View style={styles.content}>
@@ -190,11 +195,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.xxxl,
-    paddingBottom: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    paddingTop: Spacing.xl,
   },
   scrollContent: {
     // paddingBottom: Spacing.xl,

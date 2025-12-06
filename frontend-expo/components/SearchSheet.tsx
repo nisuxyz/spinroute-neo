@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TextInput,
-  useColorScheme,
   Keyboard,
   Text,
   ActivityIndicator,
@@ -12,13 +11,13 @@ import {
 } from 'react-native';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
+import { Spacing, BorderRadius, Typography } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { useDebounce } from 'use-debounce';
 import { useEnv } from '@/hooks/use-env';
 import { useUserSettings } from '@/contexts/user-settings-context';
 import { useSearchHistory, type SearchHistoryItem } from '@/hooks/use-search-history';
 import { fuzzySearch } from '@/utils/fuzzy-search';
-import { GlassView } from 'expo-glass-effect';
 
 interface SearchSheetProps {
   visible: boolean;
@@ -54,10 +53,9 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
   const [loading, setLoading] = useState(false);
   const [sessionToken, setSessionToken] = useState('');
   const [debouncedQuery] = useDebounce(searchQuery, 300);
-  const colorScheme = useColorScheme();
+  const textColor = useThemeColor({}, 'text');
   const { settings } = useUserSettings();
   const { history, addToHistory, removeFromHistory } = useSearchHistory();
-  const colors = Colors[colorScheme ?? 'light'];
   const env = useEnv();
 
   const sheetRef = useRef<TrueSheet>(null);
@@ -267,22 +265,32 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
 
       return (
         <TouchableOpacity style={styles.resultItem} onPress={handlePress}>
-          <MaterialIcons name={icon} size={20} color={colors.text} style={styles.resultIcon} />
-          <View style={styles.resultTextContainer}>
-            <Text style={[styles.resultName, { color: colors.text }]}>{name}</Text>
-            <Text style={[styles.resultDetails, { color: colors.text + 'CC' }]} numberOfLines={1}>
+          <MaterialIcons
+            name={icon}
+            size={20}
+            color={textColor}
+            style={{ marginRight: Spacing.md }}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[Typography.bodyLarge, { marginBottom: 2, color: textColor }]}>
+              {name}
+            </Text>
+            <Text style={[{ fontSize: 13, color: textColor + 'CC' }]} numberOfLines={1}>
               {details}
             </Text>
           </View>
           {isHistory && (
-            <TouchableOpacity onPress={handleRemove} style={styles.removeButton}>
-              <MaterialIcons name="close" size={18} color={colors.text + '80'} />
+            <TouchableOpacity
+              onPress={handleRemove}
+              style={{ padding: Spacing.sm, marginLeft: Spacing.sm }}
+            >
+              <MaterialIcons name="close" size={18} color={textColor + '80'} />
             </TouchableOpacity>
           )}
         </TouchableOpacity>
       );
     },
-    [colors.text, handleSelectSuggestion, handleSelectHistory, removeFromHistory],
+    [textColor, handleSelectSuggestion, handleSelectHistory, removeFromHistory],
   );
 
   return (
@@ -299,11 +307,11 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
         {/* Search Input - Fixed header */}
         <View style={styles.searchHeader}>
           <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={24} color={colors.text} />
+            <MaterialIcons name="search" size={24} color={textColor} />
             <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
+              style={[styles.searchInput, { color: textColor }]}
               placeholder="Search for places..."
-              placeholderTextColor={colors.text + '80'}
+              placeholderTextColor={textColor + '80'}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoFocus={visible}
@@ -311,19 +319,16 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <MaterialIcons name="close" size={20} color={colors.text} />
+                <MaterialIcons name="close" size={20} color={textColor} />
               </TouchableOpacity>
             )}
           </View>
-          {/* <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <MaterialIcons name="keyboard-arrow-down" size={32} color={colors.text} />
-          </TouchableOpacity> */}
         </View>
 
         {/* Results List - Scrollable */}
         {loading && searchQuery.length >= 2 && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={colors.text} />
+            <ActivityIndicator size="small" color={textColor} />
           </View>
         )}
 
@@ -337,7 +342,12 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
             renderItem={renderItem}
             ListHeaderComponent={
               searchQuery.length < 2 && history.length > 0 ? (
-                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>
+                <Text
+                  style={[
+                    Typography.bodyMedium,
+                    { marginBottom: Spacing.md, paddingHorizontal: 4, color: textColor + '80' },
+                  ]}
+                >
                   Recent Searches
                 </Text>
               ) : null
@@ -347,15 +357,21 @@ const SearchSheet: React.FC<SearchSheetProps> = ({ visible, onClose, onSelectLoc
 
         {!loading && searchQuery.length >= 2 && combinedResults.length === 0 && (
           <View style={styles.emptyContainer}>
-            <MaterialIcons name="search-off" size={48} color={colors.text + '60'} />
-            <Text style={[styles.emptyText, { color: colors.text + '80' }]}>No results found</Text>
+            <MaterialIcons name="search-off" size={48} color={textColor + '60'} />
+            <Text
+              style={[Typography.bodyLarge, { marginTop: Spacing.md, color: textColor + '80' }]}
+            >
+              No results found
+            </Text>
           </View>
         )}
 
         {!loading && searchQuery.length < 2 && history.length === 0 && (
           <View style={styles.emptyContainer}>
-            <MaterialIcons name="history" size={48} color={colors.text + '60'} />
-            <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
+            <MaterialIcons name="history" size={48} color={textColor + '60'} />
+            <Text
+              style={[Typography.bodyLarge, { marginTop: Spacing.md, color: textColor + '80' }]}
+            >
               No search history yet
             </Text>
           </View>
@@ -370,86 +386,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xxxl,
+    paddingBottom: Spacing.md,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    gap: 12,
+    gap: Spacing.md,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
   },
-  closeButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   loadingContainer: {
-    marginTop: 20,
+    marginTop: Spacing.xl,
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
   },
   resultsContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xl,
   },
   resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 8,
-  },
-  resultIcon: {
-    marginRight: 12,
-  },
-  resultTextContainer: {
-    flex: 1,
-  },
-  resultName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  resultDetails: {
-    fontSize: 13,
+    marginBottom: Spacing.sm,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 60,
-    paddingHorizontal: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    marginTop: 12,
-  },
-  sectionHeader: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  removeButton: {
-    padding: 8,
-    marginLeft: 8,
+    paddingHorizontal: Spacing.xl,
   },
 });
 

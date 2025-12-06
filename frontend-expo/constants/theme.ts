@@ -328,3 +328,43 @@ export const ButtonStyles = {
     };
   },
 } as const;
+
+/**
+ * Common list styles
+ */
+export const ListStyles = {
+  // List container
+  container: {
+    flex: 1,
+  },
+  // List content (for ScrollView contentContainerStyle)
+  content: {
+    paddingBottom: Spacing.xxxl,
+  },
+  // Standard list item (e.g., settings, selections)
+  item: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xs,
+  },
+  // List item with icon on the left
+  itemWithIcon: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xs,
+  },
+  // Icon container for list items
+  iconContainer: {
+    width: 40,
+    alignItems: 'center' as const,
+  },
+  // Text container (takes remaining space)
+  textContainer: {
+    flex: 1,
+  },
+} as const;

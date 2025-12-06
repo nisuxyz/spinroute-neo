@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, useColorScheme, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { Spacing, Typography, BorderRadius, CardStyles } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import BaseSheet, { BaseSheetRef } from './BaseSheet';
 import GetDirectionsButton from './GetDirectionsButton';
 import { useStationRealtime } from '@/hooks/use-station-realtime';
@@ -58,8 +59,8 @@ const StationSheet: React.FC<StationSheetProps> = ({
   isLoadingDirections = false,
 }) => {
   const sheetRef = useRef<BaseSheetRef>(null);
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const textColor = useThemeColor({}, 'text');
+  const buttonIcon = useThemeColor({}, 'buttonIcon');
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Preserve the last known station data to prevent race conditions during dismissal
@@ -138,7 +139,7 @@ const StationSheet: React.FC<StationSheetProps> = ({
           const hasDocks = currentStation.availableDocks > 0;
 
           const getStatusColor = (): string => {
-            if (totalBikes === 0) return colors.text + '66';
+            if (totalBikes === 0) return textColor + '66';
             if (totalBikes >= 5) return '#4CAF50';
             if (totalBikes >= 2) return '#FF9800';
             return '#F44336';
@@ -179,23 +180,21 @@ const StationSheet: React.FC<StationSheetProps> = ({
               {!isExpanded ? (
                 // Collapsed view
                 <View style={styles.collapsedContent}>
-                  <View
-                    style={[
-                      styles.iconCircle,
-                      { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-                    ]}
-                  >
+                  <View style={[styles.iconCircle, { backgroundColor: buttonIcon }]}>
                     <MaterialIcons name="pedal-bike" size={24} color="white" />
                   </View>
-                  <View style={styles.infoContainer}>
-                    <Text style={[styles.stationName, { color: colors.text }]} numberOfLines={1}>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[Typography.h3, { marginBottom: 4, color: textColor }]}
+                      numberOfLines={1}
+                    >
                       {currentStation.name}
                     </Text>
                     <View style={styles.statsRow}>
                       {hasClassicBikes && (
                         <View style={styles.stat}>
-                          <MaterialIcons name="pedal-bike" size={16} color={colors.text + 'CC'} />
-                          <Text style={[styles.statValue, { color: colors.text }]}>
+                          <MaterialIcons name="pedal-bike" size={16} color={textColor + 'CC'} />
+                          <Text style={[Typography.h3, { color: textColor }]}>
                             {currentStation.classicBikes}
                           </Text>
                         </View>
@@ -207,9 +206,9 @@ const StationSheet: React.FC<StationSheetProps> = ({
                             <MaterialIcons
                               name="electric-bike"
                               size={16}
-                              color={colors.text + 'CC'}
+                              color={textColor + 'CC'}
                             />
-                            <Text style={[styles.statValue, { color: colors.text }]}>
+                            <Text style={[Typography.h3, { color: textColor }]}>
                               {currentStation.electricBikes}
                             </Text>
                           </View>
@@ -221,8 +220,8 @@ const StationSheet: React.FC<StationSheetProps> = ({
                             <View style={styles.statDivider} />
                           )}
                           <View style={styles.stat}>
-                            <MaterialIcons name="lock-open" size={16} color={colors.text + 'CC'} />
-                            <Text style={[styles.statValue, { color: colors.text }]}>
+                            <MaterialIcons name="lock-open" size={16} color={textColor + 'CC'} />
+                            <Text style={[Typography.h3, { color: textColor }]}>
                               {currentStation.availableDocks}
                             </Text>
                           </View>
@@ -230,56 +229,76 @@ const StationSheet: React.FC<StationSheetProps> = ({
                       )}
                     </View>
                     {totalBikes === 0 && (
-                      <View style={styles.warningContainer}>
-                        <MaterialIcons name="info-outline" size={14} color={colors.text + '99'} />
-                        <Text style={[styles.warningText, { color: colors.text + '99' }]}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'flex-start',
+                          gap: 6,
+                          marginTop: 6,
+                        }}
+                      >
+                        <MaterialIcons name="info-outline" size={14} color={textColor + '99'} />
+                        <Text
+                          style={{ fontSize: 11, flex: 1, lineHeight: 14, color: textColor + '99' }}
+                        >
                           No bikes available
                         </Text>
                       </View>
                     )}
                   </View>
                   {onGetDirections && !isLoadingDirections && (
-                    <TouchableOpacity style={styles.directionsIconButton} onPress={onGetDirections}>
-                      <MaterialIcons name="directions" size={20} color={colors.text} />
+                    <TouchableOpacity
+                      style={{ padding: 4, marginRight: 4 }}
+                      onPress={onGetDirections}
+                    >
+                      <MaterialIcons name="directions" size={20} color={textColor} />
                     </TouchableOpacity>
                   )}
                   {onGetDirections && isLoadingDirections && (
-                    <TouchableOpacity style={styles.directionsIconButton} disabled>
-                      <MaterialIcons name="hourglass-empty" size={20} color={colors.text} />
+                    <TouchableOpacity style={{ padding: 4, marginRight: 4 }} disabled>
+                      <MaterialIcons name="hourglass-empty" size={20} color={textColor} />
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
-                    <MaterialIcons name="close" size={20} color={colors.text} />
+                  <TouchableOpacity style={{ padding: 4 }} onPress={handleClosePress}>
+                    <MaterialIcons name="close" size={20} color={textColor} />
                   </TouchableOpacity>
                 </View>
               ) : (
                 // Expanded view
-                <View style={styles.expandedContentWrapper}>
+                <View style={{ padding: Spacing.lg }}>
                   <View style={styles.expandedHeader}>
-                    <Text style={[styles.expandedTitle, { color: colors.text }]}>
-                      Station Details
-                    </Text>
-                    <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
-                      <MaterialIcons name="close" size={24} color={colors.text} />
+                    <Text style={[Typography.h2, { color: textColor }]}>Station Details</Text>
+                    <TouchableOpacity style={{ padding: 4 }} onPress={handleClosePress}>
+                      <MaterialIcons name="close" size={24} color={textColor} />
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.expandedIconContainer}>
-                    <View
-                      style={[
-                        styles.expandedIconCircle,
-                        { backgroundColor: Colors[colorScheme ?? 'light'].buttonIcon },
-                      ]}
-                    >
+                  <View style={{ alignItems: 'center', marginBottom: Spacing.xxl }}>
+                    <View style={[styles.expandedIconCircle, { backgroundColor: buttonIcon }]}>
                       <MaterialIcons name="pedal-bike" size={48} color="white" />
                     </View>
                   </View>
 
-                  <Text style={[styles.expandedName, { color: colors.text }]}>
+                  <Text
+                    style={[
+                      Typography.displayLarge,
+                      { marginBottom: Spacing.sm, textAlign: 'center', color: textColor },
+                    ]}
+                  >
                     {currentStation.name}
                   </Text>
                   {currentStation.address && (
-                    <Text style={[styles.expandedAddress, { color: colors.text + 'CC' }]}>
+                    <Text
+                      style={[
+                        Typography.bodyLarge,
+                        {
+                          textAlign: 'center',
+                          marginBottom: Spacing.xxxl,
+                          lineHeight: 24,
+                          color: textColor + 'CC',
+                        },
+                      ]}
+                    >
                       {currentStation.address}
                     </Text>
                   )}
@@ -290,113 +309,123 @@ const StationSheet: React.FC<StationSheetProps> = ({
                       <View
                         style={[
                           styles.availabilityIconCircle,
-                          {
-                            backgroundColor: hasClassicBikes
-                              ? Colors[colorScheme ?? 'light'].buttonIcon
-                              : colors.text + '33',
-                          },
+                          { backgroundColor: hasClassicBikes ? buttonIcon : textColor + '33' },
                         ]}
                       >
                         <MaterialIcons name="pedal-bike" size={32} color="white" />
                       </View>
-                      <Text style={[styles.availabilityCount, { color: colors.text }]}>
+                      <Text style={[Typography.displayMedium, { color: textColor }]}>
                         {currentStation.classicBikes}
                       </Text>
-                      <Text style={[styles.availabilityLabel, { color: colors.text + '99' }]}>
-                        Classic
-                      </Text>
+                      <Text style={[Typography.label, { color: textColor + '99' }]}>Classic</Text>
                     </View>
 
                     <View style={styles.availabilityItem}>
                       <View
                         style={[
                           styles.availabilityIconCircle,
-                          {
-                            backgroundColor: hasElectricBikes
-                              ? Colors[colorScheme ?? 'light'].buttonIcon
-                              : colors.text + '33',
-                          },
+                          { backgroundColor: hasElectricBikes ? buttonIcon : textColor + '33' },
                         ]}
                       >
                         <MaterialIcons name="electric-bike" size={32} color="white" />
                       </View>
-                      <Text style={[styles.availabilityCount, { color: colors.text }]}>
+                      <Text style={[Typography.displayMedium, { color: textColor }]}>
                         {currentStation.electricBikes}
                       </Text>
-                      <Text style={[styles.availabilityLabel, { color: colors.text + '99' }]}>
-                        Electric
-                      </Text>
+                      <Text style={[Typography.label, { color: textColor + '99' }]}>Electric</Text>
                     </View>
 
                     <View style={styles.availabilityItem}>
                       <View
                         style={[
                           styles.availabilityIconCircle,
-                          {
-                            backgroundColor: hasDocks
-                              ? Colors[colorScheme ?? 'light'].buttonIcon
-                              : colors.text + '33',
-                          },
+                          { backgroundColor: hasDocks ? buttonIcon : textColor + '33' },
                         ]}
                       >
                         <MaterialIcons name="lock-open" size={32} color="white" />
                       </View>
-                      <Text style={[styles.availabilityCount, { color: colors.text }]}>
+                      <Text style={[Typography.displayMedium, { color: textColor }]}>
                         {currentStation.availableDocks}
                       </Text>
-                      <Text style={[styles.availabilityLabel, { color: colors.text + '99' }]}>
-                        Docks
-                      </Text>
+                      <Text style={[Typography.label, { color: textColor + '99' }]}>Docks</Text>
                     </View>
                   </View>
 
                   {/* Station Details */}
-                  <View style={styles.detailsSection}>
-                    <View style={styles.detailRow}>
-                      <MaterialIcons name="info-outline" size={20} color={colors.text + 'CC'} />
-                      <View style={styles.detailTextContainer}>
-                        <Text style={[styles.detailLabel, { color: colors.text + '99' }]}>
+                  <View style={{ gap: Spacing.lg }}>
+                    <View
+                      style={[
+                        CardStyles.detailRow,
+                        { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
+                      ]}
+                    >
+                      <MaterialIcons name="info-outline" size={20} color={textColor + 'CC'} />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
+                        >
                           Status
                         </Text>
-                        <Text style={[styles.detailValue, { color: getStatusColor() }]}>
+                        <Text style={[Typography.bodyLarge, { color: getStatusColor() }]}>
                           {getStatusText()}
                         </Text>
                       </View>
                     </View>
 
                     {currentStation.capacity !== undefined && (
-                      <View style={styles.detailRow}>
-                        <MaterialIcons name="storage" size={20} color={colors.text + 'CC'} />
-                        <View style={styles.detailTextContainer}>
-                          <Text style={[styles.detailLabel, { color: colors.text + '99' }]}>
+                      <View
+                        style={[
+                          CardStyles.detailRow,
+                          { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
+                        ]}
+                      >
+                        <MaterialIcons name="storage" size={20} color={textColor + 'CC'} />
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
+                          >
                             Capacity
                           </Text>
-                          <Text style={[styles.detailValue, { color: colors.text }]}>
+                          <Text style={[Typography.bodyLarge, { color: textColor }]}>
                             {currentStation.capacity} docks
                           </Text>
                         </View>
                       </View>
                     )}
 
-                    <View style={styles.detailRow}>
-                      <MaterialIcons name="schedule" size={20} color={colors.text + 'CC'} />
-                      <View style={styles.detailTextContainer}>
-                        <Text style={[styles.detailLabel, { color: colors.text + '99' }]}>
+                    <View
+                      style={[
+                        CardStyles.detailRow,
+                        { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
+                      ]}
+                    >
+                      <MaterialIcons name="schedule" size={20} color={textColor + 'CC'} />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
+                        >
                           Last Updated
                         </Text>
-                        <Text style={[styles.detailValue, { color: colors.text }]}>
+                        <Text style={[Typography.bodyLarge, { color: textColor }]}>
                           {formatLastReported(currentStation.lastReported)}
                         </Text>
                       </View>
                     </View>
 
-                    <View style={styles.detailRow}>
-                      <MaterialIcons name="place" size={20} color={colors.text + 'CC'} />
-                      <View style={styles.detailTextContainer}>
-                        <Text style={[styles.detailLabel, { color: colors.text + '99' }]}>
+                    <View
+                      style={[
+                        CardStyles.detailRow,
+                        { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
+                      ]}
+                    >
+                      <MaterialIcons name="place" size={20} color={textColor + 'CC'} />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
+                        >
                           Coordinates
                         </Text>
-                        <Text style={[styles.detailValue, { color: colors.text }]}>
+                        <Text style={[Typography.bodyLarge, { color: textColor }]}>
                           {currentStation.coordinates[1].toFixed(6)},{' '}
                           {currentStation.coordinates[0].toFixed(6)}
                         </Text>
@@ -404,13 +433,20 @@ const StationSheet: React.FC<StationSheetProps> = ({
                     </View>
 
                     {currentStation.networkName && (
-                      <View style={styles.detailRow}>
-                        <MaterialIcons name="business" size={20} color={colors.text + 'CC'} />
-                        <View style={styles.detailTextContainer}>
-                          <Text style={[styles.detailLabel, { color: colors.text + '99' }]}>
+                      <View
+                        style={[
+                          CardStyles.detailRow,
+                          { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
+                        ]}
+                      >
+                        <MaterialIcons name="business" size={20} color={textColor + 'CC'} />
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
+                          >
                             Network
                           </Text>
-                          <Text style={[styles.detailValue, { color: colors.text }]}>
+                          <Text style={[Typography.bodyLarge, { color: textColor }]}>
                             {currentStation.networkName}
                           </Text>
                         </View>
@@ -422,7 +458,7 @@ const StationSheet: React.FC<StationSheetProps> = ({
                     <GetDirectionsButton
                       onPress={onGetDirections}
                       isLoading={isLoadingDirections}
-                      style={styles.directionsButton}
+                      style={{ marginTop: Spacing.xxl, marginBottom: Spacing.xxl }}
                     />
                   )}
                 </View>
@@ -444,72 +480,33 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     padding: Spacing.lg,
   },
-  expandedContentWrapper: {
-    padding: Spacing.lg,
-  },
   iconCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: BorderRadius.xxl,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  infoContainer: {
-    flex: 1,
-  },
-  stationName: {
-    ...Typography.h3,
-    marginBottom: 4,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   stat: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  statValue: {
-    ...Typography.h3,
-  },
   statDivider: {
     width: 1,
     height: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
-  warningContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    marginTop: 6,
-  },
-  warningText: {
-    fontSize: 11,
-    flex: 1,
-    lineHeight: 14,
-  },
-  directionsIconButton: {
-    padding: 4,
-    marginRight: 4,
-  },
-  closeButton: {
-    padding: 4,
-  },
   expandedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  expandedTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  expandedIconContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xxl,
   },
   expandedIconCircle: {
     width: 96,
@@ -518,75 +515,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  expandedName: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  expandedAddress: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
   availabilitySummary: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 32,
-    paddingBottom: 24,
+    marginBottom: Spacing.xxxl,
+    paddingBottom: Spacing.xxl,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   availabilityItem: {
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   availabilityIconCircle: {
     width: 64,
     height: 64,
-    borderRadius: 32,
+    borderRadius: BorderRadius.xxxl,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  availabilityCount: {
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  availabilityLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  detailsSection: {
-    gap: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  detailTextContainer: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  directionsButton: {
-    marginTop: 24,
-    marginBottom: 24,
   },
 });
 

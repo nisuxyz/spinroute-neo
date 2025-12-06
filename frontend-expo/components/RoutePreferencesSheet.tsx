@@ -387,10 +387,21 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
       grabberVisible={true}
     >
       <View style={SheetStyles.container}>
-        <Text style={[SheetStyles.title, { color: textColor }]}>
-          {mode === 'initial' ? 'Route Preferences' : 'Recalculate Route'}
-        </Text>
-        <Text style={[SheetStyles.subtitle, { color: textColor + 'CC' }]}>
+        <View style={styles.header}>
+          <Text style={[Typography.h2, { color: textColor }]}>
+            {mode === 'initial' ? 'Route Preferences' : 'Recalculate Route'}
+          </Text>
+          <TouchableOpacity style={{ padding: 4 }} onPress={onClose}>
+            <MaterialIcons name="close" size={24} color={textColor} />
+          </TouchableOpacity>
+        </View>
+
+        <Text
+          style={[
+            Typography.bodyMedium,
+            { textAlign: 'center', marginBottom: Spacing.xxl, color: textColor + 'CC' },
+          ]}
+        >
           {mode === 'initial'
             ? 'Choose your routing provider and travel mode'
             : 'Update your routing preferences'}
@@ -418,6 +429,12 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
 };
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
   providerButtons: {
     flexDirection: 'row',
     gap: Spacing.md,

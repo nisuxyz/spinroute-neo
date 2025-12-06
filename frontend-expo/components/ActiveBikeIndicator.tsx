@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, useColorScheme, ActivityIndicator, Animated } from 'react-native';
+import { StyleSheet, View, Text, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
-import { Colors } from '@/constants/theme';
+import { Spacing, BorderRadius, Typography } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import type { Bike } from '@/hooks/use-bikes';
 import { useWeather } from '@/hooks/use-weather';
 
@@ -30,8 +31,7 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
   latitude = null,
   longitude = null,
 }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const textColor = useThemeColor({}, 'text');
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const { weather } = useWeather({ latitude, longitude, enabled: !!bike });
 
@@ -82,33 +82,27 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
 
   return (
     <View style={styles.container}>
-      <GlassView style={{ borderRadius: 32 }} glassEffectStyle="clear">
+      <GlassView style={{ borderRadius: BorderRadius.xxxl }} glassEffectStyle="clear">
         <View style={styles.content}>
           <MaterialIcons name={icon} size={16} color={bikeColor} />
-          <Text style={[styles.bikeText, { color: colors.text }]} numberOfLines={1}>
+          <Text
+            style={[Typography.bodySmall, { fontWeight: '600', color: textColor }]}
+            numberOfLines={1}
+          >
             {bike.name}
           </Text>
-          {isRecording && (
-            <Animated.View
-              style={[
-                styles.recordingDot,
-                {
-                  opacity: pulseAnim,
-                },
-              ]}
-            />
-          )}
+          {isRecording && <Animated.View style={[styles.recordingDot, { opacity: pulseAnim }]} />}
           {weather && (
             <View style={styles.weatherContainer}>
               <View style={styles.weatherItem}>
-                <MaterialIcons name="thermostat" size={14} color={colors.text} />
-                <Text style={[styles.weatherText, { color: colors.text }]}>
+                <MaterialIcons name="thermostat" size={14} color={textColor} />
+                <Text style={[Typography.caption, { fontWeight: '500', color: textColor }]}>
                   {Math.round(weather.temperature)}°C
                 </Text>
               </View>
               <View style={styles.weatherItem}>
-                <MaterialIcons name="air" size={14} color={colors.text} />
-                <Text style={[styles.weatherText, { color: colors.text }]}>
+                <MaterialIcons name="air" size={14} color={textColor} />
+                <Text style={[Typography.caption, { fontWeight: '500', color: textColor }]}>
                   {Math.round(weather.windSpeed)} km/h
                 </Text>
               </View>
@@ -124,8 +118,6 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 56,
-    // right: 80,
-    // top: 100,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -134,27 +126,23 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     gap: 6,
     maxWidth: 300,
-  },
-  bikeText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   recordingDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: BorderRadius.round,
     backgroundColor: '#ef4444',
     marginLeft: 2,
   },
   weatherContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.sm,
     marginLeft: 4,
-    paddingLeft: 8,
+    paddingLeft: Spacing.sm,
     borderLeftWidth: 1,
     borderLeftColor: 'rgba(255, 255, 255, 0.3)',
   },
@@ -162,10 +150,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-  },
-  weatherText: {
-    fontSize: 11,
-    fontWeight: '500',
   },
 });
 
