@@ -350,7 +350,7 @@ const MainMapView: React.FC = () => {
     clearRoute();
     setRouteGeometry(null);
     setSelectedStation(null);
-    setSearchedLocation(null);
+    // setSearchedLocation(null);
     if (userLocation) {
       cameraRef.current?.setCamera({
         centerCoordinate: userLocation,
@@ -624,7 +624,7 @@ const MainMapView: React.FC = () => {
 
       {/* Fancy Sheet (Apple Maps-like) - Always present, non-dismissible */}
       {ENABLE_FANCY_SHEET && (
-        <FancySheet ref={fancySheetRef} onSearch={(query) => console.log('Search:', query)} />
+        <FancySheet ref={fancySheetRef} onSelectLocation={handleSearchSelect} />
       )}
 
       {/* Station Sheet */}

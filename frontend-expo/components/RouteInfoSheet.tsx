@@ -60,8 +60,22 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
   const colors = Colors[colorScheme ?? 'light'];
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Get the current provider from route data
-  const currentProvider = route?.provider || 'openrouteservice';
+  // Preserve the last known route data to prevent race conditions during dismissal
+  const [preservedRoute, setPreservedRoute] = useState<DirectionsResponse | null>(null);
+  const [preservedError, setPreservedError] = useState<string | null>(null);
+
+  // Update preserved data when props change (but don't clear when props become null)
+  useEffect(() => {
+    if (route) {
+      setPreservedRoute(route);
+      setPreservedError(null);
+    } else if (error) {
+      setPreservedError(error);
+    }
+  }, [route, error]);
+
+  // Get the current provider from preserved route data
+  const currentProvider = preservedRoute?.provider || 'openrouteservice';
 
   // Fetch profiles for the current provider to get metadata
   const { profiles } = useProviderProfiles(currentProvider);
@@ -72,18 +86,27 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
     return profiles.find((p) => p.id === profile) || null;
   }, [profile, profiles]);
 
-  // Present/dismiss sheet based on visible prop
+  // Present sheet when visible becomes true
+  // Don't auto-dismiss when visible becomes false - let user dismiss manually
   useEffect(() => {
     if (visible) {
       sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
     }
   }, [visible]);
 
-  // Handle sheet dismissal
+  // Called when user presses close button - triggers dismissal
+  const handleClosePress = () => {
+    sheetRef.current?.dismiss();
+  };
+
+  // Called after sheet is fully dismissed - cleanup and notify parent
   const handleDismiss = () => {
     setIsExpanded(false);
+    // Clear preserved data now that sheet is fully dismissed
+    setPreservedRoute(null);
+    setPreservedError(null);
+    // Notify parent (this will clear selectedStation/searchedLocation in MainMapView)
+    // This happens AFTER the sheet animation completes (via onDidDismiss)
     onClearRoute();
   };
 
@@ -209,17 +232,17 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
   };
 
   // Determine detents based on state
-  const detents: ('auto' | number)[] = loading || error ? ['auto'] : [0.2, 0.85];
+  const detents: ('auto' | number)[] = loading || error ? ['auto'] : [0.1, 0.85];
 
   return (
     <BaseSheet
       ref={sheetRef}
       name="RouteInfoSheet"
-      detents={detents}
+      detents={[0.1, 0.9]}
       initialDetentIndex={0}
       onDismiss={handleDismiss}
       onDetentChange={handleDetentChange}
-      scrollable={!loading && !error}
+      scrollable={!loading && !preservedError}
       dimmed={false}
     >
       {loading && (
@@ -229,26 +252,28 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
         </View>
       )}
 
-      {error && (
+      {preservedError && (
         <View style={styles.errorContent}>
           <MaterialIcons name="error-outline" size={24} color={colors.text} />
           <View style={styles.errorTextContainer}>
             <Text style={[styles.errorTitle, { color: colors.text }]}>Route Error</Text>
-            <Text style={[styles.errorMessage, { color: colors.text + 'CC' }]}>{error}</Text>
+            <Text style={[styles.errorMessage, { color: colors.text + 'CC' }]}>
+              {preservedError}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+          <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
             <MaterialIcons name="close" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
       )}
 
       {!loading &&
-        !error &&
-        route &&
-        route.routes &&
-        route.routes.length > 0 &&
+        !preservedError &&
+        preservedRoute &&
+        preservedRoute.routes &&
+        preservedRoute.routes.length > 0 &&
         (() => {
-          const mainRoute = route.routes[0];
+          const mainRoute = preservedRoute.routes[0];
           const distance = formatDistance(mainRoute.distance, units);
           const duration = formatDuration(mainRoute.duration);
           const allSteps = mainRoute.legs?.flatMap((leg) => leg.steps) || [];
@@ -276,11 +301,11 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
                       <Text style={[styles.profileLabel, { color: colors.text + '99' }]}>
                         {getProfileLabel()}
                       </Text>
-                      {route.provider && (
+                      {preservedRoute.provider && (
                         <Text style={[styles.providerLabel, { color: colors.text + '66' }]}>
                           via{' '}
-                          {route.provider.charAt(0).toUpperCase() +
-                            route.provider.slice(1).replace('-', ' ')}
+                          {preservedRoute.provider.charAt(0).toUpperCase() +
+                            preservedRoute.provider.slice(1).replace('-', ' ')}
                         </Text>
                       )}
                     </View>
@@ -295,19 +320,19 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
                         <Text style={[styles.statValue, { color: colors.text }]}>{duration}</Text>
                       </View>
                     </View>
-                    {route.warnings && route.warnings.length > 0 && (
+                    {preservedRoute.warnings && preservedRoute.warnings.length > 0 && (
                       <View style={styles.warningContainer}>
                         <MaterialIcons name="info-outline" size={14} color={colors.text + '99'} />
                         <Text
                           style={[styles.warningText, { color: colors.text + '99' }]}
                           numberOfLines={2}
                         >
-                          {route.warnings[0]}
+                          {preservedRoute.warnings[0]}
                         </Text>
                       </View>
                     )}
                   </View>
-                  <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+                  <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
                     <MaterialIcons name="close" size={20} color={colors.text} />
                   </TouchableOpacity>
                 </View>
@@ -317,11 +342,11 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
                   <View style={styles.expandedHeader}>
                     <View style={styles.expandedTitleContainer}>
                       <Text style={[styles.expandedTitle, { color: colors.text }]}>Directions</Text>
-                      {route.provider && (
+                      {preservedRoute.provider && (
                         <Text style={[styles.expandedProviderLabel, { color: colors.text + '66' }]}>
                           via{' '}
-                          {route.provider.charAt(0).toUpperCase() +
-                            route.provider.slice(1).replace('-', ' ')}
+                          {preservedRoute.provider.charAt(0).toUpperCase() +
+                            preservedRoute.provider.slice(1).replace('-', ' ')}
                         </Text>
                       )}
                     </View>
@@ -336,7 +361,7 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
                         <MaterialIcons name="tune" size={20} color="white" />
                       </TouchableOpacity>
                     )}
-                    <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+                    <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
                       <MaterialIcons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
                   </View>
@@ -420,11 +445,11 @@ const RouteInfoSheet: React.FC<RouteInfoSheetProps> = ({
                     ))}
                   </View>
 
-                  {route.warnings && route.warnings.length > 0 && (
+                  {preservedRoute.warnings && preservedRoute.warnings.length > 0 && (
                     <View style={[styles.expandedWarning, { backgroundColor: colors.text + '1A' }]}>
                       <MaterialIcons name="info-outline" size={16} color={colors.text + '99'} />
                       <Text style={[styles.expandedWarningText, { color: colors.text + '99' }]}>
-                        {route.warnings[0]}
+                        {preservedRoute.warnings[0]}
                       </Text>
                     </View>
                   )}

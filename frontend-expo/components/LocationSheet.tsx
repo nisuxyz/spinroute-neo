@@ -54,18 +54,36 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
   const colors = Colors[colorScheme ?? 'light'];
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Present/dismiss sheet based on visible prop
+  // Preserve the last known location data to prevent race conditions during dismissal
+  const [preservedLocation, setPreservedLocation] = useState<LocationData | null>(null);
+
+  // Update preserved location when prop changes (but don't clear it when prop becomes null)
+  useEffect(() => {
+    if (location) {
+      setPreservedLocation(location);
+    }
+  }, [location]);
+
+  // Present sheet when visible becomes true
+  // Don't auto-dismiss when visible becomes false - let user dismiss manually
   useEffect(() => {
     if (visible && location) {
       sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
     }
   }, [visible, location]);
 
-  // Handle sheet dismissal
+  // Called when user presses close button - triggers dismissal
+  const handleClosePress = () => {
+    sheetRef.current?.dismiss();
+  };
+
+  // Called after sheet is fully dismissed - cleanup and notify parent
   const handleDismiss = () => {
     setIsExpanded(false);
+    // Clear preserved location data now that sheet is fully dismissed
+    setPreservedLocation(null);
+    // Notify parent (this will clear searchedLocation in MainMapView)
+    // This happens AFTER the sheet animation completes (via onDidDismiss)
     onClose();
   };
 
@@ -114,7 +132,7 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
       scrollable={true}
       dimmed={false}
     >
-      {location && (
+      {preservedLocation && (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -131,20 +149,20 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
                 ]}
               >
                 <MaterialIcons
-                  name={getIconForFeatureType(location.type)}
+                  name={getIconForFeatureType(preservedLocation.type)}
                   size={24}
                   color="white"
                 />
               </View>
               <View style={styles.infoContainer}>
                 <Text style={[styles.locationName, { color: colors.text }]} numberOfLines={1}>
-                  {location.name}
+                  {preservedLocation.name}
                 </Text>
                 <Text
                   style={[styles.locationAddress, { color: colors.text + 'CC' }]}
                   numberOfLines={1}
                 >
-                  {location.display_name}
+                  {preservedLocation.display_name}
                 </Text>
               </View>
               {onGetDirections && !isLoadingDirections && (
@@ -157,7 +175,7 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
                   <MaterialIcons name="hourglass-empty" size={20} color={colors.text} />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+              <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
                 <MaterialIcons name="close" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
@@ -166,7 +184,7 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
             <View style={styles.expandedContentWrapper}>
               <View style={styles.expandedHeader}>
                 <Text style={[styles.expandedTitle, { color: colors.text }]}>Location Details</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+                <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
                   <MaterialIcons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
@@ -179,16 +197,18 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
                   ]}
                 >
                   <MaterialIcons
-                    name={getIconForFeatureType(location.type)}
+                    name={getIconForFeatureType(preservedLocation.type)}
                     size={48}
                     color="white"
                   />
                 </View>
               </View>
 
-              <Text style={[styles.expandedName, { color: colors.text }]}>{location.name}</Text>
+              <Text style={[styles.expandedName, { color: colors.text }]}>
+                {preservedLocation.name}
+              </Text>
               <Text style={[styles.expandedAddress, { color: colors.text + 'CC' }]}>
-                {location.display_name}
+                {preservedLocation.display_name}
               </Text>
 
               {/* Location Details */}
@@ -200,7 +220,7 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
                       Coordinates
                     </Text>
                     <Text style={[styles.detailValue, { color: colors.text }]}>
-                      {location.lat.toFixed(6)}, {location.lon.toFixed(6)}
+                      {preservedLocation.lat.toFixed(6)}, {preservedLocation.lon.toFixed(6)}
                     </Text>
                   </View>
                 </View>
@@ -210,7 +230,8 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
                   <View style={styles.detailTextContainer}>
                     <Text style={[styles.detailLabel, { color: colors.text + '99' }]}>Type</Text>
                     <Text style={[styles.detailValue, { color: colors.text }]}>
-                      {location.type.charAt(0).toUpperCase() + location.type.slice(1)}
+                      {preservedLocation.type.charAt(0).toUpperCase() +
+                        preservedLocation.type.slice(1)}
                     </Text>
                   </View>
                 </View>

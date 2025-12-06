@@ -62,36 +62,55 @@ const StationSheet: React.FC<StationSheetProps> = ({
   const colors = Colors[colorScheme ?? 'light'];
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Subscribe to real-time station updates
-  const { stationData: realtimeStation } = useStationRealtime(station?.id ?? null);
+  // Preserve the last known station data to prevent race conditions during dismissal
+  const [preservedStation, setPreservedStation] = useState<StationData | null>(null);
 
-  // Use real-time data if available, otherwise fall back to prop data
-  const currentStation = realtimeStation
-    ? {
-        ...station!,
-        classicBikes: realtimeStation.num_bikes_available || 0,
-        electricBikes: realtimeStation.num_ebikes_available || 0,
-        availableDocks: realtimeStation.num_docks_available || 0,
-        isOperational: realtimeStation.is_operational ?? true,
-        isRenting: realtimeStation.is_renting ?? true,
-        isReturning: realtimeStation.is_returning ?? true,
-        lastReported: realtimeStation.last_reported ?? undefined,
-        capacity: realtimeStation.capacity ?? undefined,
-      }
-    : station;
+  // Subscribe to real-time station updates (only when we have a station)
+  const { stationData: realtimeStation } = useStationRealtime(preservedStation?.id ?? null);
 
-  // Present/dismiss sheet based on visible prop
+  // Update preserved station when prop changes (but don't clear it when prop becomes null)
+  useEffect(() => {
+    if (station) {
+      setPreservedStation(station);
+    }
+  }, [station]);
+
+  // Use real-time data if available, otherwise fall back to preserved data
+  const currentStation =
+    realtimeStation && preservedStation
+      ? {
+          ...preservedStation,
+          classicBikes: realtimeStation.num_bikes_available || 0,
+          electricBikes: realtimeStation.num_ebikes_available || 0,
+          availableDocks: realtimeStation.num_docks_available || 0,
+          isOperational: realtimeStation.is_operational ?? true,
+          isRenting: realtimeStation.is_renting ?? true,
+          isReturning: realtimeStation.is_returning ?? true,
+          lastReported: realtimeStation.last_reported ?? undefined,
+          capacity: realtimeStation.capacity ?? undefined,
+        }
+      : preservedStation;
+
+  // Present sheet when visible becomes true
+  // Don't auto-dismiss when visible becomes false - let user dismiss manually
   useEffect(() => {
     if (visible && station) {
       sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
     }
   }, [visible, station]);
 
-  // Handle sheet dismissal
+  // Called when user presses close button - triggers dismissal
+  const handleClosePress = () => {
+    sheetRef.current?.dismiss();
+  };
+
+  // Called after sheet is fully dismissed - cleanup and notify parent
   const handleDismiss = () => {
     setIsExpanded(false);
+    // Clear preserved station data now that sheet is fully dismissed
+    setPreservedStation(null);
+    // Notify parent (this will clear selectedStation in MainMapView)
+    // This happens AFTER the sheet animation completes (via onDidDismiss)
     onClose();
   };
 
@@ -229,7 +248,7 @@ const StationSheet: React.FC<StationSheetProps> = ({
                       <MaterialIcons name="hourglass-empty" size={20} color={colors.text} />
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+                  <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
                     <MaterialIcons name="close" size={20} color={colors.text} />
                   </TouchableOpacity>
                 </View>
@@ -240,7 +259,7 @@ const StationSheet: React.FC<StationSheetProps> = ({
                     <Text style={[styles.expandedTitle, { color: colors.text }]}>
                       Station Details
                     </Text>
-                    <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+                    <TouchableOpacity style={styles.closeButton} onPress={handleClosePress}>
                       <MaterialIcons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
                   </View>

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
-import { GlassContainer, GlassView } from 'expo-glass-effect';
+import { GlassContainer } from 'expo-glass-effect';
 import MapActionButton from './MapActionButton';
-import { Colors, electricPurple, Spacing } from '@/constants/theme';
+import { electricPurple, Spacing } from '@/constants/theme';
 import { getMapStyleIcon } from './MapStylePicker';
 
 interface MapActionButtonsProps {
