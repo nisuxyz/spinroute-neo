@@ -2,13 +2,13 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'spinroute-neo',
+  name: 'spinroute',
   slug: 'spinroute-neo',
   owner: 'itsnisu',
-  version: '0.0.1',
+  version: '0.1.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'spinroute-neo',
+  scheme: 'spinroute',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
   ios: {
