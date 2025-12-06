@@ -16,6 +16,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'xyz.itsnisu.spinroute',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      UIBackgroundModes: ['location'],
     },
     entitlements: {
       'com.apple.developer.applesignin': ['Default'],
@@ -33,6 +34,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     permissions: [
       'android.permission.ACCESS_COARSE_LOCATION',
       'android.permission.ACCESS_FINE_LOCATION',
+      'android.permission.ACCESS_BACKGROUND_LOCATION',
+      'android.permission.FOREGROUND_SERVICE',
+      'android.permission.FOREGROUND_SERVICE_LOCATION',
     ],
     package: 'xyz.itsnisu.spinroute',
   },
@@ -68,7 +72,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-location',
       {
-        locationWhenInUsePermission: 'Show current location on map.',
+        locationAlwaysAndWhenInUsePermission:
+          'Allow SpinRoute to access your location to record trips and track your rides, even when the app is in the background.',
+        locationAlwaysPermission:
+          'Allow SpinRoute to access your location in the background to continue recording your trip when the app is not in use.',
+        locationWhenInUsePermission:
+          'Allow SpinRoute to access your location to show your position on the map and record trips.',
+        isIosBackgroundLocationEnabled: true,
+        isAndroidBackgroundLocationEnabled: true,
       },
     ],
     'expo-font',

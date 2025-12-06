@@ -51,14 +51,13 @@ export function useLocationTracking({
   const batchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSyncing = useRef(false);
 
-  // Request location permissions
+  // Request location permissions (foreground + background)
   const requestPermissions = async (): Promise<boolean> => {
     try {
       console.log('[useLocationTracking] Requesting location permissions...');
 
-      // Request foreground permissions
+      // Request foreground permissions first
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
-
       console.log('[useLocationTracking] Foreground permission status:', foregroundStatus);
 
       if (foregroundStatus !== 'granted') {
@@ -67,9 +66,8 @@ export function useLocationTracking({
         return false;
       }
 
-      // Request background permissions
+      // Request background permissions for continuous tracking
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-
       console.log('[useLocationTracking] Background permission status:', backgroundStatus);
 
       if (backgroundStatus !== 'granted') {
@@ -110,6 +108,53 @@ export function useLocationTracking({
     try {
       console.log(`[useLocationTracking] Syncing ${pointsToSync.length} points for trip:`, tripId);
 
+      // Check auth session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log(
+        '[useLocationTracking] Auth session present:',
+        !!session,
+        'User ID:',
+        session?.user?.id,
+      );
+
+      if (!session) {
+        console.error('[useLocationTracking] No auth session found!');
+        throw new Error('Not authenticated');
+      }
+
+      // Verify trip is still active before inserting
+      const { data: trip, error: tripError } = await supabase
+        .schema('recording')
+        .from('trips')
+        .select('id, status, user_id')
+        .eq('id', tripId)
+        .single();
+
+      if (tripError) {
+        console.error('[useLocationTracking] Error checking trip status:', tripError);
+        throw tripError;
+      }
+
+      if (!trip) {
+        console.warn('[useLocationTracking] Trip not found:', tripId);
+        throw new Error('Trip not found');
+      }
+
+      console.log('[useLocationTracking] Trip status:', trip.status, 'User ID:', trip.user_id);
+
+      if (trip.status !== 'in_progress' && trip.status !== 'paused') {
+        console.warn(
+          '[useLocationTracking] Trip is not active, skipping sync. Status:',
+          trip.status,
+        );
+        // Clear the queue since we can't insert these points
+        pointsQueue.current = [];
+        setQueuedPointsCount(0);
+        return;
+      }
+
       const { error: insertError } = await supabase
         .schema('recording')
         .from('trip_points')
@@ -128,11 +173,15 @@ export function useLocationTracking({
     } catch (err) {
       console.error('[useLocationTracking] Error syncing location points:', err);
       setError(err instanceof Error ? err.message : 'Failed to sync location points');
-      // Keep points in queue for retry
+      // Keep points in queue for retry only if it's not a status issue
+      if (err instanceof Error && err.message.includes('not active')) {
+        pointsQueue.current = [];
+        setQueuedPointsCount(0);
+      }
     } finally {
       isSyncing.current = false;
     }
-  }, [tripId]);
+  }, [tripId, supabase]);
 
   // Add point to queue and trigger sync if needed
   const queuePoint = useCallback(
@@ -159,7 +208,7 @@ export function useLocationTracking({
     [batchSize, batchTimeout, syncQueuedPoints],
   );
 
-  // Start location tracking
+  // Start location tracking (with background support)
   const startTracking = async (): Promise<boolean> => {
     if (!tripId) {
       setError('No active trip to track');
@@ -179,6 +228,9 @@ export function useLocationTracking({
           accuracy: Location.Accuracy.BestForNavigation,
           timeInterval: captureInterval * 1000,
           distanceInterval: 0, // Capture based on time only
+          mayShowUserSettingsDialog: true,
+          // Enable background location updates
+          showsBackgroundLocationIndicator: true,
         },
         (location) => {
           const { latitude, longitude, altitude, accuracy, speed } = location.coords;
@@ -260,22 +312,15 @@ export function useLocationTracking({
 
   // Auto-start tracking when tripId changes
   useEffect(() => {
-    console.log('[useLocationTracking] Auto-start effect triggered:', {
-      tripId,
-      permissionStatus,
-      isTracking,
-    });
-
     if (tripId && permissionStatus === 'granted' && !isTracking) {
       console.log('[useLocationTracking] Auto-starting tracking for trip:', tripId);
       startTracking();
     } else if (!tripId && isTracking) {
       console.log('[useLocationTracking] Auto-stopping tracking');
       stopTracking();
-    } else if (tripId && permissionStatus !== 'granted') {
-      console.warn('[useLocationTracking] Cannot auto-start: permission not granted');
     }
-  }, [tripId, permissionStatus, isTracking, startTracking, stopTracking]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId, permissionStatus, isTracking]);
 
   // Force sync all queued points (useful before stopping a trip)
   const syncAllPoints = useCallback(async () => {
