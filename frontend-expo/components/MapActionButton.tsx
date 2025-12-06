@@ -100,7 +100,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
           toValue: 1,
           duration: loadingSpinSpeed,
           easing: Easing.linear,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       );
       animation.start();
@@ -189,7 +189,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
   const ButtonWrapper = useGlass ? GlassView : View;
   const wrapperProps = useGlass
     ? {
-        glassEffectStyle: (isActive ? 'regular' : 'clear') as const,
+        glassEffectStyle: isActive ? ('regular' as const) : ('clear' as const),
         isInteractive: true,
       }
     : {};
@@ -202,6 +202,8 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
           backgroundColor,
           borderColor,
           borderWidth,
+          padding: isActive ? 2 : 0,
+          // padding
         },
       ]}
       onPress={handlePress}

@@ -43,12 +43,12 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
           Animated.timing(pulseAnim, {
             toValue: 0.3,
             duration: 800,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
             duration: 800,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
         ]),
       );
@@ -60,17 +60,17 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
   }, [isRecording, pulseAnim]);
 
   // Always show loading indicator when loading
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <GlassView style={{ borderRadius: 16 }}>
-          <View style={styles.content}>
-            <ActivityIndicator size="small" color={colors.buttonIcon} />
-          </View>
-        </GlassView>
-      </View>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <View style={styles.container}>
+  //       <GlassView style={{ borderRadius: 32 }}>
+  //         <View style={styles.content}>
+  //           <ActivityIndicator size="small" color={colors.buttonIcon} />
+  //         </View>
+  //       </GlassView>
+  //     </View>
+  //   );
+  // }
 
   if (!bike) {
     return null;
@@ -82,7 +82,7 @@ const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
 
   return (
     <View style={styles.container}>
-      <GlassView style={{ borderRadius: 16 }}>
+      <GlassView style={{ borderRadius: 32 }} glassEffectStyle="clear">
         <View style={styles.content}>
           <MaterialIcons name={icon} size={16} color={bikeColor} />
           <Text style={[styles.bikeText, { color: colors.text }]} numberOfLines={1}>
@@ -136,7 +136,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 16,
     gap: 6,
     maxWidth: 300,
   },
