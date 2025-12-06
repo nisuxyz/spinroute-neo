@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  useColorScheme,
-  ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { View, StyleSheet, useColorScheme, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useUserSettings } from '@/contexts/user-settings-context';
+import SettingsCard from './SettingsCard';
+import SettingsRow from './SettingsRow';
 import ProviderPicker from './ProviderPicker';
 import ProfilePicker from './ProfilePicker';
 import BikeTypePicker from './BikeTypePicker';
@@ -25,9 +19,11 @@ export default function RoutingSettingsSection() {
   // Only show loading on initial load when we have no settings at all
   if (!settings && loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={colors.tint} />
-      </View>
+      <SettingsCard title="Routing" icon="route">
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={colors.tint} />
+        </View>
+      </SettingsCard>
     );
   }
 
@@ -62,90 +58,33 @@ export default function RoutingSettingsSection() {
 
   return (
     <>
-      <View style={styles.container}>
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Routing Preferences</Text>
+      <SettingsCard title="Routing" icon="route">
+        <SettingsRow
+          label="Provider"
+          description="Routing service to use"
+          value={getProviderDisplayName()}
+          onPress={() => setShowProviderPicker(true)}
+          showChevron
+        />
 
-          <View style={[styles.card, { backgroundColor: colors.buttonBackground }]}>
-            {/* Provider Setting */}
-            <TouchableOpacity
-              style={styles.settingRow}
-              onPress={() => setShowProviderPicker(true)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingIcon}>
-                <MaterialIcons name="route" size={24} color={colors.text} />
-              </View>
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Provider</Text>
-                <Text style={[styles.settingDescription, { color: colors.icon }]}>
-                  Routing service to use
-                </Text>
-              </View>
-              <View style={styles.valueContainer}>
-                <Text style={[styles.valueText, { color: colors.text }]}>
-                  {getProviderDisplayName()}
-                </Text>
-                <Text style={[styles.chevron, { color: colors.icon }]}>›</Text>
-              </View>
-            </TouchableOpacity>
+        <SettingsRow
+          label="Profile"
+          description="Transportation mode"
+          value={getProfileDisplayName()}
+          onPress={() => setShowProfilePicker(true)}
+          showChevron
+          showBorder
+        />
 
-            {/* Profile Setting */}
-            <TouchableOpacity
-              style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderTopColor: colors.background },
-              ]}
-              onPress={() => setShowProfilePicker(true)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingIcon}>
-                <MaterialIcons name="directions-bike" size={24} color={colors.text} />
-              </View>
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Profile</Text>
-                <Text style={[styles.settingDescription, { color: colors.icon }]}>
-                  Transportation mode
-                </Text>
-              </View>
-              <View style={styles.valueContainer}>
-                <Text style={[styles.valueText, { color: colors.text }]}>
-                  {getProfileDisplayName()}
-                </Text>
-                <Text style={[styles.chevron, { color: colors.icon }]}>›</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Bike Type Setting */}
-            <TouchableOpacity
-              style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderTopColor: colors.background, paddingBottom: 0 },
-              ]}
-              onPress={() => setShowBikeTypePicker(true)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingIcon}>
-                <MaterialIcons name="pedal-bike" size={24} color={colors.text} />
-              </View>
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Bike Type</Text>
-                <Text style={[styles.settingDescription, { color: colors.icon }]}>
-                  Optimize routes for bike type
-                </Text>
-              </View>
-              <View style={styles.valueContainer}>
-                <Text style={[styles.valueText, { color: colors.text }]}>
-                  {getBikeTypeDisplayName()}
-                </Text>
-                <Text style={[styles.chevron, { color: colors.icon }]}>›</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+        <SettingsRow
+          label="Bike Type"
+          description="Optimize routes for bike type"
+          value={getBikeTypeDisplayName()}
+          onPress={() => setShowBikeTypePicker(true)}
+          showChevron
+          showBorder
+        />
+      </SettingsCard>
 
       {/* Pickers */}
       <ProviderPicker
@@ -170,59 +109,8 @@ export default function RoutingSettingsSection() {
 }
 
 const styles = StyleSheet.create({
-  container: {},
-  section: {},
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  card: {
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  settingRow: {
-    flexDirection: 'row',
+  loadingContainer: {
+    paddingVertical: 8,
     alignItems: 'center',
-    paddingBottom: 12,
-  },
-  settingRowBorder: {
-    borderTopWidth: 1,
-    paddingTop: 12,
-  },
-  settingIcon: {
-    width: 40,
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 12,
-  },
-  valueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  valueText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  chevron: {
-    fontSize: 24,
-    fontWeight: '300',
   },
 });

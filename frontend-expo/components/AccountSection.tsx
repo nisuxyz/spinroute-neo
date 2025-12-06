@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, Alert } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import SettingsCard from './SettingsCard';
 
 export default function AccountSection() {
   const colorScheme = useColorScheme();
@@ -22,37 +23,21 @@ export default function AccountSection() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
-        <TouchableOpacity
-          style={[styles.button, styles.signOutButton]}
-          onPress={handleSignOut}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.signOutButtonText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    <SettingsCard title="Account" icon="manage-accounts">
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.7}>
+        <Text style={styles.signOutButtonText}>Sign Out</Text>
+      </TouchableOpacity>
+    </SettingsCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {},
-  section: {},
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  button: {
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   signOutButton: {
     backgroundColor: '#ef4444',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   signOutButtonText: {
     color: '#fff',

@@ -16,6 +16,8 @@ import { useSubscription } from '@/contexts/user-settings-context';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
 import { useBikes } from '@/hooks/use-bikes';
 import { usePaywall } from '@/hooks/use-paywall';
+import SettingsCard from './SettingsCard';
+import SettingsRow from './SettingsRow';
 
 export default function SubscriptionSection() {
   const colorScheme = useColorScheme();
@@ -110,64 +112,73 @@ export default function SubscriptionSection() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.buttonBackground }]}>
+      <SettingsCard title="Subscription" icon="workspace-premium">
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" />
         </View>
-      </View>
+      </SettingsCard>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.buttonBackground }]}>
-      <View style={styles.header}>
-        <MaterialIcons name="workspace-premium" size={24} color={colors.icon} />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Subscription</Text>
-      </View>
-
+    <SettingsCard title={`Subscription: ${isPro ? 'Pro' : 'Free'}`} icon="workspace-premium">
       <View style={styles.content}>
         {/* Current Plan */}
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: colors.icon }]}>Current Plan</Text>
-          <View style={styles.valueContainer}>
-            <Text style={[styles.value, { color: colors.text }]}>
-              {isPro ? 'SpinRoute Pro' : 'Free'}
-            </Text>
-            {isPro && (
-              <View style={[styles.badge, { backgroundColor: '#10b981' }]}>
-                <Text style={styles.badgeText}>PRO</Text>
-              </View>
-            )}
-          </View>
-        </View>
+        {/* <SettingsRow
+          label="Current Plan"
+          description={
+            <View style={styles.planValue}>
+              <Text style={[styles.planText, { color: colors.text }]}>
+                {isPro ? 'SpinRoute Pro' : 'Free'}
+              </Text>
+              {isPro && (
+                <View style={[styles.badge, { backgroundColor: '#10b981' }]}>
+                  <Text style={styles.badgeText}>PRO</Text>
+                </View>
+              )}
+            </View>
+          }
+        /> */}
 
         {/* Status - only show for Pro users */}
         {isPro && (
-          <View style={styles.row}>
-            <Text style={[styles.label, { color: colors.icon }]}>Status</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '20' }]}>
-              <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
-              <Text style={[styles.statusText, { color: getStatusColor() }]}>
-                {getStatusLabel()}
-              </Text>
-            </View>
-          </View>
+          <SettingsRow
+            label="Status"
+            description={
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '20' }]}>
+                <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
+                <Text style={[styles.statusText, { color: getStatusColor() }]}>
+                  {getStatusLabel()}
+                </Text>
+              </View>
+            }
+            showBorder
+          />
         )}
 
         {/* Renewal/Expiration - only show for Pro users */}
         {isPro && expiresAt && (
-          <View style={styles.row}>
-            <Text style={[styles.label, { color: colors.icon }]}>
-              {isRenewing ? 'Renews' : 'Expires'}
-            </Text>
-            <Text style={[styles.value, { color: colors.text }]}>{formatDate(expiresAt)}</Text>
-          </View>
+          <SettingsRow
+            label={isRenewing ? 'Renews' : 'Expires'}
+            description={formatDate(expiresAt)}
+            showBorder
+          />
         )}
 
         {/* Free Plan Usage - only show for Free users */}
         {!isPro && (
           <View style={styles.usageSection}>
-            <Text style={[styles.usageSectionTitle, { color: colors.text }]}>Free Plan Usage</Text>
+            <Text style={[styles.usageSectionTitle, { color: colors.text }]}>Usage</Text>
+
+            {/* Pro Benefits Teaser */}
+            <View style={[styles.proTeaser, { backgroundColor: colors.background }]}>
+              <Text style={[styles.proTeaserTitle, { color: colors.text }]}>
+                ✨ Go Pro for unlimited access
+              </Text>
+              <Text style={[styles.proTeaserText, { color: colors.icon }]}>
+                Unlimited bikes, trips, and advanced stats
+              </Text>
+            </View>
 
             {/* Bikes Usage */}
             <View style={styles.usageItem}>
@@ -227,16 +238,6 @@ export default function SubscriptionSection() {
                 <Text style={styles.limitReachedText}>Limit reached • Resets in 7 days</Text>
               )}
             </View>
-
-            {/* Pro Benefits Teaser */}
-            <View style={[styles.proTeaser, { backgroundColor: colors.background }]}>
-              <Text style={[styles.proTeaserTitle, { color: colors.text }]}>
-                ✨ Go Pro for unlimited access
-              </Text>
-              <Text style={[styles.proTeaserText, { color: colors.icon }]}>
-                Unlimited bikes, trips, and advanced stats
-              </Text>
-            </View>
           </View>
         )}
 
@@ -262,72 +263,45 @@ export default function SubscriptionSection() {
       </View>
 
       {/* Actions */}
-      <View style={styles.actions}>
-        {isPro ? (
-          <TouchableOpacity
-            style={[styles.manageButton, { borderColor: colors.buttonBorder }]}
-            onPress={handleManageSubscription}
-          >
-            <Text style={[styles.manageButtonText, { color: colors.buttonIcon }]}>
-              Manage Subscription
-            </Text>
-            <MaterialIcons name="open-in-new" size={16} color={colors.buttonIcon} />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.upgradeButton, { backgroundColor: '#007AFF' }]}
-            onPress={handleUpgrade}
-          >
-            <MaterialIcons name="star" size={18} color="#fff" />
-            <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
+      {isPro ? (
+        <TouchableOpacity
+          style={[styles.manageButton, { borderColor: colors.buttonBorder }]}
+          onPress={handleManageSubscription}
+        >
+          <Text style={[styles.manageButtonText, { color: colors.buttonIcon }]}>
+            Manage Subscription
+          </Text>
+          <MaterialIcons name="open-in-new" size={16} color={colors.buttonIcon} />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[styles.upgradeButton, { backgroundColor: '#007AFF' }]}
+          onPress={handleUpgrade}
+        >
+          <MaterialIcons name="star" size={18} color="#fff" />
+          <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+        </TouchableOpacity>
+      )}
+    </SettingsCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
   loadingContainer: {
-    padding: 24,
+    paddingVertical: 8,
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
   },
   content: {
-    padding: 16,
-    gap: 12,
+    gap: 0,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  label: {
-    fontSize: 15,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  valueContainer: {
+  planValue: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  planText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   badge: {
     paddingHorizontal: 8,
@@ -362,7 +336,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     gap: 8,
-    marginTop: 4,
+    marginVertical: 24,
   },
   warningText: {
     flex: 1,
@@ -370,11 +344,8 @@ const styles = StyleSheet.create({
     color: '#f59e0b',
     lineHeight: 18,
   },
-  actions: {
-    padding: 16,
-    paddingTop: 0,
-  },
   manageButton: {
+    marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -388,6 +359,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   upgradeButton: {
+    marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -402,7 +374,6 @@ const styles = StyleSheet.create({
   },
   // Usage section styles
   usageSection: {
-    marginTop: 8,
     paddingTop: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(0,0,0,0.1)',

@@ -18,26 +18,12 @@ export default function SettingsScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.contentContainer}
     >
-      <View style={styles.section}>
-        <UserProfileSection />
-      </View>
-      <View style={styles.section}>
-        <SubscriptionSection />
-      </View>
-      <View style={styles.section}>
-        <AppSettingsSection />
-      </View>
-      <View style={styles.section}>
-        <RoutingSettingsSection />
-      </View>
-      {isDevelopment && (
-        <View style={styles.section}>
-          <DevSettingsSection />
-        </View>
-      )}
-      <View style={styles.section}>
-        <AccountSection />
-      </View>
+      <UserProfileSection />
+      <SubscriptionSection />
+      <AppSettingsSection />
+      <RoutingSettingsSection />
+      {isDevelopment && <DevSettingsSection />}
+      <AccountSection />
     </ScrollView>
   );
 }
@@ -48,7 +34,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    gap: 16,
+    gap: 20,
   },
-  section: {},
 });

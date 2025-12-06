@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   useColorScheme,
-  Switch,
   ActivityIndicator,
   Alert,
   TouchableOpacity,
@@ -18,7 +17,8 @@ import { Colors, electricPurple } from '@/constants/theme';
 import { useUserSettings } from '@/contexts/user-settings-context';
 import { useBikes } from '@/hooks/use-bikes';
 import { useRouter } from 'expo-router';
-import { lightenColor } from '@/utils/lighten-color';
+import SettingsCard from './SettingsCard';
+import SettingsRow from './SettingsRow';
 
 export default function AppSettingsSection() {
   const colorScheme = useColorScheme();
@@ -70,9 +70,11 @@ export default function AppSettingsSection() {
   // Only show loading on initial load when we have no settings at all
   if (!settings && loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={colors.tint} />
-      </View>
+      <SettingsCard title="Preferences" icon="settings">
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={colors.tint} />
+        </View>
+      </SettingsCard>
     );
   }
 
@@ -83,111 +85,55 @@ export default function AppSettingsSection() {
 
   return (
     <>
-      <View style={styles.container}>
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
-
-          <View style={[styles.card, { backgroundColor: colors.buttonBackground }]}>
-            {/* Units Setting */}
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Units</Text>
-                <Text style={[styles.settingDescription, { color: colors.icon }]}>
-                  Distance measurement system
-                </Text>
-              </View>
-              <SegmentedControl
-                values={['km', 'mi']}
-                selectedIndex={settings.units === 'metric' ? 0 : 1}
-                onChange={(event) => {
-                  const index = event.nativeEvent.selectedSegmentIndex;
-                  handleUnitsChange(index === 0 ? 'metric' : 'imperial');
-                }}
-                style={styles.segmentedControl}
-              />
-            </View>
-
-            {/* Active Bike Setting */}
-            <TouchableOpacity
-              style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderTopColor: colors.background },
-              ]}
-              onPress={() => router.push('/bikes')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Active Bike</Text>
-                <Text style={[styles.settingDescription, { color: colors.icon }]}>
-                  Default bike for recording rides
-                </Text>
-              </View>
-              <View style={styles.valueContainer}>
-                <Text style={[styles.valueText, { color: colors.text }]}>
-                  {bikesLoading ? <ActivityIndicator /> : getActiveBikeName()}
-                </Text>
-                <Text style={[styles.chevron, { color: colors.icon }]}>›</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Start Recording on Launch */}
-            <View
-              style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderTopColor: colors.background },
-              ]}
-            >
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  Auto-start Recording
-                </Text>
-                <Text style={[styles.settingDescription, { color: colors.icon }]}>
-                  Start recording rides when app launches
-                </Text>
-              </View>
-              <View style={styles.valueContainer}>
-                <Switch
-                  value={settings.start_recording_on_launch}
-                  onValueChange={handleStartRecordingToggle}
-                  trackColor={{
-                    false: colors.icon,
-                    true: lightenColor(colors.buttonBackground, 100),
-                  }}
-                  thumbColor="#fff"
-                />
-              </View>
-            </View>
-
-            {/* Capture Interval */}
-            <TouchableOpacity
-              style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderTopColor: colors.background, paddingBottom: 0 },
-              ]}
-              onPress={openIntervalPicker}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  Location Capture Interval
-                </Text>
-                <Text style={[styles.settingDescription, { color: colors.icon }]}>
-                  How often to record location during trips
-                </Text>
-              </View>
-              <View style={styles.valueContainer}>
-                <Text style={[styles.valueText, { color: colors.text }]}>
-                  {settings.capture_interval_seconds ?? 5}s
-                </Text>
-                <Text style={[styles.chevron, { color: colors.icon }]}>›</Text>
-              </View>
-            </TouchableOpacity>
+      <SettingsCard title="Preferences" icon="settings">
+        {/* Units Setting */}
+        <View style={styles.unitsRow}>
+          <View style={styles.unitsInfo}>
+            <Text style={[styles.unitsLabel, { color: colors.text }]}>Units</Text>
+            <Text style={[styles.unitsDescription, { color: colors.icon }]}>
+              Distance measurement system
+            </Text>
           </View>
+          <SegmentedControl
+            values={['km', 'mi']}
+            selectedIndex={settings.units === 'metric' ? 0 : 1}
+            onChange={(event) => {
+              const index = event.nativeEvent.selectedSegmentIndex;
+              handleUnitsChange(index === 0 ? 'metric' : 'imperial');
+            }}
+            style={styles.segmentedControl}
+          />
         </View>
-      </View>
+
+        {/* Active Bike Setting */}
+        <SettingsRow
+          label="Active Bike"
+          description="Default bike for recording rides"
+          value={bikesLoading ? <ActivityIndicator size="small" /> : getActiveBikeName()}
+          onPress={() => router.push('/bikes')}
+          showChevron
+          showBorder
+        />
+
+        {/* Start Recording on Launch */}
+        <SettingsRow
+          label="Auto-start Recording"
+          description="Start recording rides when app launches"
+          switchValue={settings.start_recording_on_launch}
+          onSwitchChange={handleStartRecordingToggle}
+          showBorder
+        />
+
+        {/* Capture Interval */}
+        <SettingsRow
+          label="Location Capture Interval"
+          description="How often to record location during trips"
+          value={`${settings.capture_interval_seconds ?? 5}s`}
+          onPress={openIntervalPicker}
+          showChevron
+          showBorder
+        />
+      </SettingsCard>
 
       {/* Interval Picker Modal */}
       <Modal
@@ -228,60 +174,31 @@ export default function AppSettingsSection() {
 }
 
 const styles = StyleSheet.create({
-  container: {},
-  section: {},
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
+  loadingContainer: {
+    paddingVertical: 8,
+    alignItems: 'center',
   },
-  card: {
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  settingRow: {
+  unitsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 12,
+    paddingVertical: 12,
   },
-  settingRowBorder: {
-    borderTopWidth: 1,
-    // marginTop: 12,
-    paddingTop: 12,
-  },
-  settingInfo: {
+  unitsInfo: {
     flex: 1,
     marginRight: 16,
+    gap: 4,
   },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+  unitsLabel: {
+    fontSize: 15,
+    fontWeight: '400',
   },
-  settingDescription: {
-    fontSize: 12,
+  unitsDescription: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   segmentedControl: {
     width: 120,
-  },
-  valueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  valueText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  chevron: {
-    fontSize: 24,
-    fontWeight: '300',
   },
   modalOverlay: {
     flex: 1,
