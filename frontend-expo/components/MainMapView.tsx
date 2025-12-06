@@ -8,7 +8,7 @@ import {
   Alert,
   useWindowDimensions,
 } from 'react-native';
-import Mapbox from '@rnmapbox/maps';
+import Mapbox, { UserTrackingMode } from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -222,10 +222,13 @@ const MainMapView: React.FC = () => {
     }
   }, [directionsRoute, directionsLoading]);
 
-  // Follow mode
+  // Follow mode with heading tracking
   React.useEffect(() => {
     if (isFollowModeActive && liveUserLocation) {
-      cameraRef.current?.setCamera({ centerCoordinate: liveUserLocation, animationDuration: 300 });
+      cameraRef.current?.setCamera({
+        centerCoordinate: liveUserLocation,
+        animationDuration: 300,
+      });
     }
   }, [isFollowModeActive, liveUserLocation]);
 
@@ -387,6 +390,19 @@ const MainMapView: React.FC = () => {
   const handleUserLocationUpdate = (location: Mapbox.Location) => {
     if (location?.coords) {
       setLiveUserLocation([location.coords.longitude, location.coords.latitude]);
+
+      // Update camera heading when in follow mode
+      if (
+        isFollowModeActive &&
+        location.coords.heading !== undefined &&
+        location.coords.heading >= 0
+      ) {
+        cameraRef.current?.setCamera({
+          centerCoordinate: [location.coords.longitude, location.coords.latitude],
+          heading: location.coords.heading,
+          animationDuration: 300,
+        });
+      }
     }
   };
 
@@ -485,6 +501,10 @@ const MainMapView: React.FC = () => {
           centerCoordinate={userLocation || DEFAULT_LOCATION}
           zoomLevel={userLocation ? USER_LOCATION_ZOOM : DEFAULT_ZOOM}
           animationDuration={1000}
+          followUserLocation={isFollowModeActive}
+          followUserMode={
+            isFollowModeActive ? UserTrackingMode.FollowWithHeading : UserTrackingMode.Follow
+          }
         />
 
         {isStationsVisible && !useMarkerView && (
