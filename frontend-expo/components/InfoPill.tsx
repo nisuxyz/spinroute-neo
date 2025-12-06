@@ -7,7 +7,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import type { Bike } from '@/hooks/use-bikes';
 import { useWeather } from '@/hooks/use-weather';
 
-interface ActiveBikeIndicatorProps {
+interface InfoPillProps {
   bike: Bike | undefined;
   loading?: boolean;
   isRecording?: boolean;
@@ -24,7 +24,7 @@ const bikeTypeIcons: Record<string, keyof typeof MaterialIcons.glyphMap> = {
   other: 'two-wheeler',
 };
 
-const ActiveBikeIndicator: React.FC<ActiveBikeIndicatorProps> = ({
+const InfoPill: React.FC<InfoPillProps> = ({
   bike,
   loading = false,
   isRecording = false,
@@ -153,4 +153,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ActiveBikeIndicator;
+export default InfoPill;

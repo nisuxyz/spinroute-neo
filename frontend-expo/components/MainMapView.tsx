@@ -33,7 +33,7 @@ import SearchSheet from './SearchSheet';
 import LocationSheet from './LocationSheet';
 import FancySheet, { type FancySheetRef } from './FancySheet';
 import MapStylePicker from './MapStylePicker';
-import ActiveBikeIndicator from './ActiveBikeIndicator';
+import InfoPill from './InfoPill';
 import RouteInfoSheet from './RouteInfoSheet';
 import RoutePreferencesSheet from './RoutePreferencesSheet';
 import { useDirections } from '@/hooks/use-directions';
@@ -694,7 +694,7 @@ const MainMapView: React.FC = () => {
       />
 
       {(activeBike || (bikesLoading && settings?.active_bike_id)) && (
-        <ActiveBikeIndicator
+        <InfoPill
           bike={activeBike}
           loading={bikesLoading}
           isRecording={!!activeTrip}
