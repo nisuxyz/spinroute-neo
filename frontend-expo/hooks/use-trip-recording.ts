@@ -10,11 +10,16 @@ type PauseEventInsert = Database['recording']['Tables']['pause_events']['Insert'
 
 export type TripStatus = 'in_progress' | 'paused' | 'completed';
 
+interface StartTripOptions {
+  title?: string;
+  bikeId?: string | null;
+}
+
 interface UseTripRecordingReturn {
   activeTrip: Trip | null;
   loading: boolean;
   error: string | null;
-  startTrip: (title?: string) => Promise<Trip | null>;
+  startTrip: (options?: StartTripOptions) => Promise<Trip | null>;
   stopTrip: () => Promise<boolean>;
   pauseTrip: () => Promise<boolean>;
   resumeTrip: () => Promise<boolean>;
@@ -55,7 +60,7 @@ export function useTripRecording(): UseTripRecordingReturn {
     fetchActiveTrip();
   }, [fetchActiveTrip]);
 
-  const startTrip = async (title?: string): Promise<Trip | null> => {
+  const startTrip = async (options?: StartTripOptions): Promise<Trip | null> => {
     if (!user) {
       const errorMsg = 'Not authenticated';
       setError(errorMsg);
@@ -79,7 +84,8 @@ export function useTripRecording(): UseTripRecordingReturn {
         user_id: user.id,
         status: 'in_progress',
         started_at: new Date().toISOString(),
-        title: title || undefined,
+        title: options?.title || undefined,
+        bike_id: options?.bikeId || undefined,
       };
 
       console.log('[useTripRecording] Starting trip with data:', tripData);

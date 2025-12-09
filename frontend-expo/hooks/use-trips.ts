@@ -1,13 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './use-auth';
 import { useClient } from 'react-supabase';
+import { useUserSettings } from '@/contexts/user-settings-context';
 import type { Database } from '@/supabase/types';
 
 type Trip = Database['recording']['Tables']['trips']['Row'];
 type TripBasicStats = Database['recording']['Tables']['trip_basic_stats']['Row'];
 
+const KM_TO_MI = 0.621371;
+
+// Display stats with converted units
+export interface DisplayStats {
+  distance: number | null;
+  avg_speed: number | null;
+  max_speed: number | null;
+  moving_duration_seconds: number | null;
+  duration_seconds: number | null;
+  distance_unit: 'km' | 'mi';
+  speed_unit: 'km/h' | 'mph';
+}
+
 export interface TripWithStats extends Trip {
   trip_basic_stats?: TripBasicStats | null;
+  display_stats?: DisplayStats;
 }
 
 export interface UseTripsOptions {
@@ -29,9 +44,10 @@ interface UseTripsReturn {
 export function useTrips(options: UseTripsOptions = {}): UseTripsReturn {
   const { user } = useAuth();
   const supabase = useClient();
+  const { settings } = useUserSettings();
   const { pageSize = 20, startDate, endDate } = options;
 
-  const [trips, setTrips] = useState<TripWithStats[]>([]);
+  const [rawTrips, setRawTrips] = useState<TripWithStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -40,6 +56,39 @@ export function useTrips(options: UseTripsOptions = {}): UseTripsReturn {
     start: startDate,
     end: endDate,
   });
+
+  const isImperial = settings?.units === 'imperial';
+
+  // Convert trips based on user's unit preference
+  const trips: TripWithStats[] = useMemo(() => {
+    return rawTrips.map((trip) => {
+      const stats = trip.trip_basic_stats;
+      return {
+        ...trip,
+        display_stats: {
+          distance: stats?.distance_km
+            ? isImperial
+              ? stats.distance_km * KM_TO_MI
+              : stats.distance_km
+            : null,
+          avg_speed: stats?.avg_speed_kmh
+            ? isImperial
+              ? stats.avg_speed_kmh * KM_TO_MI
+              : stats.avg_speed_kmh
+            : null,
+          max_speed: stats?.max_speed_kmh
+            ? isImperial
+              ? stats.max_speed_kmh * KM_TO_MI
+              : stats.max_speed_kmh
+            : null,
+          moving_duration_seconds: stats?.moving_duration_seconds ?? null,
+          duration_seconds: stats?.duration_seconds ?? null,
+          distance_unit: isImperial ? 'mi' : 'km',
+          speed_unit: isImperial ? 'mph' : 'km/h',
+        },
+      };
+    });
+  }, [rawTrips, isImperial]);
 
   const fetchTrips = useCallback(
     async (pageNum: number, append: boolean = false) => {
@@ -84,9 +133,9 @@ export function useTrips(options: UseTripsOptions = {}): UseTripsReturn {
         }));
 
         if (append) {
-          setTrips((prev) => [...prev, ...tripsWithStats]);
+          setRawTrips((prev) => [...prev, ...tripsWithStats]);
         } else {
-          setTrips(tripsWithStats);
+          setRawTrips(tripsWithStats);
         }
 
         // Check if there are more trips to load

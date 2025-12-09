@@ -314,6 +314,23 @@ export type Database = {
           raw_data: Json;
         }[];
       };
+      get_vehicles_in_view: {
+        Args: { ne_lat: number; ne_lng: number; sw_lat: number; sw_lng: number };
+        Returns: {
+          battery_level: number;
+          created_at: string;
+          fetched_at: string;
+          id: string;
+          is_disabled: boolean;
+          is_reserved: boolean;
+          last_reported: string;
+          lat: number;
+          lng: number;
+          location: unknown;
+          network_id: string;
+          vehicle_type: string;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -889,6 +906,7 @@ export type Database = {
       };
       trips: {
         Row: {
+          bike_id: string | null;
           completed_at: string | null;
           created_at: string;
           id: string;
@@ -900,6 +918,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          bike_id?: string | null;
           completed_at?: string | null;
           created_at?: string;
           id?: string;
@@ -911,6 +930,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          bike_id?: string | null;
           completed_at?: string | null;
           created_at?: string;
           id?: string;

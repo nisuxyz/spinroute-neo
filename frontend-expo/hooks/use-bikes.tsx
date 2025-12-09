@@ -1,10 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useClient } from 'react-supabase';
 import type { Database } from '../supabase/types';
 import { useAuth } from './use-auth';
+import { useUserSettings } from '@/contexts/user-settings-context';
 
 export type BikeType = Database['vehicles']['Enums']['bike_type'];
-export type Bike = Database['vehicles']['Tables']['user_bike']['Row'];
+type BikeRow = Database['vehicles']['Tables']['user_bike']['Row'];
+
+// Extended bike type with converted distance for display
+export type Bike = BikeRow & {
+  display_distance: number;
+  distance_unit: 'km' | 'mi';
+};
 
 export interface CreateBikeInput {
   name: string;
@@ -42,9 +49,21 @@ function convertMiToKm(mi: number): number {
 export function useBikes() {
   const supabase = useClient();
   const { user } = useAuth();
-  const [bikes, setBikes] = useState<Bike[]>([]);
+  const { settings } = useUserSettings();
+  const [rawBikes, setRawBikes] = useState<BikeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isImperial = settings?.units === 'imperial';
+
+  // Convert bikes based on user's unit preference
+  const bikes: Bike[] = useMemo(() => {
+    return rawBikes.map((bike) => ({
+      ...bike,
+      display_distance: isImperial ? convertKmToMi(bike.total_kilometrage) : bike.total_kilometrage,
+      distance_unit: isImperial ? 'mi' : 'km',
+    }));
+  }, [rawBikes, isImperial]);
 
   const fetchBikes = useCallback(async () => {
     setLoading(true);
@@ -59,13 +78,7 @@ export function useBikes() {
 
       if (fetchError) throw fetchError;
 
-      // Convert km to miles for display
-      const bikesWithMiles = (data || []).map((bike) => ({
-        ...bike,
-        total_kilometrage: convertKmToMi(bike.total_kilometrage),
-      }));
-
-      setBikes(bikesWithMiles);
+      setRawBikes(data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch bikes');
       console.error('Error fetching bikes:', err);
@@ -130,14 +143,15 @@ export function useBikes() {
         return null;
       }
 
-      // Convert km to miles for display
-      const bikeWithMiles = {
+      setRawBikes((prev) => [data, ...prev]);
+      // Return with display values
+      return {
         ...data,
-        total_kilometrage: convertKmToMi(data.total_kilometrage),
-      };
-
-      setBikes((prev) => [bikeWithMiles, ...prev]);
-      return bikeWithMiles;
+        display_distance: isImperial
+          ? convertKmToMi(data.total_kilometrage)
+          : data.total_kilometrage,
+        distance_unit: isImperial ? 'mi' : 'km',
+      } as Bike;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to create bike';
       setError(errorMsg);
@@ -180,14 +194,15 @@ export function useBikes() {
 
       if (updateError) throw updateError;
 
-      // Convert km to miles for display
-      const bikeWithMiles = {
+      setRawBikes((prev) => prev.map((b) => (b.id === id ? data : b)));
+      // Return with display values
+      return {
         ...data,
-        total_kilometrage: convertKmToMi(data.total_kilometrage),
-      };
-
-      setBikes((prev) => prev.map((b) => (b.id === id ? bikeWithMiles : b)));
-      return bikeWithMiles;
+        display_distance: isImperial
+          ? convertKmToMi(data.total_kilometrage)
+          : data.total_kilometrage,
+        distance_unit: isImperial ? 'mi' : 'km',
+      } as Bike;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update bike');
       console.error('Error updating bike:', err);
@@ -215,7 +230,7 @@ export function useBikes() {
 
       if (deleteError) throw deleteError;
 
-      setBikes((prev) => prev.filter((b) => b.id !== id));
+      setRawBikes((prev) => prev.filter((b) => b.id !== id));
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete bike');

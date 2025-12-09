@@ -132,7 +132,7 @@ export default function BikesScreen() {
               <View className="flex-row items-center gap-1.5">
                 <Icon name="speed" size={16} color="mutedForeground" />
                 <Text variant="small" className="font-medium">
-                  {bike.total_kilometrage?.toFixed(1) || '0.0'} miles
+                  {bike.display_distance?.toFixed(1) || '0.0'} {bike.distance_unit || 'km'}
                 </Text>
               </View>
             </View>

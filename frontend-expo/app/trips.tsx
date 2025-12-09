@@ -42,22 +42,12 @@ export default function TripsScreen() {
     return `${minutes}m`;
   };
 
-  const formatDistance = (km?: number | null) => {
-    if (!km) return '--';
-    return `${km.toFixed(2)} km`;
-  };
-
-  const formatSpeed = (kmh?: number | null) => {
-    if (!kmh) return '--';
-    return `${kmh.toFixed(1)} km/h`;
-  };
-
   const handleTripPress = (trip: TripWithStats) => {
     router.push(`/trip/${trip.id}`);
   };
 
   const renderTripItem = ({ item }: { item: TripWithStats }) => {
-    const stats = item.trip_basic_stats;
+    const displayStats = item.display_stats;
 
     return (
       <TouchableOpacity onPress={() => handleTripPress(item)} activeOpacity={0.7}>
@@ -89,7 +79,11 @@ export default function TripsScreen() {
               <View className="flex-row items-center gap-1.5 flex-1">
                 <Icon name="straighten" size={18} color="primary" />
                 <View className="flex-1">
-                  <Text className="font-semibold">{formatDistance(stats?.distance_km)}</Text>
+                  <Text className="font-semibold">
+                    {displayStats?.distance != null
+                      ? `${displayStats.distance.toFixed(2)} ${displayStats.distance_unit}`
+                      : '--'}
+                  </Text>
                   <Text variant="small" className="text-muted-foreground">
                     Distance
                   </Text>
@@ -100,7 +94,7 @@ export default function TripsScreen() {
                 <Icon name="schedule" size={18} color="primary" />
                 <View className="flex-1">
                   <Text className="font-semibold">
-                    {formatDuration(stats?.moving_duration_seconds)}
+                    {formatDuration(displayStats?.moving_duration_seconds)}
                   </Text>
                   <Text variant="small" className="text-muted-foreground">
                     Duration
@@ -111,7 +105,11 @@ export default function TripsScreen() {
               <View className="flex-row items-center gap-1.5 flex-1">
                 <Icon name="speed" size={18} color="primary" />
                 <View className="flex-1">
-                  <Text className="font-semibold">{formatSpeed(stats?.avg_speed_kmh)}</Text>
+                  <Text className="font-semibold">
+                    {displayStats?.avg_speed != null
+                      ? `${displayStats.avg_speed.toFixed(1)} ${displayStats.speed_unit}`
+                      : '--'}
+                  </Text>
                   <Text variant="small" className="text-muted-foreground">
                     Avg Speed
                   </Text>

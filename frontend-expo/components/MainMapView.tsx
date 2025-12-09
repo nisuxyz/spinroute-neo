@@ -491,7 +491,7 @@ const MainMapView: React.FC = () => {
         return;
       }
     }
-    const trip = await startTrip();
+    const trip = await startTrip({ bikeId: settings?.active_bike_id });
     if (trip) {
       Alert.alert('Recording Started', 'Your trip is now being recorded');
     } else if (tripError) {

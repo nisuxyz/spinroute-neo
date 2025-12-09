@@ -90,19 +90,29 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
     return `${secs}s`;
   };
 
+  const isImperial = settings?.units === 'imperial';
+  const KM_TO_MI = 0.621371;
+  const M_TO_FT = 3.28084;
+
   const formatDistance = (km?: number | null) => {
     if (!km) return '--';
-    return `${km.toFixed(2)} km`;
+    const value = isImperial ? km * KM_TO_MI : km;
+    const unit = isImperial ? 'mi' : 'km';
+    return `${value.toFixed(2)} ${unit}`;
   };
 
   const formatSpeed = (kmh?: number | null) => {
     if (!kmh) return '--';
-    return `${kmh.toFixed(1)} km/h`;
+    const value = isImperial ? kmh * KM_TO_MI : kmh;
+    const unit = isImperial ? 'mph' : 'km/h';
+    return `${value.toFixed(1)} ${unit}`;
   };
 
   const formatElevation = (m?: number | null) => {
     if (!m) return '--';
-    return `${m.toFixed(0)} m`;
+    const value = isImperial ? m * M_TO_FT : m;
+    const unit = isImperial ? 'ft' : 'm';
+    return `${value.toFixed(0)} ${unit}`;
   };
 
   if (loading) {
