@@ -94,6 +94,12 @@ function MapboxInitializer() {
   return null;
 }
 
+export function PaywallPortal() {
+  const { isVisible, hidePaywall } = usePaywall();
+
+  return <Paywall visible={isVisible} onClose={hidePaywall} />;
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   // const [loaded] = useFonts({
@@ -120,11 +126,16 @@ export default function RootLayout() {
             <IAPProvider>
               <PaywallProvider>
                 <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                  <Stack>
-                    <Stack.Screen name="index" options={{ headerShown: false, title: 'Map' }} />
-                  </Stack>
-                  <StatusBar style="auto" />
-                  <PortalHost />
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <MenuProvider>
+                      <Stack>
+                        <Stack.Screen name="index" options={{ headerShown: false, title: 'Map' }} />
+                      </Stack>
+                      <StatusBar style="auto" />
+                      <PaywallPortal />
+                      <PortalHost />
+                    </MenuProvider>
+                  </GestureHandlerRootView>
                 </ThemeProvider>
               </PaywallProvider>
             </IAPProvider>
