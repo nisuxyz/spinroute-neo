@@ -20,16 +20,17 @@ func main() {
 		log.Fatalf("❌ Failed to initialize Supabase client: %v", err)
 	}
 
+	// Bootstrap networks from API sources before starting WebSocket consumer
+	// This ensures all networks exist in the database before we receive station updates
+	if err := supabaseClient.BootstrapNetworks(); err != nil {
+		log.Printf("⚠️  Network bootstrap failed: %v (continuing anyway)", err)
+	}
+
 	// Create batch queue for efficient database writes
-	// Temporarily reduced to 10 for debugging
 	bucket := batchqueue.CreateBatchQueue(100, 10*time.Second)
 
-	// Start WebSocket consumer if enabled
-	// if envkeys.Environment.ConsumeWS {
+	// Start WebSocket consumer
 	go citybikeswebsocket.ConnectToCityBikes(bucket)
-	// } else {
-	// log.Println("⚠️  WebSocket consumption is disabled (SPINROUTE_CONSUME_WS != true)")
-	// }
 
 	// Simple health check endpoint
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

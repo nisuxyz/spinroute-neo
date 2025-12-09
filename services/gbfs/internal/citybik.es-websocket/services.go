@@ -89,6 +89,7 @@ func processDiffEvent(diffRaw json.RawMessage, bucket *batchqueue.BatchQueue) er
 	networkId, _ := uuidfy.UUIDfy(network)
 
 	if Config.verbose {
+		log.Printf("🔍 DEBUG: Received station update - network_name: %q, network_id: %s, station_name: %q", network, networkId, name)
 		fmt.Printf("➡️  %s: %d bike(s) at %s (%s)\n", action, int(n), name, networkId)
 	}
 
