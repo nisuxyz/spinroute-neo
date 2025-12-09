@@ -1,0 +1,16 @@
+{
+  "name": "spinroute-scripts",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "refresh-stations": "bun run refresh-stale-stations.ts",
+    "refresh-stations:dry": "DRY_RUN=true bun run refresh-stale-stations.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.74.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
