@@ -5,6 +5,7 @@
   "scripts": {
     "format": "biome format --write",
     "prepare": "husky",
+    "deploy:gbfs": "flyctl deploy -c services/gbfs/fly.toml --remote-only",
     "deploy:routing": "flyctl deploy -c services/routing/fly.toml --remote-only",
     "deploy:iap": "flyctl deploy -c services/iap/fly.toml --remote-only"
   },
@@ -12,7 +13,8 @@
     "packages": [
       "services/*",
       "frontend*",
-      "shared"
+      "shared",
+      "scripts"
     ],
     "catalogs": {
       "angular": {
