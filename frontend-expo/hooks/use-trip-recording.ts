@@ -15,12 +15,17 @@ interface StartTripOptions {
   bikeId?: string | null;
 }
 
+interface StopTripOptions {
+  title?: string;
+  notes?: string;
+}
+
 interface UseTripRecordingReturn {
   activeTrip: Trip | null;
   loading: boolean;
   error: string | null;
   startTrip: (options?: StartTripOptions) => Promise<Trip | null>;
-  stopTrip: () => Promise<boolean>;
+  stopTrip: (options?: StopTripOptions) => Promise<boolean>;
   pauseTrip: () => Promise<boolean>;
   resumeTrip: () => Promise<boolean>;
   refreshActiveTrip: () => Promise<void>;
@@ -122,7 +127,7 @@ export function useTripRecording(): UseTripRecordingReturn {
     }
   };
 
-  const stopTrip = async (): Promise<boolean> => {
+  const stopTrip = async (options?: { title?: string; notes?: string }): Promise<boolean> => {
     if (!user || !activeTrip) {
       setError('No active trip to stop');
       return false;
@@ -136,6 +141,8 @@ export function useTripRecording(): UseTripRecordingReturn {
         status: 'completed',
         completed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        ...(options?.title && { title: options.title }),
+        ...(options?.notes && { notes: options.notes }),
       };
 
       const { error: updateError } = await supabase

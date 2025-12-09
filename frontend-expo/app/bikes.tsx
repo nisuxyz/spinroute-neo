@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Alert, TouchableOpacity, ScrollView, Text as RNText } from 'react-native';
+import { View, Alert, TouchableOpacity, ScrollView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
 import { useUserSettings } from '@/contexts/user-settings-context';
@@ -24,7 +24,7 @@ const BIKE_TYPES: { value: BikeType; label: string; icon: IconName }[] = [
 export default function BikesScreen() {
   const router = useRouter();
   const { bikes, loading, error } = useBikes();
-  const { settings, updateSettings, refetch: refetchSettings } = useUserSettings();
+  const { settings, updateSettings } = useUserSettings();
   const { canAddUnlimitedBikes, freeBikeLimit } = useFeatureAccess();
   const { showPaywall } = usePaywall();
 
@@ -62,14 +62,8 @@ export default function BikesScreen() {
       active_bike_id: isActive ? null : bike.id,
     });
 
-    if (success) {
-      Alert.alert(
-        'Success',
-        isActive
-          ? `"${bike.name}" is no longer your active bike`
-          : `"${bike.name}" is now your active bike`,
-      );
-    } else {
+    // No success alert needed - visual indicator (star icon + "Active" badge) shows state
+    if (!success) {
       Alert.alert('Error', 'Failed to update active bike');
     }
   };

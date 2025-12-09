@@ -40,6 +40,7 @@ import InfoPill from './InfoPill';
 import InfoPillSheet from './InfoPillSheet';
 import RouteInfoSheet from './RouteInfoSheet';
 import RoutePreferencesSheet from './RoutePreferencesSheet';
+import TripCompletionSheet from './TripCompletionSheet';
 import { useDirections } from '@/hooks/use-directions';
 import { useAuth } from '@/hooks/use-auth';
 import { useWeather } from '@/hooks/use-weather';
@@ -138,6 +139,7 @@ const MainMapView: React.FC = () => {
   const [isMapStylePickerVisible, setIsMapStylePickerVisible] = useState(false);
   const [isRoutePreferencesSheetVisible, setIsRoutePreferencesSheetVisible] = useState(false);
   const [isInfoPillSheetVisible, setIsInfoPillSheetVisible] = useState(false);
+  const [isTripCompletionSheetVisible, setIsTripCompletionSheetVisible] = useState(false);
 
   // Directions hook
   const {
@@ -175,10 +177,12 @@ const MainMapView: React.FC = () => {
   const [weeklyTripCount, setWeeklyTripCount] = useState(0);
 
   // Location tracking
-  const { permissionStatus, requestPermissions, syncAllPoints } = useLocationTracking({
-    tripId: activeTrip?.id || null,
-    captureInterval,
-  });
+  const { permissionStatus, requestPermissions, syncAllPoints, stopTracking } = useLocationTracking(
+    {
+      tripId: activeTrip?.id || null,
+      captureInterval,
+    },
+  );
 
   const { width } = useWindowDimensions();
 
@@ -492,9 +496,8 @@ const MainMapView: React.FC = () => {
       }
     }
     const trip = await startTrip({ bikeId: settings?.active_bike_id });
-    if (trip) {
-      Alert.alert('Recording Started', 'Your trip is now being recorded');
-    } else if (tripError) {
+    // No alert needed - InfoPill shows recording indicator
+    if (!trip && tripError) {
       if (
         tripError.includes('policy') ||
         tripError.includes('42501') ||
@@ -509,10 +512,25 @@ const MainMapView: React.FC = () => {
   };
 
   const handleStopRecording = async () => {
-    await syncAllPoints();
-    const success = await stopTrip();
-    if (success) Alert.alert('Recording Stopped', 'Your trip has been saved');
-    else if (tripError) Alert.alert('Error', tripError);
+    // 1. Stop location tracking first to prevent new points from being queued
+    stopTracking();
+
+    // 2. Sync all remaining location points while trip is still 'in_progress'
+    try {
+      await syncAllPoints();
+    } catch (err) {
+      console.error('[MainMapView] Error syncing points:', err);
+    }
+
+    // 3. Show completion sheet to collect title and notes
+    setIsTripCompletionSheetVisible(true);
+  };
+
+  const handleTripCompletionSave = async (title: string, notes: string) => {
+    const success = await stopTrip({ title, notes });
+    if (!success && tripError) {
+      Alert.alert('Error', tripError);
+    }
   };
 
   const handleSearchSelect = (location: SearchedLocation) => {
@@ -816,6 +834,12 @@ const MainMapView: React.FC = () => {
         weather={weather}
         isRecording={!!activeTrip}
         onClose={() => setIsInfoPillSheetVisible(false)}
+      />
+
+      <TripCompletionSheet
+        visible={isTripCompletionSheetVisible}
+        onClose={() => setIsTripCompletionSheetVisible(false)}
+        onSave={handleTripCompletionSave}
       />
     </View>
   );
