@@ -2,7 +2,9 @@ package main
 
 import (
 	batchqueue "gbfs-service/internal/batch-queue"
+	citybikespoller "gbfs-service/internal/citybikes-poller"
 	citybikeswebsocket "gbfs-service/internal/citybik.es-websocket"
+	"gbfs-service/internal/envkeys"
 	supabaseClient "gbfs-service/internal/supabase"
 	"log"
 	"net/http"
@@ -13,24 +15,31 @@ import (
 )
 
 func main() {
-	log.Println("🚀 Starting SpinRoute CityBikes WebSocket Consumer")
+	log.Println("🚀 Starting SpinRoute GBFS Service")
 
 	// Initialize Supabase client
 	if err := supabaseClient.InitSupabase(); err != nil {
 		log.Fatalf("❌ Failed to initialize Supabase client: %v", err)
 	}
 
-	// Bootstrap networks from API sources before starting WebSocket consumer
-	// This ensures all networks exist in the database before we receive station updates
+	// Bootstrap networks from API sources before starting consumers
+	// This ensures all networks exist in the database before we receive updates
 	if err := supabaseClient.BootstrapNetworks(); err != nil {
 		log.Printf("⚠️  Network bootstrap failed: %v (continuing anyway)", err)
 	}
 
-	// Create batch queue for efficient database writes
-	bucket := batchqueue.CreateBatchQueue(100, 10*time.Second)
+	// Create batch queue for efficient database writes (stations only)
+	stationQueue := batchqueue.CreateBatchQueue(100, 10*time.Second)
 
-	// Start WebSocket consumer
-	go citybikeswebsocket.ConnectToCityBikes(bucket)
+	// Start WebSocket consumer for real-time station updates
+	go citybikeswebsocket.ConnectToCityBikes(stationQueue)
+
+	// Start REST API poller for vehicle data (and station verification)
+	if envkeys.Environment.EnablePoller {
+		go citybikespoller.StartPoller()
+	} else {
+		log.Println("ℹ️  REST API poller disabled (set ENABLE_POLLER=true to enable)")
+	}
 
 	// Simple health check endpoint
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

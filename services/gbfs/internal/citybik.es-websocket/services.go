@@ -13,8 +13,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Extract message processing logic into a separate function
-func processWebSocketMessage(msg string, bucket *batchqueue.BatchQueue) error {
+// processWebSocketMessage extracts message processing logic into a separate function
+func processWebSocketMessage(msg string, stationQueue *batchqueue.BatchQueue) error {
 	// Socket.IO packet types:
 	// 0 = open, 1 = close, 2 = ping, 3 = pong, 4 = message
 	switch {
@@ -30,9 +30,7 @@ func processWebSocketMessage(msg string, bucket *batchqueue.BatchQueue) error {
 		// Parse the event array
 		var eventArray []json.RawMessage
 		if err := json.Unmarshal([]byte(jsonStr), &eventArray); err != nil {
-			if Config.verbose {
-				log.Printf("⚠️ Failed to parse event: %v", err)
-			}
+			log.Printf("⚠️ Failed to parse event: %v", err)
 			return err
 		}
 
@@ -40,9 +38,12 @@ func processWebSocketMessage(msg string, bucket *batchqueue.BatchQueue) error {
 		var eventName string
 		if len(eventArray) > 0 {
 			if err := json.Unmarshal(eventArray[0], &eventName); err == nil {
+				if Config.verbose {
+					log.Printf("📬 Event type: %s", eventName)
+				}
 				if eventName == "diff" && len(eventArray) > 1 {
 					// Process the diff event
-					return processDiffEvent(eventArray[1], bucket)
+					return processDiffEvent(eventArray[1], stationQueue)
 				}
 			}
 		}
@@ -56,18 +57,12 @@ func processWebSocketMessage(msg string, bucket *batchqueue.BatchQueue) error {
 	return nil
 }
 
-// Extract diff processing logic
-func processDiffEvent(diffRaw json.RawMessage, bucket *batchqueue.BatchQueue) error {
+// Extract diff processing logic - WebSocket only sends station updates
+func processDiffEvent(diffRaw json.RawMessage, stationQueue *batchqueue.BatchQueue) error {
 	// Parse the diff data
 	var diffData map[string]any
 	if err := json.Unmarshal(diffRaw, &diffData); err != nil {
 		return fmt.Errorf("failed to parse diff data: %v", err)
-	}
-
-	// Pretty print the diff event
-	if Config.verbose {
-		prettyJSON, _ := json.MarshalIndent(diffData, "", "  ")
-		fmt.Printf("\n🚲 Bike station update:\n%s\n", string(prettyJSON))
 	}
 
 	// Extract specific fields
@@ -80,17 +75,23 @@ func processDiffEvent(diffRaw json.RawMessage, bucket *batchqueue.BatchQueue) er
 	n, _ := message["n"].(float64)
 	network, _ := message["network"].(string)
 
+	// Process station update
 	station, ok := message["station"].(map[string]any)
 	if !ok {
 		return nil
 	}
 
+	return processStationUpdate(station, network, action, int(n), stationQueue)
+}
+
+// processStationUpdate handles station diff events
+func processStationUpdate(station map[string]any, network, action string, n int, bucket *batchqueue.BatchQueue) error {
 	name, _ := station["name"].(string)
 	networkId, _ := uuidfy.UUIDfy(network)
 
 	if Config.verbose {
-		log.Printf("🔍 DEBUG: Received station update - network_name: %q, network_id: %s, station_name: %q", network, networkId, name)
-		fmt.Printf("➡️  %s: %d bike(s) at %s (%s)\n", action, int(n), name, networkId)
+		log.Printf("🚲 Station update - network: %q (%s), station: %q, action: %s, bikes: %d",
+			network, networkId, name, action, n)
 	}
 
 	// Map the station data to Supabase format
@@ -99,27 +100,21 @@ func processDiffEvent(diffRaw json.RawMessage, bucket *batchqueue.BatchQueue) er
 		return fmt.Errorf("failed to map station data: %v", err)
 	}
 
-	// Print the mapped station data
-	if Config.verbose {
-		prettyMappedJSON, _ := json.MarshalIndent(mappedStation, "", "  ")
-		fmt.Printf("Mapped Station:\n%s\n", string(prettyMappedJSON))
-	}
-
 	// Add the mapped station to the bucket
 	bucket.Add(mappedStation)
 
 	// Check if the bucket is full or needs to be emptied
 	if bucket.IsFull() {
 		if err := bucket.FlushQueue(); err != nil {
-			log.Printf("Failed to empty bucket: %v", err)
+			log.Printf("Failed to flush station bucket: %v", err)
 		}
 	}
 
 	return nil
 }
 
-// Separate function to handle an active WebSocket connection
-func handleConnection(conn *websocket.Conn, bucket *batchqueue.BatchQueue) bool {
+// handleConnection handles an active WebSocket connection
+func handleConnection(conn *websocket.Conn, stationQueue *batchqueue.BatchQueue) bool {
 	defer conn.Close()
 
 	// Channel to signal when to stop the ping goroutine
@@ -144,6 +139,26 @@ func handleConnection(conn *websocket.Conn, bucket *batchqueue.BatchQueue) bool 
 		}
 	}()
 
+	// Periodic flush for queue that hasn't reached capacity
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				// Flush station queue if it has records and is past max age
+				if stationQueue.IsFull() {
+					if err := stationQueue.FlushQueue(); err != nil {
+						log.Printf("⚠️ Periodic station flush failed: %v", err)
+					}
+				}
+			case <-stopPing:
+				return
+			}
+		}
+	}()
+
 	// Read messages
 	for {
 		_, message, err := conn.ReadMessage()
@@ -161,16 +176,16 @@ func handleConnection(conn *websocket.Conn, bucket *batchqueue.BatchQueue) bool 
 
 		msg := string(message)
 
-		// Process the message (your existing logic)
-		if err := processWebSocketMessage(msg, bucket); err != nil {
+		// Process the message
+		if err := processWebSocketMessage(msg, stationQueue); err != nil {
 			log.Printf("⚠️ Error processing message: %v", err)
 			// Continue processing other messages
 		}
 	}
 }
 
-// WebSocket connection with retry logic
-func ConnectToCityBikes(bucket *batchqueue.BatchQueue) {
+// ConnectToCityBikes establishes WebSocket connection with retry logic
+func ConnectToCityBikes(stationQueue *batchqueue.BatchQueue) {
 	attempts := 0
 
 	for {
@@ -200,13 +215,13 @@ func ConnectToCityBikes(bucket *batchqueue.BatchQueue) {
 			continue
 		}
 
-		log.Println("✅ Connected to CityBikes! Listening for messages...")
+		log.Println("✅ Connected to CityBikes! Listening for station updates...")
 
 		// Reset attempt counter on successful connection
 		attempts = 0
 
 		// Handle the connection - this will block until connection fails
-		if handleConnection(conn, bucket) {
+		if handleConnection(conn, stationQueue) {
 			// If handleConnection returns true, it means we should stop trying to reconnect
 			log.Println("🛑 WebSocket handler requested shutdown")
 			return

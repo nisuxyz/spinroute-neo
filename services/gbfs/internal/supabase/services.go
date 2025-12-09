@@ -126,3 +126,94 @@ func BatchUpsertStations(stationsData []map[string]any) error {
 	log.Printf("✅ Batch upserted %d stations", len(stations))
 	return nil
 }
+
+
+// VehicleRecord represents a vehicle for Supabase upsert
+type VehicleRecord struct {
+	ID            string         `json:"id"`
+	NetworkID     string         `json:"network_id"`
+	Location      string         `json:"location"`
+	VehicleType   *string        `json:"vehicle_type,omitempty"`
+	IsReserved    *bool          `json:"is_reserved,omitempty"`
+	IsDisabled    *bool          `json:"is_disabled,omitempty"`
+	BatteryLevel  *int           `json:"battery_level,omitempty"`
+	LastReported  *string        `json:"last_reported,omitempty"`
+	PricingPlanID *string        `json:"pricing_plan_id,omitempty"`
+	RentalURIs    map[string]any `json:"rental_uris,omitempty"`
+	RawData       map[string]any `json:"raw_data"`
+}
+
+// BatchUpsertVehicles upserts multiple vehicles in a single request
+func BatchUpsertVehicles(vehiclesData []map[string]any) error {
+	if Config == nil || Config.Client == nil {
+		return fmt.Errorf("supabase client not initialized")
+	}
+
+	if len(vehiclesData) == 0 {
+		return nil
+	}
+
+	verbose := envkeys.Environment.Verbose
+
+	if verbose {
+		networkIDs := make(map[string]bool)
+		for _, vehicleData := range vehiclesData {
+			if networkID, ok := vehicleData["network_id"].(string); ok {
+				networkIDs[networkID] = true
+			}
+		}
+		networkIDList := make([]string, 0, len(networkIDs))
+		for id := range networkIDs {
+			networkIDList = append(networkIDList, id)
+		}
+		log.Printf("🛴 DEBUG: Unique network_ids in vehicle batch: %v", networkIDList)
+	}
+
+	// Convert all vehicle data to VehicleRecords
+	vehicles := make([]VehicleRecord, 0, len(vehiclesData))
+	for i, vehicleData := range vehiclesData {
+		jsonData, err := json.Marshal(vehicleData)
+		if err != nil {
+			if verbose {
+				log.Printf("Warning: failed to marshal vehicle data at index %d: %v", i, err)
+			}
+			continue
+		}
+
+		var vehicle VehicleRecord
+		if err := json.Unmarshal(jsonData, &vehicle); err != nil {
+			if verbose {
+				log.Printf("Warning: failed to unmarshal vehicle data at index %d: %v", i, err)
+			}
+			continue
+		}
+
+		vehicles = append(vehicles, vehicle)
+	}
+
+	if len(vehicles) == 0 {
+		return fmt.Errorf("no valid vehicles to upsert")
+	}
+
+	// Batch upsert to vehicle table
+	_, _, err := Config.Client.From("vehicle").
+		Upsert(vehicles, "id", "*", "merge-duplicates").
+		Execute()
+
+	if err != nil {
+		log.Printf("❌ Batch upsert failed for %d vehicles: %v", len(vehicles), err)
+
+		if verbose {
+			failedNetworkIDs := make(map[string]int)
+			for _, v := range vehicles {
+				failedNetworkIDs[v.NetworkID]++
+			}
+			log.Printf("❌ DEBUG: Failed batch network_ids (with vehicle counts): %v", failedNetworkIDs)
+		}
+
+		return fmt.Errorf("failed to batch upsert %d vehicles: %v", len(vehicles), err)
+	}
+
+	log.Printf("🛴 Batch upserted %d vehicles", len(vehicles))
+	return nil
+}

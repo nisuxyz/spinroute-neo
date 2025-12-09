@@ -14,10 +14,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import MapActionButtons from './MapActionButtons';
 import StationSheet from './StationSheet';
+import VehicleSheet from './VehicleSheet';
 import StationMarker from './StationMarker';
 import StationLayers from './StationLayers';
+import VehicleMarker from './VehicleMarker';
 import { useClient } from 'react-supabase';
 import { useBikeshareStations } from '@/hooks/use-bikeshare-stations';
+import { useBikeshareVehicles } from '@/hooks/use-bikeshare-vehicles';
 import { useMapLocation } from '@/hooks/use-map-location';
 import { useStationVisibility } from '@/hooks/use-station-visibility';
 import { useTripRecording } from '@/hooks/use-trip-recording';
@@ -107,8 +110,21 @@ const MainMapView: React.FC = () => {
     },
   );
 
+  const {
+    updateVehicleList,
+    vehicleFeatureCollection,
+    isLoading: isVehicleDataFetching,
+  } = useBikeshareVehicles();
+
   // Core data state
   const [selectedStation, setSelectedStation] = useState<SelectedStation | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<{
+    id: string;
+    coordinates: [number, number];
+    isElectric: boolean;
+    batteryLevel: number | null;
+    vehicleType: string | null;
+  } | null>(null);
   const [searchedLocation, setSearchedLocation] = useState<SearchedLocation | null>(null);
   const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null);
 
@@ -191,11 +207,14 @@ const MainMapView: React.FC = () => {
   );
 
   // Determine which sheet to show based on state
-  // Priority: route > location > station (route takes precedence when active)
+  // Priority: route > location > vehicle > station (route takes precedence when active)
   const hasActiveRoute = !!(directionsRoute || directionsLoading || directionsError);
   const showRouteSheet = hasActiveRoute;
-  const showLocationSheet = !hasActiveRoute && !!searchedLocation && !selectedStation;
-  const showStationSheet = !hasActiveRoute && !!selectedStation && !searchedLocation;
+  const showLocationSheet =
+    !hasActiveRoute && !!searchedLocation && !selectedStation && !selectedVehicle;
+  const showVehicleSheet = !hasActiveRoute && !!selectedVehicle && !searchedLocation;
+  const showStationSheet =
+    !hasActiveRoute && !!selectedStation && !searchedLocation && !selectedVehicle;
 
   // Update route geometry when route changes
   React.useEffect(() => {
@@ -236,12 +255,16 @@ const MainMapView: React.FC = () => {
     if (regionFeature?.properties?.isUserInteraction && isFollowModeActive) {
       setIsFollowModeActive(false);
     }
-    if (regionFeature?.properties?.isUserInteraction && isStationsVisible) {
+    if (regionFeature?.properties?.isUserInteraction) {
       const visibleBounds = regionFeature.properties.visibleBounds;
       if (visibleBounds?.length >= 2) {
-        updateStationList({
+        const boundsPayload = {
           properties: { bounds: { ne: visibleBounds[0], sw: visibleBounds[1] } },
-        });
+        };
+        if (isStationsVisible) {
+          updateStationList(boundsPayload);
+          updateVehicleList(boundsPayload);
+        }
       }
     }
   };
@@ -329,8 +352,25 @@ const MainMapView: React.FC = () => {
   };
 
   const handleMapPress = () => {
-    if (selectedStation && !hasActiveRoute) {
+    if (!hasActiveRoute) {
+      if (selectedStation) setSelectedStation(null);
+      if (selectedVehicle) setSelectedVehicle(null);
+    }
+  };
+
+  const handleVehiclePress = (
+    id: string,
+    coordinates: [number, number],
+    isElectric: boolean,
+    batteryLevel: number | null,
+    vehicleType: string | null,
+  ) => {
+    if (selectedVehicle?.id === id) {
+      setSelectedVehicle(null);
+    } else {
       setSelectedStation(null);
+      setSearchedLocation(null);
+      setSelectedVehicle({ id, coordinates, isElectric, batteryLevel, vehicleType });
     }
   };
 
@@ -339,7 +379,7 @@ const MainMapView: React.FC = () => {
       Alert.alert('Location Required', 'Unable to calculate route without your location');
       return;
     }
-    if (!searchedLocation && !selectedStation) {
+    if (!searchedLocation && !selectedStation && !selectedVehicle) {
       Alert.alert('Destination Required', 'Select a destination first');
       return;
     }
@@ -348,9 +388,16 @@ const MainMapView: React.FC = () => {
 
   const handleConfirmRoutePreferences = async () => {
     if (!userLocation) return;
-    const dest = selectedStation
-      ? { lat: selectedStation.coordinates[1], lon: selectedStation.coordinates[0] }
-      : searchedLocation;
+    let dest: { lat: number; lon: number } | null = null;
+
+    if (selectedStation) {
+      dest = { lat: selectedStation.coordinates[1], lon: selectedStation.coordinates[0] };
+    } else if (selectedVehicle) {
+      dest = { lat: selectedVehicle.coordinates[1], lon: selectedVehicle.coordinates[0] };
+    } else if (searchedLocation) {
+      dest = { lat: searchedLocation.lat, lon: searchedLocation.lon };
+    }
+
     if (!dest) return;
 
     await calculateRoute({
@@ -546,6 +593,25 @@ const MainMapView: React.FC = () => {
             );
           })}
 
+        {/* Free-floating bikeshare vehicles */}
+        {isStationsVisible &&
+          vehicleFeatureCollection.features.map((feature: any) => {
+            const { id, isElectric, batteryLevel, vehicleType } = feature.properties;
+            const coordinates = feature.geometry.coordinates as [number, number];
+            return (
+              <VehicleMarker
+                key={id}
+                id={id}
+                coordinate={coordinates}
+                isElectric={isElectric}
+                active={selectedVehicle?.id === id}
+                onPress={() =>
+                  handleVehiclePress(id, coordinates, isElectric, batteryLevel, vehicleType)
+                }
+              />
+            );
+          })}
+
         {locationPermissionGranted && (
           <>
             <Mapbox.LocationPuck
@@ -652,7 +718,7 @@ const MainMapView: React.FC = () => {
         onStartRecording={handleStartRecording}
         onStopRecording={handleStopRecording}
         isStationsVisible={isStationsVisible}
-        isStationsLoading={isStationDataLoading || isStationDataFetching}
+        isStationsLoading={isStationDataLoading || isStationDataFetching || isVehicleDataFetching}
         onToggleStations={toggleStationVisibility}
       />
 
@@ -677,6 +743,15 @@ const MainMapView: React.FC = () => {
         visible={showStationSheet}
         station={selectedStation}
         onClose={() => setSelectedStation(null)}
+        onGetDirections={handleGetDirections}
+        isLoadingDirections={directionsLoading}
+      />
+
+      {/* Vehicle Sheet */}
+      <VehicleSheet
+        visible={showVehicleSheet}
+        vehicle={selectedVehicle}
+        onClose={() => setSelectedVehicle(null)}
         onGetDirections={handleGetDirections}
         isLoadingDirections={directionsLoading}
       />

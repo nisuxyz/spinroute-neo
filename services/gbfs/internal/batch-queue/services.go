@@ -20,20 +20,35 @@ func (b *BatchQueue) FlushQueue() error {
 		return nil
 	}
 
-	// Use Supabase's batch upsert functionality
-	if err := supabaseClient.BatchUpsertStations(b.Records); err != nil {
-		log.Printf("Failed to batch upsert stations: %v", err)
-		// Reset anyway to prevent infinite retries
-		b.Reset()
+	var err error
+
+	// Use appropriate upsert based on record type
+	switch b.RecordType {
+	case RecordTypeVehicle:
+		err = supabaseClient.BatchUpsertVehicles(b.Records)
+		if err != nil {
+			log.Printf("Failed to batch upsert vehicles: %v", err)
+		}
+	case RecordTypeStation:
+		fallthrough
+	default:
+		err = supabaseClient.BatchUpsertStations(b.Records)
+		if err != nil {
+			log.Printf("Failed to batch upsert stations: %v", err)
+		}
+	}
+
+	// Reset the bucket after processing (success or failure)
+	totalRecords := len(b.Records)
+	recordType := b.RecordType
+	b.Reset()
+
+	if err != nil {
 		return err
 	}
 
-	// Reset the bucket after successful processing
-	totalRecords := len(b.Records)
-	b.Reset()
-
 	if config.verbose {
-		log.Printf("✅ Successfully processed all %d records in bucket", totalRecords)
+		log.Printf("✅ Successfully processed all %d %s records in bucket", totalRecords, recordType)
 	}
 
 	return nil
@@ -45,6 +60,7 @@ func (b *BatchQueue) Reset() {
 	b.Records = make([]map[string]any, 0, b.MaxRecords)
 }
 
+// CreateBatchQueue creates a new batch queue for stations (default)
 func CreateBatchQueue(maxRecords int, maxAge time.Duration) *BatchQueue {
 	return &BatchQueue{
 		MaxRecords:   maxRecords,
@@ -52,5 +68,18 @@ func CreateBatchQueue(maxRecords int, maxAge time.Duration) *BatchQueue {
 		MaxAge:       maxAge,
 		Checkpoint:   time.Now(),
 		Records:      make([]map[string]any, 0, maxRecords),
+		RecordType:   RecordTypeStation,
+	}
+}
+
+// CreateVehicleBatchQueue creates a new batch queue for vehicles
+func CreateVehicleBatchQueue(maxRecords int, maxAge time.Duration) *BatchQueue {
+	return &BatchQueue{
+		MaxRecords:   maxRecords,
+		RecordsCount: 0,
+		MaxAge:       maxAge,
+		Checkpoint:   time.Now(),
+		Records:      make([]map[string]any, 0, maxRecords),
+		RecordType:   RecordTypeVehicle,
 	}
 }
