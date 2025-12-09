@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
+import { View, Pressable } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
-import { Colors } from '@/constants/theme';
+import { Text } from '@/components/ui/text';
+import { cn } from '@/lib/utils';
 
 interface StationMarkerProps {
   id: string;
@@ -11,6 +12,7 @@ interface StationMarkerProps {
   electricBikes: number;
   availableDocks: number;
   availabilityStatus: string;
+  active?: boolean;
   onPress: () => void;
 }
 
@@ -20,16 +22,13 @@ const StationMarker: React.FC<StationMarkerProps> = ({
   classicBikes,
   electricBikes,
   availabilityStatus,
+  active = false,
   onPress,
 }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-
   const totalBikes = (classicBikes || 0) + (electricBikes || 0);
   const hasElectric = (electricBikes || 0) > 0;
-  const backgroundColor = totalBikes > 0 ? colors.stationAvailable : colors.stationEmpty;
-  const borderColor =
-    availabilityStatus === 'no-docks' ? colors.stationNoDocks : colors.stationBorder;
+  const hasBikes = totalBikes > 0;
+  const noDocks = availabilityStatus === 'no-docks';
 
   return (
     <Mapbox.MarkerView
@@ -39,53 +38,37 @@ const StationMarker: React.FC<StationMarkerProps> = ({
       allowOverlap={true}
       allowOverlapWithPuck={true}
     >
-      <View style={styles.markerWrapper}>
-        {hasElectric && <View style={styles.electricRing} />}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={[styles.markerContainer, { backgroundColor, borderColor }]}
+      <View className={cn('items-center justify-center', active ? 'h-12 w-12' : 'h-9 w-9')}>
+        {/* Active glow */}
+        {active && <View className="absolute h-11 w-11 rounded-full bg-primary opacity-35" />}
+
+        {/* Electric ring indicator */}
+        {hasElectric && (
+          <View className="absolute rounded-full bg-yellow-500" style={{ height: 28, width: 28 }} />
+        )}
+
+        {/* Main marker */}
+        <Pressable
           onPress={onPress}
+          className={cn(
+            'items-center justify-center rounded-full p-2',
+            active ? 'h-6 w-6 border-[3px] border-primary' : 'h-6 w-6 border-[3px]',
+            hasBikes ? 'bg-green-500' : 'h-6 w-6 bg-background',
+            !active && (noDocks ? 'border-red-500' : 'border-white'),
+          )}
         >
-          <Text style={styles.markerText}>{String(totalBikes)}</Text>
-        </TouchableOpacity>
+          <Text
+            className={cn(
+              'text-center text-xs font-bold text-white rounded-full w-4 h-4',
+              // Text shadow isn't supported in NativeWind, but the white on colored bg has good contrast
+            )}
+          >
+            {String(totalBikes)}
+          </Text>
+        </Pressable>
       </View>
     </Mapbox.MarkerView>
   );
 };
-
-const styles = StyleSheet.create({
-  markerWrapper: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  electricRing: {
-    position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: Colors.light.stationElectric,
-    opacity: 0.8,
-  },
-  markerContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  markerText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: Colors.light.stationText,
-    textAlign: 'center',
-    textShadowColor: Colors.light.stationTextShadow,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 2,
-  },
-});
 
 export default StationMarker;

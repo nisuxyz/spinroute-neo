@@ -530,6 +530,7 @@ const MainMapView: React.FC = () => {
                 electricBikes={electricBikes}
                 availableDocks={availableDocks}
                 availabilityStatus={availabilityStatus}
+                active={selectedStation?.id === id}
                 onPress={() =>
                   handleMarkerPress(
                     id,
