@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import TripDetail from '@/components/TripDetail';
 import { useTripDetail } from '@/hooks/use-trip-detail';
@@ -31,17 +31,9 @@ export default function TripDetailScreen() {
           headerBackButtonDisplayMode: 'minimal',
         }}
       />
-      <View style={styles.container}>
+      <View className="flex-1" style={{ zIndex: 9999, elevation: 9999 }}>
         <TripDetail tripId={id} />
       </View>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    zIndex: 9999,
-    elevation: 9999, // For Android
-  },
-});

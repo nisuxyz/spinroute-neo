@@ -171,7 +171,7 @@ export default function MapStylePicker({
       </View>
 
       {/* Style List */}
-      <ScrollView className="px-4" showsVerticalScrollIndicator={false}>
+      <ScrollView className="px-4 pt-4" showsVerticalScrollIndicator={false}>
         <View className="gap-2 pb-8">
           {MAP_STYLES.map((style) => {
             const isSelected = style.url === currentStyle;

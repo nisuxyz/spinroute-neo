@@ -221,9 +221,12 @@ export default function BikesScreen() {
             title: 'My Bikes',
             headerBackButtonDisplayMode: 'minimal',
             headerRight: () => (
-              <Text className="font-semibold mx-2" onPress={handleAddBike}>
-                New Bike
-              </Text>
+              <View className="border-2 border-transparent m-0">
+                <Icon name="add" size={32} color="primaryForeground" onPress={handleAddBike} />
+              </View>
+              // <Text className="font-semibold mx-2" onPress={handleAddBike}>
+              //   New Bike
+              // </Text>
             ),
           }}
         />
@@ -248,9 +251,12 @@ export default function BikesScreen() {
           title: 'My Bikes',
           headerBackButtonDisplayMode: 'minimal',
           headerRight: () => (
-            <Text className="font-semibold mx-2" onPress={handleAddBike}>
-              New Bike
-            </Text>
+            <View className="border-2 border-transparent m-0">
+              <Icon name="add" size={32} color="primaryForeground" onPress={handleAddBike} />
+            </View>
+            // <Text className="font-semibold mx-2" onPress={handleAddBike}>
+            //   New Bike
+            // </Text>
           ),
         }}
       />

@@ -16,9 +16,10 @@ function Card({
       <Wrapper {...wrapperProps}>
         <View
           className={cn(
-            isGlass
-              ? `flex flex-col gap-6 rounded-xl py-6 shadow-sm shadow-black/5 ${colorScheme === 'dark' ? '' : 'bg-background'}`
-              : 'border-border flex flex-col gap-6 rounded-xl border py-6 shadow-sm shadow-black/5',
+            isGlass && `flex flex-col gap-6 rounded-xl py-6 shadow-sm shadow-black/5`,
+            !isGlass &&
+              'border-border flex flex-col gap-6 rounded-xl border py-6 shadow-sm shadow-black/5',
+            colorScheme === 'light' && 'bg-background',
             className,
           )}
           {...props}

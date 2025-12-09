@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  useColorScheme,
-  Text,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
 import { useBikes, BikeType } from '@/hooks/use-bikes';
+import { useUserSettings } from '@/contexts/user-settings-context';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Icon, IconName } from '@/components/icon';
+import { cn } from '@/lib/utils';
 
-const BIKE_TYPES: { value: BikeType; label: string; icon: string }[] = [
+const BIKE_TYPES: { value: BikeType; label: string; icon: IconName }[] = [
   { value: 'road', label: 'Road', icon: 'directions-bike' },
   { value: 'mountain', label: 'Mountain', icon: 'terrain' },
   { value: 'hybrid', label: 'Hybrid', icon: 'pedal-bike' },
@@ -38,13 +35,13 @@ const BIKE_COLORS = [
 ];
 
 export default function EditBikeScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { bikes, updateBike, loading } = useBikes();
+  const { bikes, updateBike, deleteBike, loading } = useBikes();
+  const { settings, refetch: refetchSettings } = useUserSettings();
 
   const bike = bikes.find((b) => b.id === id);
+  const isActiveBike = settings?.active_bike_id === id;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -87,6 +84,31 @@ export default function EditBikeScreen() {
     }
   };
 
+  const handleDelete = () => {
+    if (!id || !bike) return;
+
+    const warningMessage = isActiveBike
+      ? `"${bike.name}" is your active bike. Are you sure you want to delete it?`
+      : `Are you sure you want to delete "${bike.name}"?`;
+
+    Alert.alert('Delete Bike', warningMessage, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const success = await deleteBike(id);
+          if (success) {
+            await refetchSettings();
+            router.back();
+          } else {
+            Alert.alert('Error', 'Failed to delete bike');
+          }
+        },
+      },
+    ]);
+  };
+
   if (!bike) {
     return (
       <>
@@ -96,11 +118,29 @@ export default function EditBikeScreen() {
             headerBackButtonDisplayMode: 'minimal',
           }}
         />
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.buttonIcon} />
-          </View>
-        </View>
+        <ScrollView className="flex-1" contentContainerClassName="p-4 gap-5">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent>
+              <View className="gap-6">
+                <View className="gap-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                </View>
+                <View className="gap-2">
+                  <Skeleton className="h-4 w-16" />
+                  <View className="flex-row flex-wrap gap-2">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <Skeleton key={i} className="h-12 w-24 rounded-lg" />
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
+        </ScrollView>
       </>
     );
   }
@@ -112,210 +152,170 @@ export default function EditBikeScreen() {
           title: 'Edit Bike',
           headerBackButtonDisplayMode: 'minimal',
           headerRight: () => (
-            <TouchableOpacity onPress={handleSave} disabled={loading}>
-              {loading ? (
-                <ActivityIndicator size="small" color={colors.buttonIcon} />
-              ) : (
-                <Text style={[styles.saveButton]}>Save</Text>
-              )}
-            </TouchableOpacity>
+            <Text className="font-semibold mx-2" onPress={handleSave} disabled={loading}>
+              {loading ? 'Saving...' : 'Save'}
+            </Text>
           ),
         }}
       />
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.text }]}>Bike Name *</Text>
-            <TextInput
-              style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
-              placeholder="e.g., My Road Bike"
-              placeholderTextColor={colors.icon}
-              value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
-            />
-          </View>
+      <ScrollView className="flex-1" contentContainerClassName="p-4 gap-5">
+        {/* Basic Info Card */}
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle variant="large">Basic Info</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <View className="w-full gap-6">
+              {/* Bike Name */}
+              <View className="gap-2">
+                <Label>Bike Name *</Label>
+                <Input
+                  placeholder="e.g., My Road Bike"
+                  value={formData.name}
+                  onChangeText={(text) => setFormData({ ...formData, name: text })}
+                />
+              </View>
 
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.text }]}>Bike Type</Text>
-            <View style={styles.typeGrid}>
+              {/* Brand */}
+              <View className="gap-2">
+                <Label>Brand (optional)</Label>
+                <Input
+                  placeholder="e.g., Trek, Specialized"
+                  value={formData.brand}
+                  onChangeText={(text) => setFormData({ ...formData, brand: text })}
+                />
+              </View>
+
+              {/* Model */}
+              <View className="gap-2">
+                <Label>Model (optional)</Label>
+                <Input
+                  placeholder="e.g., Domane SL 5"
+                  value={formData.model}
+                  onChangeText={(text) => setFormData({ ...formData, model: text })}
+                />
+              </View>
+            </View>
+          </CardContent>
+        </Card>
+
+        {/* Bike Type Card */}
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle variant="large">Bike Type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <View className="flex-row flex-wrap gap-2">
               {BIKE_TYPES.map((type) => (
                 <TouchableOpacity
                   key={type.value}
-                  style={[
-                    styles.typeButton,
-                    {
-                      borderColor: formData.type === type.value ? colors.buttonBorder : colors.icon,
-                      backgroundColor:
-                        formData.type === type.value ? colors.buttonBorder + '20' : 'transparent',
-                    },
-                  ]}
                   onPress={() => setFormData({ ...formData, type: type.value })}
+                  className={cn(
+                    'flex-1 min-w-24 flex-row items-center gap-1.5 px-3 py-2.5 rounded-lg border-2',
+                    formData.type === type.value
+                      ? 'border-primary bg-primary/20'
+                      : 'border-border bg-transparent',
+                  )}
                 >
-                  <MaterialIcons
-                    name={type.icon as any}
-                    size={24}
-                    color={formData.type === type.value ? colors.buttonIcon : colors.icon}
+                  <Icon
+                    name={type.icon}
+                    size={20}
+                    color={formData.type === type.value ? 'primary' : 'mutedForeground'}
                   />
                   <Text
-                    style={[
-                      styles.typeLabel,
-                      {
-                        color: formData.type === type.value ? colors.buttonIcon : colors.text,
-                      },
-                    ]}
+                    className={cn(
+                      'text-sm font-medium',
+                      formData.type === type.value ? 'text-primary' : 'text-foreground',
+                    )}
                   >
                     {type.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
+          </CardContent>
+        </Card>
 
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.text }]}>Color</Text>
-            <View style={styles.colorGrid}>
+        {/* Color Card */}
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle variant="large">Color</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <View className="flex-row flex-wrap gap-3">
               {BIKE_COLORS.map((color) => (
                 <TouchableOpacity
                   key={color}
-                  style={[
-                    styles.colorButton,
-                    {
-                      backgroundColor: color,
-                      borderWidth: formData.color === color ? 3 : 0,
-                      borderColor: colors.background,
-                      transform: [{ scale: formData.color === color ? 1.1 : 1 }],
-                    },
-                  ]}
                   onPress={() => setFormData({ ...formData, color })}
+                  className="w-12 h-12 rounded-full items-center justify-center border-4"
+                  style={{
+                    backgroundColor: color,
+                    borderColor: formData.color === color ? 'white' : color,
+                  }}
                 >
-                  {formData.color === color && (
-                    <MaterialIcons name="check" size={20} color="#fff" />
-                  )}
+                  {formData.color === color && <Icon name="check" size={20} color="#fff" />}
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
+          </CardContent>
+        </Card>
 
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.text }]}>Brand (optional)</Text>
-            <TextInput
-              style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
-              placeholder="e.g., Trek, Specialized"
-              placeholderTextColor={colors.icon}
-              value={formData.brand}
-              onChangeText={(text) => setFormData({ ...formData, brand: text })}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: colors.text }]}>Model (optional)</Text>
-            <TextInput
-              style={[styles.input, { color: colors.text, borderColor: colors.icon }]}
-              placeholder="e.g., Domane SL 5"
-              placeholderTextColor={colors.icon}
-              value={formData.model}
-              onChangeText={(text) => setFormData({ ...formData, model: text })}
-            />
-          </View>
-
-          <View style={styles.statsSection}>
-            <Text style={[styles.label, { color: colors.text }]}>Statistics</Text>
-            <View style={[styles.statCard, { backgroundColor: colors.buttonBackground }]}>
-              <View style={styles.statRow}>
-                <MaterialIcons name="speed" size={20} color={colors.buttonIcon} />
-                <Text style={[styles.statLabel, { color: colors.icon }]}>Total Mileage</Text>
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {bike.total_kilometrage?.toFixed(1) || '0.0'} miles
+        {/* Statistics Card */}
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle variant="large">Statistics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <View className="flex-row items-center gap-3">
+              <Icon name="speed" size={20} color="mutedForeground" />
+              <View className="flex-1">
+                <Text variant="small" className="text-muted-foreground">
+                  Total Mileage
                 </Text>
               </View>
+              <Text className="font-semibold">
+                {bike.total_kilometrage?.toFixed(1) || '0.0'} miles
+              </Text>
             </View>
-          </View>
-        </ScrollView>
-      </View>
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone Card */}
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle variant="large" className="text-rose-500">
+              Danger Zone
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <View className="gap-4">
+              <Text variant="small" className="text-muted-foreground">
+                Deleting this bike will remove all associated data. This action cannot be undone.
+              </Text>
+              {isActiveBike && (
+                <View className="bg-amber-500/20 rounded-md p-3 flex-row gap-2 items-center">
+                  <Icon name="warning" size={20} color="#f59e0b" />
+                  <Text className="flex-1 text-sm text-amber-500 leading-[18px]">
+                    This is your active bike.
+                  </Text>
+                </View>
+              )}
+            </View>
+          </CardContent>
+          <CardFooter>
+            <Button
+              // variant="destructive"
+              size="lg"
+              className="w-full bg-rose-500/20"
+              onPress={handleDelete}
+              disabled={loading}
+            >
+              <Icon name="delete" size={20} color="#f43f5e" />
+              <Text className="text-rose-500">Delete Bike</Text>
+            </Button>
+          </CardFooter>
+        </Card>
+      </ScrollView>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  statsSection: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-  },
-  typeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  typeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    gap: 6,
-  },
-  typeLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  colorButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButton: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: 'white',
-    paddingHorizontal: 16,
-  },
-  statCard: {
-    borderRadius: 12,
-    padding: 16,
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  statLabel: {
-    fontSize: 15,
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

@@ -18,62 +18,64 @@ import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MenuProvider } from 'react-native-popup-menu';
 import { PortalHost } from '@rn-primitives/portal';
+import * as SplashScreen from 'expo-splash-screen';
 import '../global.css';
+
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-function RootLayoutNav() {
-  const { user, loading } = useAuth();
-  const { isVisible, hidePaywall } = usePaywall();
-  const segments = useSegments();
-  const router = useRouter();
+// function RootLayoutNav() {
+//   const { user, loading } = useAuth();
+//   const { isVisible, hidePaywall } = usePaywall();
+//   const segments = useSegments();
+//   const router = useRouter();
 
-  useEffect(() => {
-    if (loading) return;
+//   useEffect(() => {
+//     if (loading) return;
 
-    const inAuthGroup = segments[0] === 'auth';
+//     const inAuthGroup = segments[0] === 'auth';
 
-    if (!user && !inAuthGroup) {
-      // Redirect to auth if not signed in
-      router.replace('/auth');
-    } else if (user && inAuthGroup) {
-      // Redirect to app if signed in
-      router.replace('/(tabs)');
-    }
-  }, [user, loading, segments]);
+//     if (!user && !inAuthGroup) {
+//       // Redirect to auth if not signed in
+//       router.replace('/auth');
+//     } else if (user && inAuthGroup) {
+//       // Redirect to app if signed in
+//       router.replace('/');
+//     }
+//   }, [user, loading, segments, router]);
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+//   if (loading) {
+//     return (
+//       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+//         <ActivityIndicator size="large" />
+//       </View>
+//     );
+//   }
 
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <MenuProvider>
-        <Stack>
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Map' }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-          <Stack.Screen
-            name="trip/[id]"
-            options={{
-              presentation: 'card',
-              animation: 'slide_from_right',
-            }}
-          />
-        </Stack>
-        {/* Global Paywall - controlled by context */}
-        <Paywall visible={isVisible} onClose={hidePaywall} />
-      </MenuProvider>
-    </GestureHandlerRootView>
-  );
-}
+//   return (
+//     <GestureHandlerRootView style={{ flex: 1 }}>
+//       <MenuProvider>
+//         <Stack>
+//           <Stack.Screen name="auth" options={{ headerShown: false }} />
+//           <Stack.Screen name="" options={{ headerShown: false, title: 'Map' }} />
+//           <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+//           <Stack.Screen
+//             name="trip/[id]"
+//             options={{
+//               presentation: 'card',
+//               animation: 'slide_from_right',
+//             }}
+//           />
+//         </Stack>
+//         {/* Global Paywall - controlled by context */}
+//         <Paywall visible={isVisible} onClose={hidePaywall} />
+//       </MenuProvider>
+//     </GestureHandlerRootView>
+//   );
+// }
 
 function MapboxInitializer() {
   const env = useEnv();
@@ -94,6 +96,20 @@ function MapboxInitializer() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  // const [loaded] = useFonts({
+  //   SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+  // });
+  const loaded = true;
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hide();
+    }
+  }, [loaded]);
+
+  if (!loaded) {
+    return null;
+  }
 
   return (
     <SupabaseProvider value={supabase}>
@@ -104,7 +120,9 @@ export default function RootLayout() {
             <IAPProvider>
               <PaywallProvider>
                 <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                  <RootLayoutNav />
+                  <Stack>
+                    <Stack.Screen name="index" options={{ headerShown: false, title: 'Map' }} />
+                  </Stack>
                   <StatusBar style="auto" />
                   <PortalHost />
                 </ThemeProvider>

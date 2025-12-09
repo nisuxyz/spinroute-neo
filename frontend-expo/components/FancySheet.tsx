@@ -1,69 +1,20 @@
-import React, {
-  forwardRef,
-  useImperativeHandle,
-  useRef,
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-} from 'react';
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  TouchableOpacity,
-  useColorScheme,
-  useWindowDimensions,
-  Platform,
-  FlatList,
-  ActivityIndicator,
-  Keyboard,
-} from 'react-native';
+import React, { forwardRef, useImperativeHandle, useRef, useEffect, useCallback } from 'react';
+import { View, TouchableOpacity, useWindowDimensions, FlatList, Keyboard } from 'react-native';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
-import { MaterialIcons } from '@expo/vector-icons';
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { usePathname } from 'expo-router';
-import { Colors, Spacing, Typography, BorderRadius, InputStyles } from '@/constants/theme';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { useDebounce } from 'use-debounce';
-import { useEnv } from '@/hooks/use-env';
-import { useSearchHistory, type SearchHistoryItem } from '@/hooks/use-search-history';
-import { fuzzySearch } from '@/utils/fuzzy-search';
+import {
+  useMapboxSearch,
+  type GeocodingResult,
+  type CombinedResult,
+  type SearchSuggestion,
+} from '@/hooks/use-mapbox-search';
+import type { SearchHistoryItem } from '@/hooks/use-search-history';
+import { Text } from './ui/text';
+import { Input } from './ui/input';
+import { Icon, IconName } from './icon';
+import { Skeleton } from './ui/skeleton';
 
-const HEADER_HEIGHT = 60;
-
-const getIsLiquidGlassAvailable = (): boolean => {
-  if (Platform.OS !== 'ios') return false;
-  return isLiquidGlassAvailable();
-};
-
-const getBlurTint = (): 'system-material' | undefined => {
-  const hasLiquidGlass = getIsLiquidGlassAvailable();
-  return hasLiquidGlass ? undefined : 'system-material';
-};
-
-interface SearchSuggestion {
-  name: string;
-  mapbox_id: string;
-  feature_type: string;
-  full_address?: string;
-  place_formatted?: string;
-  maki?: string;
-}
-
-export interface GeocodingResult {
-  name: string;
-  display_name: string;
-  lat: number;
-  lon: number;
-  type: string;
-  mapbox_id: string;
-}
-
-type CombinedResult =
-  | { type: 'history'; data: SearchHistoryItem }
-  | { type: 'suggestion'; data: SearchSuggestion };
+export type { GeocodingResult } from '@/hooks/use-mapbox-search';
 
 interface FancySheetProps {
   onSelectLocation?: (location: GeocodingResult) => void;
@@ -76,23 +27,18 @@ export interface FancySheetRef {
 
 const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocation }, ref) => {
   const sheetRef = useRef<TrueSheet>(null);
-  const colorScheme = useColorScheme();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [sessionToken, setSessionToken] = useState('');
-  const [debouncedQuery] = useDebounce(searchQuery, 300);
-
-  const textColor = useThemeColor({}, 'text');
-  const iconColor = useThemeColor({}, 'icon');
-  const secondaryTextColor = useThemeColor({}, 'calloutTextSecondary');
-
-  const env = useEnv();
-  const { history, addToHistory, removeFromHistory } = useSearchHistory();
-
-  const inputBgColor = colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-
   const { height } = useWindowDimensions();
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    loading,
+    combinedResults,
+    history,
+    selectItem,
+    removeFromHistory,
+    clearSearch,
+  } = useMapboxSearch();
 
   useImperativeHandle(ref, () => ({
     present: async (index = 0) => {
@@ -115,124 +61,7 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
     }
   }, [pathname]);
 
-  // Generate a new session token when the sheet opens
-  useEffect(() => {
-    setSessionToken(generateUUID());
-  }, []);
-
-  // Fetch suggestions from Mapbox
-  useEffect(() => {
-    if (debouncedQuery.trim().length < 2) {
-      setSuggestions([]);
-      return;
-    }
-
-    const fetchSuggestions = async () => {
-      setLoading(true);
-      try {
-        const accessToken = env.MAPBOX_ACCESS_TOKEN;
-        if (!accessToken) {
-          console.warn('Mapbox access token not configured');
-          return;
-        }
-
-        const response = await fetch(
-          `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(debouncedQuery)}&language=en&limit=10&session_token=${sessionToken}&access_token=${accessToken}`,
-        );
-
-        if (!response.ok) {
-          throw new Error('Search request failed');
-        }
-
-        const data = await response.json();
-        setSuggestions(data.suggestions || []);
-      } catch (error) {
-        console.error('Search error:', error);
-        setSuggestions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSuggestions();
-  }, [debouncedQuery, sessionToken, env.MAPBOX_ACCESS_TOKEN]);
-
-  const generateUUID = (): string => {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  };
-
-  const handleSelectSuggestion = async (suggestion: SearchSuggestion) => {
-    try {
-      const accessToken = env.MAPBOX_ACCESS_TOKEN;
-      if (!accessToken) return;
-
-      // Retrieve full details including coordinates
-      const response = await fetch(
-        `https://api.mapbox.com/search/searchbox/v1/retrieve/${suggestion.mapbox_id}?session_token=${sessionToken}&access_token=${accessToken}`,
-      );
-
-      if (!response.ok) {
-        throw new Error('Retrieve request failed');
-      }
-
-      const data = await response.json();
-      const feature = data.features?.[0];
-
-      if (feature?.geometry?.coordinates) {
-        const result: GeocodingResult = {
-          name: suggestion.name,
-          display_name: suggestion.full_address || suggestion.place_formatted || suggestion.name,
-          lon: feature.geometry.coordinates[0],
-          lat: feature.geometry.coordinates[1],
-          type: suggestion.feature_type,
-          mapbox_id: suggestion.mapbox_id,
-        };
-
-        // Add to history
-        await addToHistory(result);
-
-        // Notify parent
-        onSelectLocation?.(result);
-
-        // Collapse sheet and clear search
-        setSearchQuery('');
-        setSuggestions([]);
-        Keyboard.dismiss();
-        await sheetRef.current?.present(0);
-      }
-    } catch (error) {
-      console.error('Retrieve error:', error);
-    }
-  };
-
-  const handleSelectHistory = async (item: SearchHistoryItem) => {
-    const result: GeocodingResult = {
-      name: item.name,
-      display_name: item.display_name,
-      lon: item.lon,
-      lat: item.lat,
-      type: item.type,
-      mapbox_id: item.mapbox_id,
-    };
-
-    // Update timestamp by re-adding to history
-    await addToHistory(result);
-
-    // Notify parent
-    onSelectLocation?.(result);
-
-    // Collapse sheet and clear search
-    setSearchQuery('');
-    setSuggestions([]);
-    Keyboard.dismiss();
-    await sheetRef.current?.present(0);
-  };
-
-  const getIconForFeatureType = (type: string): any => {
+  const getIconForFeatureType = (type: string): IconName => {
     switch (type) {
       case 'poi':
         return 'place';
@@ -258,58 +87,27 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
     }
   };
 
-  // Combine history and suggestions based on search query
-  const combinedResults = useMemo((): CombinedResult[] => {
-    const results: CombinedResult[] = [];
-
-    if (debouncedQuery.trim().length < 2) {
-      // Show recent history when no search query
-      return history.slice(0, 10).map((item) => ({ type: 'history', data: item }));
-    }
-
-    // Fuzzy search through history
-    const historyMatches = fuzzySearch(
-      debouncedQuery,
-      history,
-      (item) => `${item.name} ${item.display_name}`,
-    );
-
-    // Add top 3 history matches at the beginning
-    historyMatches.slice(0, 3).forEach((match) => {
-      results.push({ type: 'history', data: match.item });
-    });
-
-    // Add API suggestions
-    suggestions.forEach((suggestion) => {
-      results.push({ type: 'suggestion', data: suggestion });
-    });
-
-    return results;
-  }, [debouncedQuery, history, suggestions]);
+  const handleSelectItem = useCallback(
+    async (item: CombinedResult) => {
+      const result = await selectItem(item);
+      if (result) {
+        onSelectLocation?.(result);
+        clearSearch();
+        Keyboard.dismiss();
+        await sheetRef.current?.present(0);
+      }
+    },
+    [selectItem, onSelectLocation, clearSearch],
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: CombinedResult }) => {
       const isHistory = item.type === 'history';
       const data = item.data;
 
-      const handlePress = () => {
-        if (isHistory) {
-          handleSelectHistory(data as SearchHistoryItem);
-        } else {
-          handleSelectSuggestion(data as SearchSuggestion);
-        }
-      };
-
-      const handleRemove = (e: any) => {
-        e.stopPropagation();
-        if (isHistory) {
-          removeFromHistory((data as SearchHistoryItem).mapbox_id);
-        }
-      };
-
-      const icon = isHistory
+      const icon: IconName = isHistory
         ? 'history'
-        : getIconForFeatureType((data as any).feature_type || (data as any).type);
+        : getIconForFeatureType((data as SearchSuggestion).feature_type || 'place');
       const name = data.name;
       const details = isHistory
         ? (data as SearchHistoryItem).display_name
@@ -318,33 +116,34 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
           '';
 
       return (
-        <TouchableOpacity style={styles.resultItem} onPress={handlePress}>
-          <MaterialIcons name={icon} size={20} color={textColor} style={styles.resultIcon} />
-          <View style={styles.resultTextContainer}>
-            <Text style={[styles.resultName, { color: textColor }]}>{name}</Text>
+        <TouchableOpacity
+          className="flex-row items-center py-3 px-3 rounded-xl bg-muted/30 mb-2"
+          onPress={() => handleSelectItem(item)}
+        >
+          <Icon name={icon} size={20} color="foreground" className="mr-3" />
+          <View className="flex-1">
+            <Text className="font-semibold mb-0.5">{name}</Text>
             {details && (
-              <Text style={[styles.resultDetails, { color: secondaryTextColor }]} numberOfLines={1}>
+              <Text variant="small" className="text-muted-foreground" numberOfLines={1}>
                 {details}
               </Text>
             )}
           </View>
           {isHistory && (
-            <TouchableOpacity onPress={handleRemove} style={styles.removeButton}>
-              <MaterialIcons name="close" size={18} color={iconColor} />
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                removeFromHistory((data as SearchHistoryItem).mapbox_id);
+              }}
+              className="p-2 ml-2"
+            >
+              <Icon name="close" size={18} color="mutedForeground" />
             </TouchableOpacity>
           )}
         </TouchableOpacity>
       );
     },
-    [
-      textColor,
-      secondaryTextColor,
-      iconColor,
-      handleSelectSuggestion,
-      handleSelectHistory,
-      removeFromHistory,
-      getIconForFeatureType,
-    ],
+    [handleSelectItem, removeFromHistory],
   );
 
   return (
@@ -355,20 +154,20 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
       dimmedDetentIndex={2}
       dismissible={false}
       edgeToEdgeFullScreen
-      // blurTint={blurTint}
       cornerRadius={36}
       grabber={true}
       keyboardMode="pan"
+      scrollable
     >
-      <View style={styles.container}>
+      <View className="flex-1 pt-3.5">
         {/* Search Header */}
-        <View style={styles.searchHeader}>
-          <View style={[styles.searchInputContainer, { backgroundColor: inputBgColor }]}>
-            <MaterialIcons name="search" size={20} color={iconColor} style={styles.searchIcon} />
-            <TextInput
-              style={[styles.searchInput, { color: textColor }]}
+        <View className="pb-4 px-4">
+          <View className="flex-row items-center dark:bg-input/30 border-input bg-background/30 rounded-full px-4">
+            <Icon name="search" size={20} color="mutedForeground" className="mr-2" />
+            <Input
+              variant="ghost"
+              className="flex-1 h-11 border-0 bg-transparent shadow-none font-semibold"
               placeholder="Search for a place or address"
-              placeholderTextColor={iconColor}
               value={searchQuery}
               onChangeText={setSearchQuery}
               returnKeyType="search"
@@ -376,18 +175,26 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
               autoCorrect={false}
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <MaterialIcons name="cancel" size={18} color={iconColor} />
+              <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1">
+                <Icon name="cancel" size={18} color="mutedForeground" />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
         {/* Content Area */}
-        <View style={styles.contentArea}>
+        <View className="flex-1">
           {loading && searchQuery.length >= 2 && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={textColor} />
+            <View className="gap-2 px-4 pt-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <View key={i} className="flex-row items-center py-3 px-3 rounded-xl bg-muted/30">
+                  <Skeleton className="w-5 h-5 rounded-full mr-3" />
+                  <View className="flex-1 gap-1.5">
+                    <Skeleton className="h-4 w-3/4 rounded" />
+                    <Skeleton className="h-3 w-1/2 rounded" />
+                  </View>
+                </View>
+              ))}
             </View>
           )}
 
@@ -395,12 +202,14 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
             <FlatList
               data={combinedResults}
               keyExtractor={(item: CombinedResult) => `${item.type}-${item.data.mapbox_id}`}
-              contentContainerStyle={styles.resultsContent}
+              className="px-0 m-0"
+              contentContainerClassName="mx-4 pt-4 px-0 m-0"
               keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
               renderItem={renderItem}
               ListHeaderComponent={
                 searchQuery.length < 2 && history.length > 0 ? (
-                  <Text style={[styles.sectionTitle, { color: secondaryTextColor }]}>
+                  <Text className="font-semibold text-muted-foreground mb-3 px-1">
                     Recent Searches
                   </Text>
                 ) : null
@@ -409,18 +218,16 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
           )}
 
           {!loading && searchQuery.length >= 2 && combinedResults.length === 0 && (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="search-off" size={48} color={iconColor} />
-              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
-                No results found
-              </Text>
+            <View className="flex-1 justify-center items-center py-12">
+              <Icon name="search-off" size={48} color="mutedForeground" />
+              <Text className="text-muted-foreground mt-4 text-center">No results found</Text>
             </View>
           )}
 
           {!loading && searchQuery.length < 2 && history.length === 0 && (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="location-on" size={48} color={iconColor} />
-              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+            <View className="flex-1 justify-center items-center py-12">
+              <Icon name="location-on" size={48} color="mutedForeground" />
+              <Text className="text-muted-foreground mt-4 text-center">
                 Search for places, addresses, or stations
               </Text>
             </View>
@@ -432,90 +239,5 @@ const FancySheet = forwardRef<FancySheetRef, FancySheetProps>(({ onSelectLocatio
 });
 
 FancySheet.displayName = 'FancySheet';
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 14,
-  },
-  searchHeader: {
-    paddingBottom: Spacing.md,
-  },
-  searchInputContainer: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 32,
-    paddingHorizontal: Spacing.md,
-    marginHorizontal: Spacing.md,
-  },
-  searchIcon: {
-    marginRight: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...Typography.bodyMedium,
-    fontSize: 16,
-    height: 44,
-  },
-  clearButton: {
-    padding: Spacing.xs,
-  },
-  contentArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-  },
-  loadingContainer: {
-    paddingVertical: Spacing.xl,
-    alignItems: 'center',
-  },
-  resultsContent: {
-    paddingBottom: Spacing.xl,
-  },
-  resultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 12,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
-    marginBottom: Spacing.sm,
-  },
-  resultIcon: {
-    marginRight: Spacing.md,
-  },
-  resultTextContainer: {
-    flex: 1,
-  },
-  resultName: {
-    ...Typography.bodyMedium,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  resultDetails: {
-    ...Typography.bodySmall,
-  },
-  removeButton: {
-    padding: Spacing.sm,
-    marginLeft: Spacing.sm,
-  },
-  sectionTitle: {
-    ...Typography.bodyMedium,
-    fontWeight: '600',
-    marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.xs,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: Spacing.xxxl,
-  },
-  emptyStateText: {
-    ...Typography.bodyMedium,
-    marginTop: Spacing.md,
-    textAlign: 'center',
-  },
-});
 
 export default FancySheet;

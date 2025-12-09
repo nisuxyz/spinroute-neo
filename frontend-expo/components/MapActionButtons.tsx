@@ -114,7 +114,7 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
         />
       </GlassContainer>
 
-      <GlassContainer spacing={32} style={[styles.buttonGroup, { paddingBottom: 100 }]}>
+      <GlassContainer spacing={32} style={[styles.buttonGroup, { paddingBottom: 110 }]}>
         <MapActionButton
           icon="settings"
           iconFamily="MaterialIcons"

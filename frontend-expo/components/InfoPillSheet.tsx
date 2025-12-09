@@ -1,11 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Spacing, Typography, BorderRadius, CardStyles } from '@/constants/theme';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import BaseSheet, { BaseSheetRef } from './BaseSheet';
 import RecordingIndicator from './RecordingIndicator';
 import type { Bike } from '@/hooks/use-bikes';
+import { Text } from './ui/text';
+import { Button } from './ui/button';
+import { Icon, type IconName } from './icon';
 
 /**
  * Weather data interface
@@ -31,7 +31,7 @@ export interface InfoPillSheetProps {
   onClose: () => void;
 }
 
-const bikeTypeIcons: Record<string, keyof typeof MaterialIcons.glyphMap> = {
+const bikeTypeIcons: Record<string, IconName> = {
   road: 'pedal-bike',
   mountain: 'terrain',
   hybrid: 'directions-bike',
@@ -57,8 +57,9 @@ const bikeTypeLabels: Record<string, string> = {
  * - Expanded state: Shows full bike details, recording status, and detailed weather
  *
  * Detents:
- * - Collapsed: 'auto' (~120px)
- * - Expanded: 0.6 (60% screen height)
+ * - Collapsed: 0.1 (~10% screen height)
+ * - Mid: 0.45 (45% screen height)
+ * - Expanded: 0.9 (90% screen height)
  */
 const InfoPillSheet: React.FC<InfoPillSheetProps> = ({
   visible,
@@ -68,8 +69,6 @@ const InfoPillSheet: React.FC<InfoPillSheetProps> = ({
   onClose,
 }) => {
   const sheetRef = useRef<BaseSheetRef>(null);
-  const textColor = useThemeColor({}, 'text');
-  const buttonIcon = useThemeColor({}, 'buttonIcon');
   const [isExpanded, setIsExpanded] = useState(true);
 
   // Present sheet when visible becomes true
@@ -125,96 +124,79 @@ const InfoPillSheet: React.FC<InfoPillSheetProps> = ({
       dimmed={false}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled
         scrollEnabled={isExpanded}
       >
         {!isExpanded ? (
           // Collapsed view - Shows bike name, type, and basic info
-          <View style={styles.collapsedContent}>
-            <View style={[styles.iconCircle, { backgroundColor: bikeColor }]}>
-              <MaterialIcons name={icon} size={24} color="white" />
+          <View className="flex-row items-center gap-3 p-4">
+            <View
+              className="w-12 h-12 rounded-full items-center justify-center"
+              style={{ backgroundColor: bikeColor }}
+            >
+              <Icon name={icon} size={24} style={{ color: 'white' }} />
             </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text
-                  style={[Typography.h3, { marginBottom: 2, color: textColor }]}
-                  numberOfLines={1}
-                >
+            <View className="flex-1">
+              <View className="flex-row items-center gap-1.5">
+                <Text className="font-semibold text-base mb-0.5" numberOfLines={1}>
                   {bike.name}
                 </Text>
                 {isRecording && <RecordingIndicator size={8} />}
               </View>
-              <Text style={[{ fontSize: 13, color: textColor + 'CC' }]} numberOfLines={1}>
+              <Text variant="small" className="text-muted-foreground" numberOfLines={1}>
                 {bikeTypeLabel}
                 {weather && ` • ${Math.round(weather.temperature)}°C`}
               </Text>
             </View>
-            <TouchableOpacity style={{ padding: 4 }} onPress={handleClosePress}>
-              <MaterialIcons name="close" size={20} color={textColor} />
+            <TouchableOpacity className="p-1" onPress={handleClosePress}>
+              <Icon name="close" size={20} color="foreground" />
             </TouchableOpacity>
           </View>
         ) : (
           // Expanded view - Shows full details
-          <View style={{ padding: Spacing.lg }}>
-            <View style={styles.expandedHeader}>
-              <View style={{ display: 'flex', flexDirection: 'row', gap: Spacing.md }}>
-                <Text style={[Typography.h2, { color: textColor }]}>Ride Details</Text>
+          <View className="p-4">
+            {/* Header */}
+            <View className="flex-row items-center justify-between mb-6">
+              <View className="flex-row items-center gap-3">
+                <Text className="text-xl font-semibold">Ride Details</Text>
                 {isRecording && (
-                  <View style={styles.recordingBadge}>
-                    <MaterialIcons name="fiber-manual-record" size={12} color="#ef4444" />
-                    <Text style={[Typography.label, { color: '#ef4444', marginLeft: 4 }]}>
-                      Recording
-                    </Text>
+                  <View className="flex-row items-center px-3 py-1 rounded-md bg-red-500/10">
+                    <Icon name="fiber-manual-record" size={12} style={{ color: '#ef4444' }} />
+                    <Text className="text-red-500 text-xs font-medium ml-1">Recording</Text>
                   </View>
                 )}
               </View>
-              <TouchableOpacity style={{ padding: 4 }} onPress={handleClosePress}>
-                <MaterialIcons name="close" size={24} color={textColor} />
-              </TouchableOpacity>
+              <Button variant="ghost" size="sm" onPress={handleClosePress}>
+                <Text className="text-base text-muted-foreground">Close</Text>
+              </Button>
             </View>
 
             {/* Bike Icon */}
-            <View style={{ alignItems: 'center', marginBottom: Spacing.xxl }}>
-              <View style={[styles.expandedIconCircle, { backgroundColor: bikeColor }]}>
-                <MaterialIcons name={icon} size={48} color="white" />
+            <View className="items-center mb-8">
+              <View
+                className="w-24 h-24 rounded-full items-center justify-center"
+                style={{ backgroundColor: bikeColor }}
+              >
+                <Icon name={icon} size={48} style={{ color: 'white' }} />
               </View>
             </View>
 
-            {/* Bike Name & Recording Status */}
-            <View style={{ alignItems: 'center', marginBottom: Spacing.xxxl }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <Text style={[Typography.displayLarge, { textAlign: 'center', color: textColor }]}>
-                  {bike.name}
-                </Text>
-                {/* {isRecording && <View style={styles.recordingDotLarge} />} */}
-              </View>
-              <Text
-                style={[
-                  Typography.bodyLarge,
-                  { textAlign: 'center', marginTop: Spacing.xs, color: textColor + 'CC' },
-                ]}
-              >
-                {bikeTypeLabel}
-              </Text>
-            </View>
+            {/* Bike Name & Type */}
+            <Text className="text-2xl font-bold text-center mb-2">{bike.name}</Text>
+            <Text className="text-center text-muted-foreground mb-8">{bikeTypeLabel}</Text>
 
             {/* Bike Details */}
-            <View style={{ gap: Spacing.lg, marginBottom: Spacing.xxxl }}>
+            <View className="gap-4 mb-8">
               {bike.brand && (
-                <View
-                  style={[
-                    CardStyles.detailRow,
-                    { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                  ]}
-                >
-                  <MaterialIcons name="business" size={20} color={textColor + 'CC'} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}>
+                <View className="flex-row items-start gap-4">
+                  <Icon name="business" size={20} color="mutedForeground" />
+                  <View className="flex-1">
+                    <Text variant="small" className="text-muted-foreground mb-1">
                       Brand
                     </Text>
-                    <Text style={[Typography.bodyLarge, { color: textColor }]}>
+                    <Text>
                       {bike.brand}
                       {bike.model && ` ${bike.model}`}
                     </Text>
@@ -222,38 +204,24 @@ const InfoPillSheet: React.FC<InfoPillSheetProps> = ({
                 </View>
               )}
 
-              <View
-                style={[
-                  CardStyles.detailRow,
-                  { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                ]}
-              >
-                <MaterialIcons name="speed" size={20} color={textColor + 'CC'} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}>
+              <View className="flex-row items-start gap-4">
+                <Icon name="speed" size={20} color="mutedForeground" />
+                <View className="flex-1">
+                  <Text variant="small" className="text-muted-foreground mb-1">
                     Total Distance
                   </Text>
-                  <Text style={[Typography.bodyLarge, { color: textColor }]}>
-                    {bike.total_kilometrage.toFixed(1)} mi
-                  </Text>
+                  <Text>{bike.total_kilometrage.toFixed(1)} mi</Text>
                 </View>
               </View>
 
               {bike.purchase_date && (
-                <View
-                  style={[
-                    CardStyles.detailRow,
-                    { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                  ]}
-                >
-                  <MaterialIcons name="event" size={20} color={textColor + 'CC'} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}>
+                <View className="flex-row items-start gap-4">
+                  <Icon name="event" size={20} color="mutedForeground" />
+                  <View className="flex-1">
+                    <Text variant="small" className="text-muted-foreground mb-1">
                       Purchase Date
                     </Text>
-                    <Text style={[Typography.bodyLarge, { color: textColor }]}>
-                      {new Date(bike.purchase_date).toLocaleDateString()}
-                    </Text>
+                    <Text>{new Date(bike.purchase_date).toLocaleDateString()}</Text>
                   </View>
                 </View>
               )}
@@ -262,85 +230,51 @@ const InfoPillSheet: React.FC<InfoPillSheetProps> = ({
             {/* Weather Details */}
             {weather && (
               <>
-                <Text style={[Typography.h3, { marginBottom: Spacing.lg, color: textColor }]}>
-                  Weather Conditions
-                </Text>
-                <View style={{ gap: Spacing.lg }}>
-                  <View
-                    style={[
-                      CardStyles.detailRow,
-                      { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                    ]}
-                  >
-                    <MaterialIcons name="thermostat" size={20} color={textColor + 'CC'} />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
-                      >
+                <Text className="text-lg font-semibold mb-4">Weather Conditions</Text>
+                <View className="gap-4">
+                  <View className="flex-row items-start gap-4">
+                    <Icon name="thermostat" size={20} color="mutedForeground" />
+                    <View className="flex-1">
+                      <Text variant="small" className="text-muted-foreground mb-1">
                         Temperature
                       </Text>
-                      <Text style={[Typography.bodyLarge, { color: textColor }]}>
+                      <Text>
                         {Math.round(weather.temperature)}°C (Feels like{' '}
                         {Math.round(weather.feelsLike)}°C)
                       </Text>
                     </View>
                   </View>
 
-                  <View
-                    style={[
-                      CardStyles.detailRow,
-                      { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                    ]}
-                  >
-                    <MaterialIcons name="air" size={20} color={textColor + 'CC'} />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
-                      >
+                  <View className="flex-row items-start gap-4">
+                    <Icon name="air" size={20} color="mutedForeground" />
+                    <View className="flex-1">
+                      <Text variant="small" className="text-muted-foreground mb-1">
                         Wind
                       </Text>
-                      <Text style={[Typography.bodyLarge, { color: textColor }]}>
+                      <Text>
                         {Math.round(weather.windSpeed)} km/h{' '}
                         {getWindDirection(weather.windDirection)}
                       </Text>
                     </View>
                   </View>
 
-                  <View
-                    style={[
-                      CardStyles.detailRow,
-                      { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                    ]}
-                  >
-                    <MaterialIcons name="water-drop" size={20} color={textColor + 'CC'} />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
-                      >
+                  <View className="flex-row items-start gap-4">
+                    <Icon name="water-drop" size={20} color="mutedForeground" />
+                    <View className="flex-1">
+                      <Text variant="small" className="text-muted-foreground mb-1">
                         Humidity
                       </Text>
-                      <Text style={[Typography.bodyLarge, { color: textColor }]}>
-                        {weather.humidity}%
-                      </Text>
+                      <Text>{weather.humidity}%</Text>
                     </View>
                   </View>
 
-                  <View
-                    style={[
-                      CardStyles.detailRow,
-                      { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                    ]}
-                  >
-                    <MaterialIcons name="wb-sunny" size={20} color={textColor + 'CC'} />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}
-                      >
+                  <View className="flex-row items-start gap-4">
+                    <Icon name="wb-sunny" size={20} color="mutedForeground" />
+                    <View className="flex-1">
+                      <Text variant="small" className="text-muted-foreground mb-1">
                         Conditions
                       </Text>
-                      <Text style={[Typography.bodyLarge, { color: textColor }]}>
-                        {weather.description}
-                      </Text>
+                      <Text>{weather.description}</Text>
                     </View>
                   </View>
                 </View>
@@ -352,47 +286,5 @@ const InfoPillSheet: React.FC<InfoPillSheetProps> = ({
     </BaseSheet>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-  },
-  collapsedContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.xxl,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  expandedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xxl,
-  },
-  expandedIconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  recordingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    // marginTop: Spacing.sm,
-  },
-});
 
 export default InfoPillSheet;

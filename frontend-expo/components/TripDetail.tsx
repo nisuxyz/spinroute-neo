@@ -1,35 +1,27 @@
-import React, { useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  useColorScheme,
-  TouchableOpacity,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/theme';
+import React, { useRef } from 'react';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useTripDetail } from '@/hooks/use-trip-detail';
-import { useUserSettings } from '@/contexts/user-settings-context';
-import { useSubscription } from '@/contexts/user-settings-context';
+import { useUserSettings, useSubscription } from '@/contexts/user-settings-context';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import Mapbox from '@rnmapbox/maps';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
+import { Text } from './ui/text';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { Skeleton } from './ui/skeleton';
+import { Icon } from './icon';
 
 interface TripDetailProps {
   tripId: string;
 }
 
 const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const router = useRouter();
   const { trip, routeGeoJSON, loading, error, refresh } = useTripDetail(tripId);
   const { settings } = useUserSettings();
   const { isPro } = useSubscription();
   const cameraRef = useRef<Mapbox.Camera>(null);
   const mapStyle = settings?.map_style || 'mapbox://styles/mapbox/standard';
+  const primaryColor = useThemeColor({}, 'primary');
 
   // Calculate bounds for the route - MUST be before any conditional returns
   const routeBounds = React.useMemo(() => {
@@ -115,24 +107,46 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
 
   if (loading) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.buttonIcon} />
-        <Text style={[styles.loadingText, { color: colors.text }]}>Loading trip details...</Text>
-      </View>
+      <ScrollView className="flex-1 bg-background" contentContainerClassName="p-4">
+        {/* Header skeleton */}
+        <View className="mb-4">
+          <Skeleton className="h-8 w-3/4 rounded mb-2" />
+          <View className="flex-row items-center gap-1.5">
+            <Skeleton className="w-4 h-4 rounded" />
+            <Skeleton className="h-4 w-1/2 rounded" />
+          </View>
+        </View>
+
+        {/* Map skeleton */}
+        <Skeleton className="h-[250px] w-full rounded-xl mb-4" />
+
+        {/* Stats card skeleton */}
+        <Card className="mb-4">
+          <CardContent>
+            <Skeleton className="h-6 w-40 rounded mb-4" />
+            <View className="flex-row flex-wrap gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <View key={i} className="flex-1 min-w-[45%] items-center p-3">
+                  <Skeleton className="w-6 h-6 rounded-full mb-2" />
+                  <Skeleton className="h-5 w-16 rounded mb-1" />
+                  <Skeleton className="h-3 w-20 rounded" />
+                </View>
+              ))}
+            </View>
+          </CardContent>
+        </Card>
+      </ScrollView>
     );
   }
 
   if (error || !trip) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
-        <MaterialIcons name="error-outline" size={64} color={colors.stationNoDocks} />
-        <Text style={[styles.errorText, { color: colors.text }]}>{error || 'Trip not found'}</Text>
-        <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: colors.buttonIcon }]}
-          onPress={refresh}
-        >
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+      <View className="flex-1 bg-background justify-center items-center p-8">
+        <Icon name="error-outline" size={64} color="destructive" />
+        <Text className="text-center mt-4 mb-6">{error || 'Trip not found'}</Text>
+        <Button onPress={refresh}>
+          <Text className="text-primary-foreground font-semibold">Retry</Text>
+        </Button>
       </View>
     );
   }
@@ -141,32 +155,34 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
   const advancedStats = trip.trip_advanced_stats;
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.content}
-    >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>
+    <ScrollView className="flex-1" contentContainerClassName="p-4">
+      {/* Header */}
+      <View className="mb-4">
+        <Text className="text-2xl font-bold mb-2">
           {trip.title || `Trip on ${formatDate(trip.started_at)}`}
         </Text>
-        <View style={styles.dateContainer}>
-          <MaterialIcons name="event" size={16} color={colors.icon} />
-          <Text style={[styles.dateText, { color: colors.icon }]}>
+        <View className="flex-row items-center gap-1.5">
+          <Icon name="event" size={16} color="mutedForeground" />
+          <Text variant="small" className="text-muted-foreground">
             {formatDate(trip.started_at)} at {formatTime(trip.started_at)}
           </Text>
         </View>
       </View>
 
+      {/* Notes */}
       {trip.notes && (
-        <View style={[styles.notesCard, { backgroundColor: colors.buttonBackground }]}>
-          <Text style={[styles.notesText, { color: colors.text }]}>{trip.notes}</Text>
-        </View>
+        <Card className="mb-4">
+          <CardContent>
+            <Text className="leading-6">{trip.notes}</Text>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Map */}
       {routeGeoJSON && routeBounds && (
-        <View style={styles.mapContainer}>
+        <View className="h-[250px] rounded-xl overflow-hidden mb-4">
           <Mapbox.MapView
-            style={styles.map}
+            style={{ flex: 1 }}
             styleURL={mapStyle}
             logoEnabled={false}
             attributionEnabled={false}
@@ -180,7 +196,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
               <Mapbox.LineLayer
                 id="routeLine"
                 style={{
-                  lineColor: colors.buttonIcon,
+                  lineColor: primaryColor,
                   lineWidth: 4,
                   lineCap: 'round',
                   lineJoin: 'round',
@@ -197,8 +213,8 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
                   routeGeoJSON.geometry.coordinates[0][1],
                 ]}
               >
-                <View style={styles.startMarker}>
-                  <MaterialIcons name="play-arrow" size={20} color="#fff" />
+                <View className="w-9 h-9 rounded-full bg-green-500 items-center justify-center border-[3px] border-white shadow-md">
+                  <Icon name="play-arrow" size={20} style={{ color: '#fff' }} />
                 </View>
               </Mapbox.PointAnnotation>
             )}
@@ -216,8 +232,8 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
                   ][1],
                 ]}
               >
-                <View style={styles.endMarker}>
-                  <MaterialIcons name="flag" size={20} color="#fff" />
+                <View className="w-9 h-9 rounded-full bg-red-500 items-center justify-center border-[3px] border-white shadow-md">
+                  <Icon name="flag" size={20} style={{ color: '#fff' }} />
                 </View>
               </Mapbox.PointAnnotation>
             )}
@@ -225,340 +241,163 @@ const TripDetail: React.FC<TripDetailProps> = ({ tripId }) => {
         </View>
       )}
 
-      <View style={[styles.statsCard, { backgroundColor: colors.buttonBackground }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Statistics</Text>
+      {/* Basic Statistics */}
+      <View className="mb-4">
+        <Card>
+          <CardContent>
+            <Text className="text-xl font-semibold mb-4">Basic Statistics</Text>
+            <View className="flex-row flex-wrap gap-3">
+              <View className="flex-1 min-w-[45%] items-center p-3">
+                <Icon name="straighten" size={24} color="primary" />
+                <Text className="text-xl font-semibold mt-2">
+                  {formatDistance(basicStats?.distance_km)}
+                </Text>
+                <Text variant="small" className="text-muted-foreground mt-1 text-center">
+                  Distance
+                </Text>
+              </View>
 
-        <View style={styles.statsGrid}>
-          <View style={styles.statBox}>
-            <MaterialIcons name="straighten" size={24} color={colors.buttonIcon} />
-            <Text style={[styles.statValue, { color: colors.text }]}>
-              {formatDistance(basicStats?.distance_km)}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.icon }]}>Distance</Text>
-          </View>
+              <View className="flex-1 min-w-[45%] items-center p-3">
+                <Icon name="schedule" size={24} color="primary" />
+                <Text className="text-xl font-semibold mt-2">
+                  {formatDuration(basicStats?.moving_duration_seconds)}
+                </Text>
+                <Text variant="small" className="text-muted-foreground mt-1 text-center">
+                  Moving Time
+                </Text>
+              </View>
 
-          <View style={styles.statBox}>
-            <MaterialIcons name="schedule" size={24} color={colors.buttonIcon} />
-            <Text style={[styles.statValue, { color: colors.text }]}>
-              {formatDuration(basicStats?.moving_duration_seconds)}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.icon }]}>Moving Time</Text>
-          </View>
+              <View className="flex-1 min-w-[45%] items-center p-3">
+                <Icon name="speed" size={24} color="primary" />
+                <Text className="text-xl font-semibold mt-2">
+                  {formatSpeed(basicStats?.avg_speed_kmh)}
+                </Text>
+                <Text variant="small" className="text-muted-foreground mt-1 text-center">
+                  Avg Speed
+                </Text>
+              </View>
 
-          <View style={styles.statBox}>
-            <MaterialIcons name="speed" size={24} color={colors.buttonIcon} />
-            <Text style={[styles.statValue, { color: colors.text }]}>
-              {formatSpeed(basicStats?.avg_speed_kmh)}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.icon }]}>Avg Speed</Text>
-          </View>
-
-          <View style={styles.statBox}>
-            <MaterialIcons name="trending-up" size={24} color={colors.buttonIcon} />
-            <Text style={[styles.statValue, { color: colors.text }]}>
-              {formatSpeed(basicStats?.max_speed_kmh)}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.icon }]}>Max Speed</Text>
-          </View>
-        </View>
+              <View className="flex-1 min-w-[45%] items-center p-3">
+                <Icon name="trending-up" size={24} color="primary" />
+                <Text className="text-xl font-semibold mt-2">
+                  {formatSpeed(basicStats?.max_speed_kmh)}
+                </Text>
+                <Text variant="small" className="text-muted-foreground mt-1 text-center">
+                  Max Speed
+                </Text>
+              </View>
+            </View>
+          </CardContent>
+        </Card>
       </View>
 
       {/* Advanced Statistics - Pro Only */}
       {advancedStats && isPro && (
-        <View style={[styles.statsCard, { backgroundColor: colors.buttonBackground }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Advanced Statistics</Text>
+        <Card>
+          <CardContent>
+            <Text className="text-xl font-semibold mb-4">Advanced Statistics</Text>
+            <View className="flex-row flex-wrap gap-3">
+              {advancedStats.elevation_gain_m !== null && (
+                <View className="flex-1 min-w-[45%] items-center p-3">
+                  <Icon name="terrain" size={24} color="primary" />
+                  <Text className="text-xl font-semibold mt-2">
+                    {formatElevation(advancedStats.elevation_gain_m)}
+                  </Text>
+                  <Text variant="small" className="text-muted-foreground mt-1 text-center">
+                    Elevation Gain
+                  </Text>
+                </View>
+              )}
 
-          <View style={styles.statsGrid}>
-            {advancedStats.elevation_gain_m !== null && (
-              <View style={styles.statBox}>
-                <MaterialIcons name="terrain" size={24} color={colors.buttonIcon} />
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {formatElevation(advancedStats.elevation_gain_m)}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.icon }]}>Elevation Gain</Text>
-              </View>
-            )}
+              {advancedStats.elevation_loss_m !== null && (
+                <View className="flex-1 min-w-[45%] items-center p-3">
+                  <Icon name="trending-down" size={24} color="primary" />
+                  <Text className="text-xl font-semibold mt-2">
+                    {formatElevation(advancedStats.elevation_loss_m)}
+                  </Text>
+                  <Text variant="small" className="text-muted-foreground mt-1 text-center">
+                    Elevation Loss
+                  </Text>
+                </View>
+              )}
 
-            {advancedStats.elevation_loss_m !== null && (
-              <View style={styles.statBox}>
-                <MaterialIcons name="trending-down" size={24} color={colors.buttonIcon} />
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {formatElevation(advancedStats.elevation_loss_m)}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.icon }]}>Elevation Loss</Text>
-              </View>
-            )}
+              {advancedStats.speed_percentile_50_kmh !== null && (
+                <View className="flex-1 min-w-[45%] items-center p-3">
+                  <Icon name="show-chart" size={24} color="primary" />
+                  <Text className="text-xl font-semibold mt-2">
+                    {formatSpeed(advancedStats.speed_percentile_50_kmh)}
+                  </Text>
+                  <Text variant="small" className="text-muted-foreground mt-1 text-center">
+                    Median Speed
+                  </Text>
+                </View>
+              )}
 
-            {advancedStats.speed_percentile_50_kmh !== null && (
-              <View style={styles.statBox}>
-                <MaterialIcons name="show-chart" size={24} color={colors.buttonIcon} />
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {formatSpeed(advancedStats.speed_percentile_50_kmh)}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.icon }]}>Median Speed</Text>
-              </View>
-            )}
-
-            {advancedStats.avg_heart_rate_bpm !== null && (
-              <View style={styles.statBox}>
-                <MaterialIcons name="favorite" size={24} color={colors.stationNoDocks} />
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {advancedStats.avg_heart_rate_bpm} bpm
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.icon }]}>Avg Heart Rate</Text>
-              </View>
-            )}
-          </View>
-        </View>
+              {advancedStats.avg_heart_rate_bpm !== null && (
+                <View className="flex-1 min-w-[45%] items-center p-3">
+                  <Icon name="favorite" size={24} color="destructive" />
+                  <Text className="text-xl font-semibold mt-2">
+                    {advancedStats.avg_heart_rate_bpm} bpm
+                  </Text>
+                  <Text variant="small" className="text-muted-foreground mt-1 text-center">
+                    Avg Heart Rate
+                  </Text>
+                </View>
+              )}
+            </View>
+          </CardContent>
+        </Card>
       )}
 
       {/* Advanced Statistics - Locked for Free Users */}
       {!isPro && (
-        <TouchableOpacity
-          style={[
-            styles.statsCard,
-            styles.lockedCard,
-            { backgroundColor: colors.buttonBackground },
-          ]}
-          onPress={() => TrueSheet.present('paywall')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.lockedHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Advanced Statistics</Text>
-            <View style={[styles.proBadge, { backgroundColor: colors.buttonIcon }]}>
-              <MaterialIcons name="lock" size={14} color="#fff" />
-              <Text style={styles.proBadgeText}>PRO</Text>
-            </View>
-          </View>
+        <TouchableOpacity onPress={() => TrueSheet.present('paywall')} activeOpacity={0.7}>
+          <Card className="overflow-hidden">
+            <CardContent>
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-xl font-semibold">Advanced Statistics</Text>
+                <View className="flex-row items-center bg-primary px-2.5 py-1 rounded-full gap-1">
+                  <Icon name="lock" size={14} style={{ color: '#fff' }} />
+                  <Text className="text-white text-xs font-bold">PRO</Text>
+                </View>
+              </View>
 
-          <View style={styles.lockedContent}>
-            <View style={styles.lockedStatsPreview}>
-              <View style={styles.lockedStatBox}>
-                <MaterialIcons name="terrain" size={24} color={colors.icon} />
-                <Text style={[styles.lockedStatValue, { color: colors.icon }]}>---</Text>
-                <Text style={[styles.statLabel, { color: colors.icon }]}>Elevation Gain</Text>
-              </View>
-              <View style={styles.lockedStatBox}>
-                <MaterialIcons name="show-chart" size={24} color={colors.icon} />
-                <Text style={[styles.lockedStatValue, { color: colors.icon }]}>---</Text>
-                <Text style={[styles.statLabel, { color: colors.icon }]}>Median Speed</Text>
-              </View>
-            </View>
+              <View className="items-center">
+                <View className="flex-row justify-center gap-6 mb-4 opacity-50">
+                  <View className="items-center p-3">
+                    <Icon name="terrain" size={24} color="mutedForeground" />
+                    <Text className="text-xl font-semibold mt-2 text-muted-foreground">---</Text>
+                    <Text variant="small" className="text-muted-foreground mt-1">
+                      Elevation Gain
+                    </Text>
+                  </View>
+                  <View className="items-center p-3">
+                    <Icon name="show-chart" size={24} color="mutedForeground" />
+                    <Text className="text-xl font-semibold mt-2 text-muted-foreground">---</Text>
+                    <Text variant="small" className="text-muted-foreground mt-1">
+                      Median Speed
+                    </Text>
+                  </View>
+                </View>
 
-            <View style={styles.upgradePrompt}>
-              <Text style={[styles.upgradeText, { color: colors.text }]}>
-                Upgrade to Pro for detailed insights
-              </Text>
-              <View style={[styles.upgradeButton, { backgroundColor: colors.buttonIcon }]}>
-                <Text style={styles.upgradeButtonText}>Unlock</Text>
-                <MaterialIcons name="arrow-forward" size={16} color="#fff" />
+                <View className="items-center gap-3">
+                  <Text className="font-medium text-center">
+                    Upgrade to Pro for detailed insights
+                  </Text>
+                  <View className="flex-row items-center bg-primary px-5 py-2.5 rounded-full gap-1.5">
+                    <Text className="text-white text-sm font-semibold">Unlock</Text>
+                    <Icon name="arrow-forward" size={16} style={{ color: '#fff' }} />
+                  </View>
+                </View>
               </View>
-            </View>
-          </View>
+            </CardContent>
+          </Card>
         </TouchableOpacity>
       )}
 
-      <View style={styles.bottomPadding} />
+      <View className="h-8" />
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  retryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dateText: {
-    fontSize: 14,
-  },
-  notesCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  notesText: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  mapContainer: {
-    height: 250,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  map: {
-    flex: 1,
-  },
-  startMarker: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#22c55e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  endMarker: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#ef4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  statsCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statBox: {
-    flex: 1,
-    minWidth: '45%',
-    alignItems: 'center',
-    padding: 12,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 8,
-  },
-  statLabel: {
-    fontSize: 13,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  bottomPadding: {
-    height: 32,
-  },
-  // Locked card styles
-  lockedCard: {
-    overflow: 'hidden',
-  },
-  lockedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  proBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  proBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  lockedContent: {
-    alignItems: 'center',
-  },
-  lockedStatsPreview: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 24,
-    marginBottom: 16,
-    opacity: 0.5,
-  },
-  lockedStatBox: {
-    alignItems: 'center',
-    padding: 12,
-  },
-  lockedStatValue: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 8,
-  },
-  upgradePrompt: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  upgradeText: {
-    fontSize: 15,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  upgradeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    // backgroundColor: '#6366f1',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
-  },
-  upgradeButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
 
 export default TripDetail;

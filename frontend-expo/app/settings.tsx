@@ -6,19 +6,31 @@ import AppSettingsSection from '@/components/AppSettingsSection';
 import RoutingSettingsSection from '@/components/RoutingSettingsSection';
 import DevSettingsSection from '@/components/DevSettingsSection';
 import AccountSection from '@/components/AccountSection';
+import { Stack } from 'expo-router';
 
 export default function SettingsScreen() {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   return (
-    <ScrollView className="flex-1 bg-background/20" contentContainerStyle={styles.contentContainer}>
-      <UserProfileSection />
-      <SubscriptionSection />
-      <AppSettingsSection />
-      <RoutingSettingsSection />
-      {isDevelopment && <DevSettingsSection />}
-      <AccountSection />
-    </ScrollView>
+    <>
+      <Stack.Screen
+        options={{
+          headerBackButtonDisplayMode: 'minimal',
+          title: 'Settings',
+        }}
+      />
+      <ScrollView
+        className="flex-1 bg-background/20"
+        contentContainerStyle={styles.contentContainer}
+      >
+        <UserProfileSection />
+        <SubscriptionSection />
+        <AppSettingsSection />
+        <RoutingSettingsSection />
+        {isDevelopment && <DevSettingsSection />}
+        <AccountSection />
+      </ScrollView>
+    </>
   );
 }
 

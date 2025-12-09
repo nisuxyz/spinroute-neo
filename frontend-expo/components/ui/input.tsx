@@ -1,15 +1,22 @@
 import { cn } from '@/lib/utils';
 import { Platform, TextInput, type TextInputProps } from 'react-native';
 
-function Input({
-  className,
-  placeholderClassName,
-  ...props
-}: TextInputProps & React.RefAttributes<TextInput>) {
+type InputProps = TextInputProps &
+  React.RefAttributes<TextInput> & {
+    variant?: 'default' | 'ghost';
+  };
+
+const variantClasses: Record<NonNullable<InputProps['variant']>, string> = {
+  default: 'dark:bg-input/30 border-input bg-background text-foreground shadow-sm shadow-black/5',
+  ghost: 'bg-transparent border-transparent shadow-none text-foreground',
+};
+
+function Input({ className, placeholderClassName, variant = 'default', ...props }: InputProps) {
   return (
     <TextInput
       className={cn(
-        'dark:bg-input/30 border-input bg-background text-foreground flex h-10 w-full min-w-0 flex-row items-center rounded-md border px-3 py-1 text-base leading-5 shadow-sm shadow-black/5 sm:h-9',
+        'flex h-10 w-full min-w-0 flex-row items-center rounded-md border px-3 py-1 text-base leading-5 sm:h-9',
+        variantClasses[variant],
         props.editable === false &&
           cn(
             'opacity-50',
@@ -21,7 +28,7 @@ function Input({
             'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
             'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
           ),
-          native: 'placeholder:text-muted-foreground/50',
+          native: 'placeholder:text-muted-foreground',
         }),
         className,
       )}
