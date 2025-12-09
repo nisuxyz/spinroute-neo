@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, useColorScheme, ScrollView, View } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { StyleSheet, ScrollView } from 'react-native';
 import UserProfileSection from '@/components/UserProfileSection';
 import SubscriptionSection from '@/components/SubscriptionSection';
 import AppSettingsSection from '@/components/AppSettingsSection';
@@ -9,15 +8,10 @@ import DevSettingsSection from '@/components/DevSettingsSection';
 import AccountSection from '@/components/AccountSection';
 
 export default function SettingsScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.contentContainer}
-    >
+    <ScrollView className="flex-1 bg-background/20" contentContainerStyle={styles.contentContainer}>
       <UserProfileSection />
       <SubscriptionSection />
       <AppSettingsSection />
@@ -29,9 +23,6 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   contentContainer: {
     padding: 16,
     gap: 20,

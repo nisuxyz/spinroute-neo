@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  renderModeText: { fontSize: 12, fontWeight: '600', color: Colors.light.calloutText },
+  renderModeText: { fontSize: 12, fontWeight: '600', color: Colors.light.text },
   searchPinContainer: { alignItems: 'center' },
   searchPin: {
     width: 48,

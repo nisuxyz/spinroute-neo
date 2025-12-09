@@ -1,27 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-  ActivityIndicator,
-  Linking,
-  Platform,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { View, Linking, Platform } from 'react-native';
+import { Icon } from './icon';
 import { useClient } from 'react-supabase';
-import { Colors } from '@/constants/theme';
 import { useSubscription } from '@/contexts/user-settings-context';
 import { useFeatureAccess } from '@/hooks/use-feature-gate';
 import { useBikes } from '@/hooks/use-bikes';
 import { usePaywall } from '@/hooks/use-paywall';
-import SettingsCard from './SettingsCard';
-import SettingsRow from './SettingsRow';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
+import { Label } from './ui/label';
+import { Text } from './ui/text';
+import { Progress } from './ui/progress';
+import { Button } from './ui/button';
+import { Skeleton } from './ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export default function SubscriptionSection() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const { showPaywall } = usePaywall();
   const { isPro, status, expiresAt, isTrial, isRenewing, loading } = useSubscription();
 
@@ -84,14 +77,28 @@ export default function SubscriptionSection() {
   const getStatusColor = () => {
     switch (status) {
       case 'active':
-        return '#10b981'; // green
+        return 'text-green-500 bg-green-500/20';
       case 'grace_period':
-        return '#f59e0b'; // amber
+        return 'text-amber-500 bg-amber-500/20';
       case 'expired':
       case 'cancelled':
-        return '#ef4444'; // red
+        return 'text-red-500 bg-red-500/20';
       default:
-        return colors.icon;
+        return 'text-muted-foreground bg-muted';
+    }
+  };
+
+  const getStatusDotColor = () => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-500';
+      case 'grace_period':
+        return 'bg-amber-500';
+      case 'expired':
+      case 'cancelled':
+        return 'bg-red-500';
+      default:
+        return 'bg-muted-foreground';
     }
   };
 
@@ -110,324 +117,130 @@ export default function SubscriptionSection() {
     }
   };
 
-  if (loading) {
-    return (
-      <SettingsCard title="Subscription" icon="workspace-premium">
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" />
-        </View>
-      </SettingsCard>
-    );
-  }
-
   return (
-    <SettingsCard title={`Subscription: ${isPro ? 'Pro' : 'Free'}`} icon="workspace-premium">
-      <View style={styles.content}>
-        {/* Current Plan */}
-        {/* <SettingsRow
-          label="Current Plan"
-          description={
-            <View style={styles.planValue}>
-              <Text style={[styles.planText, { color: colors.text }]}>
-                {isPro ? 'SpinRoute Pro' : 'Free'}
-              </Text>
-              {isPro && (
-                <View style={[styles.badge, { backgroundColor: '#10b981' }]}>
-                  <Text style={styles.badgeText}>PRO</Text>
-                </View>
-              )}
+    <Card className="w-full max-w-sm">
+      <CardHeader className="flex-row">
+        <View className="flex-1 gap-1.5">
+          <CardTitle variant="large">Subscription</CardTitle>
+        </View>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <View className="w-full justify-center gap-8">
+            <View className="gap-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-12" />
             </View>
-          }
-        /> */}
-
-        {/* Status - only show for Pro users */}
-        {isPro && (
-          <SettingsRow
-            label="Status"
-            description={
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '20' }]}>
-                <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
-                <Text style={[styles.statusText, { color: getStatusColor() }]}>
-                  {getStatusLabel()}
-                </Text>
-              </View>
-            }
-            showBorder
-          />
-        )}
-
-        {/* Renewal/Expiration - only show for Pro users */}
-        {isPro && expiresAt && (
-          <SettingsRow
-            label={isRenewing ? 'Renews' : 'Expires'}
-            description={formatDate(expiresAt)}
-            showBorder
-          />
-        )}
-
-        {/* Free Plan Usage - only show for Free users */}
-        {!isPro && (
-          <View style={styles.usageSection}>
-            <Text style={[styles.usageSectionTitle, { color: colors.text }]}>Usage</Text>
-
-            {/* Pro Benefits Teaser */}
-            <View style={[styles.proTeaser, { backgroundColor: colors.background }]}>
-              <Text style={[styles.proTeaserTitle, { color: colors.text }]}>
-                ✨ Go Pro for unlimited access
-              </Text>
-              <Text style={[styles.proTeaserText, { color: colors.icon }]}>
-                Unlimited bikes, trips, and advanced stats
-              </Text>
+            <View className="gap-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-2 w-full rounded-full" />
             </View>
-
-            {/* Bikes Usage */}
-            <View style={styles.usageItem}>
-              <View style={styles.usageHeader}>
-                <View style={styles.usageLabelRow}>
-                  <MaterialIcons name="pedal-bike" size={18} color={colors.icon} />
-                  <Text style={[styles.usageLabel, { color: colors.icon }]}>Bikes</Text>
-                </View>
-                <Text style={[styles.usageCount, { color: colors.text }]}>
-                  {bikes.length} / {freeBikeLimit}
-                </Text>
-              </View>
-              <View style={[styles.progressBar, { backgroundColor: colors.buttonBorder }]}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${Math.min((bikes.length / freeBikeLimit) * 100, 100)}%`,
-                      backgroundColor: bikes.length >= freeBikeLimit ? '#f59e0b' : '#10b981',
-                    },
-                  ]}
-                />
-              </View>
-              {bikes.length >= freeBikeLimit && (
-                <Text style={styles.limitReachedText}>Limit reached</Text>
-              )}
-            </View>
-
-            {/* Weekly Trips Usage */}
-            <View style={styles.usageItem}>
-              <View style={styles.usageHeader}>
-                <View style={styles.usageLabelRow}>
-                  <MaterialIcons name="route" size={18} color={colors.icon} />
-                  <Text style={[styles.usageLabel, { color: colors.icon }]}>Trips this week</Text>
-                </View>
-                {tripsLoading ? (
-                  <ActivityIndicator size="small" />
-                ) : (
-                  <Text style={[styles.usageCount, { color: colors.text }]}>
-                    {weeklyTripCount} / {freeWeeklyTripLimit}
-                  </Text>
-                )}
-              </View>
-              <View style={[styles.progressBar, { backgroundColor: colors.buttonBorder }]}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${Math.min((weeklyTripCount / freeWeeklyTripLimit) * 100, 100)}%`,
-                      backgroundColor:
-                        weeklyTripCount >= freeWeeklyTripLimit ? '#f59e0b' : '#10b981',
-                    },
-                  ]}
-                />
-              </View>
-              {weeklyTripCount >= freeWeeklyTripLimit && (
-                <Text style={styles.limitReachedText}>Limit reached • Resets in 7 days</Text>
-              )}
+            <View className="gap-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-2 w-full rounded-full" />
             </View>
           </View>
+        ) : (
+          <View className="w-full justify-center gap-8">
+            <View className="gap-2">
+              <Label htmlFor="email">Current Plan</Label>
+              <Text variant="small" className="text-gray-500">
+                {isPro ? 'Pro' : 'Free'}
+              </Text>
+            </View>
+
+            <View className="gap-2">
+              <Label htmlFor="name">
+                Bikes: {bikes.length} / {freeBikeLimit}
+              </Label>
+              <Progress
+                value={(bikes.length / freeBikeLimit) * 100}
+                className="mt-1"
+                indicatorClassName={bikes.length / freeBikeLimit > 1 ? 'bg-yellow-500' : ''}
+              />
+            </View>
+
+            <View className="gap-2">
+              <Label htmlFor="name">
+                Trips: {weeklyTripCount} / {freeWeeklyTripLimit}
+              </Label>
+              <Progress
+                value={(weeklyTripCount / freeWeeklyTripLimit) * 100}
+                className="mt-1"
+                indicatorClassName={
+                  weeklyTripCount / freeWeeklyTripLimit > 1 ? 'bg-yellow-500' : ''
+                }
+              />
+            </View>
+            {/* Subscription status + expiry (Pro users) */}
+            {isPro && (
+              <View className="mt-3">
+                <Label>Subscription Status</Label>
+                <View className="mt-3">
+                  <View
+                    className={cn(
+                      'flex-row items-center px-2.5 py-1 rounded-xl gap-1.5',
+                      getStatusColor(),
+                    )}
+                  >
+                    <View className={cn('w-1.5 h-1.5 rounded-full', getStatusDotColor())} />
+                    <Text className={cn('text-sm font-semibold', getStatusColor().split(' ')[0])}>
+                      {getStatusLabel()}
+                    </Text>
+                  </View>
+                </View>
+
+                {expiresAt && (
+                  <View className="mt-3">
+                    <Label>{isRenewing ? 'Renews' : 'Expires'}</Label>
+                    <Text variant="small" className="mt-2 text-gray-500">
+                      {formatDate(expiresAt)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+      </CardContent>
+      <CardFooter className="flex flex-col gap-4">
+        {status === 'expired' && (
+          <View className="mt-2 bg-rose-500/20 rounded-md p-3 flex-row gap-2 items-center">
+            <Icon name="error" size={20} color="#f43f5e" />
+            <Text className="flex-1 text-sm text-rose-500 leading-[18px]">
+              Your subscription has expired. Resubscribe to unlock Pro features.
+            </Text>
+          </View>
+          // <View className='mt-1 bg-destructive rounded-md p-3 mx-4 flex-row gap-2 items-center'>
+          //   <Icon name="error-outline" size={20} color='text-destructive-foreground' />
+          //   <Text className='text-sm text-destructive-foreground'>Your subscription has expired. Resubscribe to unlock Pro features.</Text>
+          // </View>
         )}
 
-        {/* Grace period warning */}
+        {/* Grace / Expired warnings */}
         {status === 'grace_period' && (
-          <View style={[styles.warningBanner, { backgroundColor: '#f59e0b20' }]}>
-            <MaterialIcons name="warning" size={20} color="#f59e0b" />
-            <Text style={styles.warningText}>
+          <View className="mt-2 bg-amber-500/20 rounded-md p-3 flex-row gap-2 items-center">
+            <Icon name="warning" size={20} color="#f59e0b" />
+            <Text className="flex-1 text-sm text-amber-500 leading-[18px]">
               Your subscription is in a grace period. Please update your payment method to continue.
             </Text>
           </View>
         )}
-
-        {/* Expired prompt */}
-        {status === 'expired' && (
-          <View style={[styles.warningBanner, { backgroundColor: '#ef444420' }]}>
-            <MaterialIcons name="error-outline" size={20} color="#ef4444" />
-            <Text style={[styles.warningText, { color: '#ef4444' }]}>
-              Your subscription has expired. Resubscribe to unlock Pro features.
+        {isPro ? (
+          <Button variant="outline" size="xl" className="w-full" onPress={handleManageSubscription}>
+            <Text className="text-[15px] font-semibold text-muted-foreground">
+              Manage Subscription
             </Text>
-          </View>
+            <Icon name="open-in-new" size={16} color="mutedForeground" />
+          </Button>
+        ) : (
+          <Button size="xl" className="w-full" onPress={handleUpgrade}>
+            <View>
+              <Text>✨ Go Pro for unlimited access</Text>
+            </View>
+          </Button>
         )}
-      </View>
-
-      {/* Actions */}
-      {isPro ? (
-        <TouchableOpacity
-          style={[styles.manageButton, { borderColor: colors.buttonBorder }]}
-          onPress={handleManageSubscription}
-        >
-          <Text style={[styles.manageButtonText, { color: colors.buttonIcon }]}>
-            Manage Subscription
-          </Text>
-          <MaterialIcons name="open-in-new" size={16} color={colors.buttonIcon} />
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[styles.upgradeButton, { backgroundColor: '#007AFF' }]}
-          onPress={handleUpgrade}
-        >
-          <MaterialIcons name="star" size={18} color="#fff" />
-          <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
-        </TouchableOpacity>
-      )}
-    </SettingsCard>
+      </CardFooter>
+    </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  content: {
-    gap: 0,
-  },
-  planValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  planText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 6,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  warningBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-    marginVertical: 24,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#f59e0b',
-    lineHeight: 18,
-  },
-  manageButton: {
-    marginTop: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderRadius: 10,
-  },
-  manageButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  upgradeButton: {
-    marginTop: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 10,
-  },
-  upgradeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Usage section styles
-  usageSection: {
-    paddingTop: 16,
-    gap: 16,
-  },
-  usageSectionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  usageItem: {
-    gap: 6,
-  },
-  usageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  usageLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  usageLabel: {
-    fontSize: 14,
-  },
-  usageCount: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  limitReachedText: {
-    fontSize: 12,
-    color: '#f59e0b',
-    fontWeight: '500',
-  },
-  proTeaser: {
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  proTeaserTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  proTeaserText: {
-    fontSize: 13,
-  },
-});

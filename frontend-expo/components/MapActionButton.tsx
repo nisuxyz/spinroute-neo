@@ -26,6 +26,7 @@ import type { ComponentProps } from 'react';
 import { Colors, Glows } from '@/constants/theme';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { lightenColor } from '@/utils/lighten-color';
+import { THEME } from '@/lib/theme';
 
 type IconFamily =
   | 'MaterialIcons'
@@ -124,7 +125,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
   const backgroundColor = useGlass ? 'transparent' : colors.buttonBackground;
   const borderColor = colors.primary;
   const borderWidth = useGlass ? 0 : 2;
-  const iconColor = colors.primary;
+  const iconColor = 'var(--color-secondary)';
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
@@ -137,7 +138,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
     const iconProps = {
       name: iconName as any,
       size: 24,
-      color: isActive ? iconColor : lightenColor(iconColor, 20),
+      color: THEME[colorScheme ?? 'light'].primary,
       testID: `${testID}-icon`,
     };
 
@@ -172,7 +173,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
     }
 
     const iconWithGlow = isActive ? (
-      <View style={Glows.iconGlow(colors.primary)}>{IconComponent}</View>
+      <View style={Glows.iconGlow(THEME[colorScheme ?? 'light'].primary)}>{IconComponent}</View>
     ) : (
       IconComponent
     );
@@ -199,7 +200,7 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
       style={[
         styles.container,
         {
-          backgroundColor,
+          // backgroundColor,
           borderColor,
           borderWidth,
           padding: isActive ? 2 : 0,
@@ -234,7 +235,12 @@ const MapActionButton: React.FC<MapActionButtonProps> = ({
               ) : (
                 <Image
                   source={iconImage}
-                  style={[styles.icon, { tintColor: iconColor }, isActive && styles.iconGlow]}
+                  // className='tint'
+                  style={[
+                    styles.icon,
+                    { tintColor: 'var(--color-background)' },
+                    isActive && styles.iconGlow,
+                  ]}
                   testID={`${testID}-icon`}
                 />
               )

@@ -17,6 +17,8 @@ import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MenuProvider } from 'react-native-popup-menu';
+import { PortalHost } from '@rn-primitives/portal';
+import '../global.css';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -104,6 +106,7 @@ export default function RootLayout() {
                 <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                   <RootLayoutNav />
                   <StatusBar style="auto" />
+                  <PortalHost />
                 </ThemeProvider>
               </PaywallProvider>
             </IAPProvider>

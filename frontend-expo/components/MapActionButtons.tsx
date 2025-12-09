@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { GlassContainer } from 'expo-glass-effect';
 import MapActionButton from './MapActionButton';
-import { electricPurple, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { getMapStyleIcon } from './MapStylePicker';
 
 interface MapActionButtonsProps {
@@ -59,7 +59,6 @@ const MapActionButtons: React.FC<MapActionButtonsProps> = ({
   isStationsLoading,
   onToggleStations,
 }) => {
-  const colorScheme = useColorScheme();
   const mapStyleIcon = getMapStyleIcon(currentMapStyle);
 
   return (

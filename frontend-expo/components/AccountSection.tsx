@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, Alert } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { View, Alert } from 'react-native';
 import { useAuth } from '@/hooks/use-auth';
-import SettingsCard from './SettingsCard';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { Text } from './ui/text';
+import { Button } from './ui/button';
+import { Skeleton } from './ui/skeleton';
+import { Icon } from './icon';
 
 export default function AccountSection() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const { signOut } = useAuth();
+  const { signOut, loading } = useAuth();
 
   const handleSignOut = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -23,25 +24,29 @@ export default function AccountSection() {
   };
 
   return (
-    <SettingsCard title="Account" icon="manage-accounts">
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.7}>
-        <Text style={styles.signOutButtonText}>Sign Out</Text>
-      </TouchableOpacity>
-    </SettingsCard>
+    <Card className="w-full max-w-sm">
+      <CardHeader className="flex-row">
+        <View className="flex-1 gap-1.5">
+          <CardTitle variant="large">Account</CardTitle>
+        </View>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <View className="w-full justify-center">
+            <Skeleton className="h-12 w-full rounded-xl" />
+          </View>
+        ) : (
+          <Button
+            // variant=""
+            size="xl"
+            className="w-full bg-rose-500/20"
+            onPress={handleSignOut}
+          >
+            <Icon name="logout" size={20} color="#f43f5e" />
+            <Text className="text-rose-500 font-semibold">Sign Out</Text>
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  signOutButton: {
-    backgroundColor: '#ef4444',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  signOutButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

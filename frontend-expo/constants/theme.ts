@@ -3,6 +3,7 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
+import { darkenColor, lightenColor } from '@/utils/lighten-color';
 import { Platform } from 'react-native';
 
 export const tintColorLight = '#248a3d';
@@ -10,6 +11,7 @@ export const tintColorDark = '#fff';
 export const electricPurple = '#8B5CF6';
 export const systemGreen = '#248a3d';
 export const darkGray = '#2A2A2A';
+export const lightGray = '#8b8b8b';
 
 export const Colors = {
   light: {
@@ -26,12 +28,14 @@ export const Colors = {
     // General colors
     text: '#11181C',
     textInverse: '#ECEDEE',
+    disabled: lightGray,
     background: '#cccccc',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-    // Station colors
+    background20: darkenColor('#cccccc', 20),
+    background40: darkenColor('#cccccc', 40),
+    background60: darkenColor('#cccccc', 60),
+    background80: darkenColor('#cccccc', 80),
+    background100: darkenColor('#cccccc', 100),
+    icon: lightGray,
     stationAvailable: '#22c55e', // Green - bikes available
     stationEmpty: '#6b7280', // Gray - no bikes
     stationElectric: '#eab308', // Yellow - electric bikes indicator
@@ -43,11 +47,7 @@ export const Colors = {
     buttonBackground: darkGray,
     buttonBorder: systemGreen, // System green
     buttonIcon: systemGreen,
-    buttonIconInactive: '#9A9A9A',
-    // Callout colors
-    calloutBackground: '#ffffff',
-    calloutText: '#000000',
-    calloutTextSecondary: '#333333',
+    buttonIconInactive: lightenColor(lightGray, 20),
     // Map colors
     locationPuck: '#14b8a6', // Teal
     // Shadow
@@ -67,12 +67,14 @@ export const Colors = {
     // General colors
     text: '#ECEDEE',
     textInverse: '#11181C',
+    disabled: lightGray,
     background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-    // Station colors
+    background20: lightenColor('#151718', 20),
+    background40: lightenColor('#151718', 40),
+    background60: lightenColor('#151718', 60),
+    background80: lightenColor('#151718', 80),
+    background100: lightenColor('#151718', 100),
+    icon: lightGray,
     stationAvailable: '#22c55e', // Green - bikes available
     stationEmpty: '#6b7280', // Gray - no bikes
     stationElectric: '#eab308', // Yellow - electric bikes indicator
@@ -84,11 +86,7 @@ export const Colors = {
     buttonBackground: darkGray, // Dark grey
     buttonBorder: electricPurple, // Electric purple
     buttonIcon: electricPurple,
-    buttonIconInactive: '#9A9A9A',
-    // Callout colors
-    calloutBackground: '#1f1f1f',
-    calloutText: '#ffffff',
-    calloutTextSecondary: '#cccccc',
+    buttonIconInactive: lightenColor(lightGray, 20),
     // Map colors
     locationPuck: '#14b8a6', // Teal
     // Shadow
@@ -288,17 +286,39 @@ export const CardStyles = {
  * Common sheet styles
  */
 export const SheetStyles = {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopLeftRadius: Spacing.xl,
+    borderTopRightRadius: Spacing.xl,
+    padding: Spacing.xl,
+  },
+  title: Typography.h2,
+  // {
+  //     fontSize: 18,
+  //     fontWeight: '600',
+  // },
+  cancel: Typography.h3,
+  // {
+  //   fontSize: 16,
+  // },
+  content: {
+    borderTopLeftRadius: Spacing.xl,
+    borderTopRightRadius: Spacing.xl,
+    padding: Spacing.xl,
+  },
   // Sheet container
   container: {
     padding: Spacing.xxl,
     paddingBottom: Spacing.xxxl,
   },
   // Sheet title
-  title: {
-    ...Typography.h1,
-    marginBottom: Spacing.sm,
-    textAlign: 'center' as const,
-  },
+  // title: {
+  //   ...Typography.h1,
+  //   marginBottom: Spacing.sm,
+  //   textAlign: 'center' as const,
+  // },
   // Sheet subtitle
   subtitle: {
     ...Typography.bodyMedium,
@@ -369,12 +389,15 @@ export const ButtonStyles = {
     justifyContent: 'center' as const,
     borderWidth: 1,
   },
-  primaryVariant(variant: 'solid' | 'outline' | 'ghost' = 'solid') {
+  primaryVariant(
+    variant: 'solid' | 'outline' | 'ghost' = 'solid',
+    colors: (typeof Colors)['light'] | (typeof Colors)['dark'],
+  ) {
     return {
       ...this.primary,
       borderWidth: variant === 'outline' ? 1 : 0,
-      borderColor: variant === 'ghost' ? 'none' : electricPurple,
-      backgroundColor: variant === 'solid' ? electricPurple : 'none',
+      borderColor: variant === 'ghost' ? 'none' : colors.primary,
+      backgroundColor: variant === 'solid' ? colors.primary : 'none',
     };
   },
 } as const;
@@ -383,6 +406,12 @@ export const ButtonStyles = {
  * Common list styles
  */
 export const ListStyles = {
+  contentContainer: {
+    paddingHorizontal: Spacing.xxl,
+    marginTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.sm,
+  },
   // List container
   container: {
     flex: 1,
@@ -392,12 +421,22 @@ export const ListStyles = {
     paddingBottom: Spacing.xxxl,
   },
   // Standard list item (e.g., settings, selections)
-  item: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.xs,
+  item(colors: (typeof Colors)['light'] | (typeof Colors)['dark'], isSelected: boolean = false) {
+    return {
+      display: 'flex' as const,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      gap: Spacing.lg,
+      padding: Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+      backgroundColor: colors.background20,
+      borderRadius: BorderRadius.sm,
+      borderWidth: 1,
+      borderColor: isSelected ? colors.primary : colors.background40,
+      minHeight: 64,
+      ...Shadows.small,
+    };
   },
   // List item with icon on the left
   itemWithIcon: {

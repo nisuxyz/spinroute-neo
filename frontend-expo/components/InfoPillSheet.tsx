@@ -70,12 +70,13 @@ const InfoPillSheet: React.FC<InfoPillSheetProps> = ({
   const sheetRef = useRef<BaseSheetRef>(null);
   const textColor = useThemeColor({}, 'text');
   const buttonIcon = useThemeColor({}, 'buttonIcon');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // Present sheet when visible becomes true
   useEffect(() => {
     if (visible && bike) {
-      sheetRef.current?.present();
+      sheetRef.current?.present(1);
+      setIsExpanded(true);
     }
   }, [visible, bike]);
 
@@ -116,8 +117,8 @@ const InfoPillSheet: React.FC<InfoPillSheetProps> = ({
     <BaseSheet
       ref={sheetRef}
       name="InfoPillSheet"
-      detents={[0.1, 0.9]}
-      initialDetentIndex={0}
+      detents={[0.1, 0.45, 0.9]}
+      initialDetentIndex={1}
       onDismiss={handleDismiss}
       onDetentChange={handleDetentChange}
       scrollable={true}

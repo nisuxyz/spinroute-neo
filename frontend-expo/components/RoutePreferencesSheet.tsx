@@ -1,22 +1,5 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import {
-  Spacing,
-  BorderRadius,
-  Typography,
-  ButtonStyles,
-  SheetStyles,
-  electricPurple,
-} from '@/constants/theme';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { useUserSettings } from '@/contexts/user-settings-context';
 import GetDirectionsButton from './GetDirectionsButton';
 import BaseSheet, { type BaseSheetRef } from './BaseSheet';
@@ -26,6 +9,11 @@ import {
   ProfileCategory,
   type ProfileMetadata,
 } from '@/hooks/use-provider-profiles';
+import { Text } from './ui/text';
+import { Button } from './ui/button';
+import { Icon } from './icon';
+import { Skeleton } from './ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface RoutePreferencesSheetProps {
   visible: boolean;
@@ -58,12 +46,6 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
   const sheetRef = useRef<BaseSheetRef>(null);
   const { settings, updateSettings, getProfileForProvider, setProfileForProvider } =
     useUserSettings();
-
-  // Theme colors
-  const textColor = useThemeColor({}, 'text');
-  const tintColor = useThemeColor({}, 'tint');
-  const buttonBackground = useThemeColor({}, 'buttonBackground');
-  const backgroundColor = useThemeColor({}, 'background');
 
   // Get the current provider from settings
   const currentProvider = settings?.preferred_routing_provider || 'openrouteservice';
@@ -229,33 +211,20 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
     onClose();
   };
 
-  const getProviderLabel = (provider: string): string => {
-    switch (provider) {
-      case 'openrouteservice':
-        return 'OpenRouteService';
-      case 'mapbox':
-        return 'Mapbox';
-      default:
-        return provider.charAt(0).toUpperCase() + provider.slice(1).replace('-', ' ');
-    }
-  };
+  // const getProviderLabel = (provider: string): string => {
+  //   switch (provider) {
+  //     case 'openrouteservice':
+  //       return 'OpenRouteService';
+  //     case 'mapbox':
+  //       return 'Mapbox';
+  //     default:
+  //       return provider.charAt(0).toUpperCase() + provider.slice(1).replace('-', ' ');
+  //   }
+  // };
 
-  const getProfileIcon = (profile: ProfileMetadata | null): keyof typeof MaterialIcons.glyphMap => {
+  const getProfileIcon = (profile: ProfileMetadata | null): string => {
     if (!profile) return 'directions';
-    // Map common icon names to MaterialIcons
-    const iconMap: Record<string, keyof typeof MaterialIcons.glyphMap> = {
-      'directions-bike': 'directions-bike',
-      'directions-walk': 'directions-walk',
-      'directions-car': 'directions-car',
-      'local-shipping': 'local-shipping',
-      terrain: 'terrain',
-      'electric-bike': 'electric-bike',
-      hiking: 'hiking',
-      accessible: 'accessible',
-      traffic: 'traffic',
-      directions: 'directions',
-    };
-    return iconMap[profile.icon] || 'directions';
+    return profile.icon || 'directions';
   };
 
   // Render provider selector
@@ -266,26 +235,25 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
     ];
 
     return (
-      <View style={SheetStyles.section}>
-        <Text style={[SheetStyles.sectionLabel, { color: textColor + '99' }]}>Provider</Text>
-        <View style={styles.providerButtons}>
+      <View className="mb-6">
+        <Text
+          variant="small"
+          className="text-muted-foreground mb-3 font-semibold uppercase tracking-wide"
+        >
+          Provider
+        </Text>
+        <View className="flex-row gap-3">
           {providers.map((provider) => {
             const isSelected = selectedProvider === provider.id;
             return (
-              <TouchableOpacity
+              <Button
                 key={provider.id}
-                style={[
-                  ButtonStyles.primaryVariant(isSelected ? 'solid' : 'outline'),
-                  {
-                    flex: 1,
-                    // backgroundColor: isSelected ? tintColor : buttonBackground,
-                    borderColor: isSelected ? electricPurple : '#ffffff' + '16',
-                  },
-                ]}
+                variant={isSelected ? 'default' : 'outline'}
+                className="flex-1"
                 onPress={() => handleProviderSelect(provider.id)}
               >
-                <Text style={[Typography.bodySmall, { color: textColor }]}>{provider.label}</Text>
-              </TouchableOpacity>
+                <Text>{provider.label}</Text>
+              </Button>
             );
           })}
         </View>
@@ -297,25 +265,35 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
   const renderProfileList = () => {
     if (profilesLoading) {
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={textColor} />
-          <Text style={[Typography.bodyMedium, { color: textColor }]}>Loading profiles...</Text>
+        <View className="gap-3">
+          {[1, 2, 3].map((i) => (
+            <View
+              key={i}
+              className="flex-row items-center gap-3 p-4 rounded-lg border border-border"
+            >
+              <Skeleton className="w-6 h-6 rounded" />
+              <View className="flex-1 gap-2">
+                <Skeleton className="w-32 h-4 rounded" />
+                <Skeleton className="w-48 h-3 rounded" />
+              </View>
+            </View>
+          ))}
         </View>
       );
     }
 
     if (profiles.length === 0) {
       return (
-        <View style={{ padding: Spacing.xxl, alignItems: 'center' }}>
-          <Text style={[Typography.bodyMedium, { color: textColor }]}>No profiles available</Text>
+        <View className="p-8 items-center">
+          <Text className="text-muted-foreground">No profiles available</Text>
         </View>
       );
     }
 
     return (
       <ScrollView
-        style={styles.profileList}
-        contentContainerStyle={{ paddingBottom: Spacing.sm }}
+        className="max-h-[300px]"
+        contentContainerStyle={{ paddingBottom: 8 }}
         showsVerticalScrollIndicator={true}
         nestedScrollEnabled={true}
       >
@@ -324,18 +302,10 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
           if (categoryProfiles.length === 0) return null;
 
           return (
-            <View key={category} style={{ gap: Spacing.sm, marginBottom: Spacing.lg }}>
+            <View key={category} className="gap-3 mb-6">
               <Text
-                style={[
-                  Typography.caption,
-                  {
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                    marginBottom: Spacing.sm,
-                    paddingHorizontal: Spacing.xs,
-                    color: textColor + '99',
-                  },
-                ]}
+                variant="small"
+                className="text-muted-foreground font-semibold uppercase tracking-wide mb-1 px-1"
               >
                 {CATEGORY_LABELS[category]}
               </Text>
@@ -344,29 +314,39 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
                 return (
                   <TouchableOpacity
                     key={profile.id}
-                    style={[ButtonStyles.primaryVariant(isSelected ? 'solid' : 'ghost')]}
+                    className={cn(
+                      'flex-row items-center gap-3 p-4 rounded-lg border',
+                      isSelected ? 'bg-primary border-primary' : 'bg-card border-border',
+                    )}
                     onPress={() => handleProfileSelect(profile.id)}
                   >
-                    <MaterialIcons
-                      name={getProfileIcon(profile)}
+                    <Icon
+                      name={getProfileIcon(profile) as any}
                       size={24}
-                      color={isSelected ? tintColor : textColor}
+                      color={isSelected ? 'primaryForeground' : 'foreground'}
                     />
-                    <View style={styles.profileTextContainer}>
+                    <View className="flex-1">
                       <Text
-                        style={[styles.profileTitle, { color: isSelected ? tintColor : textColor }]}
+                        className={cn(
+                          'text-base font-semibold',
+                          isSelected ? 'text-primary-foreground' : 'text-foreground',
+                        )}
                       >
                         {profile.title}
                       </Text>
                       {profile.description && (
                         <Text
-                          style={[Typography.bodySmall, { marginTop: 2, color: textColor + '80' }]}
+                          variant="small"
+                          className={cn(
+                            'mt-1',
+                            isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground',
+                          )}
                         >
                           {profile.description}
                         </Text>
                       )}
                     </View>
-                    {isSelected && <MaterialIcons name="check" size={20} color={tintColor} />}
+                    {isSelected && <Icon name="check" size={20} color="primaryForeground" />}
                   </TouchableOpacity>
                 );
               })}
@@ -386,76 +366,47 @@ const RoutePreferencesSheet: React.FC<RoutePreferencesSheetProps> = ({
       scrollable={false}
       grabberVisible={true}
     >
-      <View style={SheetStyles.container}>
-        <View style={styles.header}>
-          <Text style={[Typography.h2, { color: textColor }]}>
-            {mode === 'initial' ? 'Route Preferences' : 'Recalculate Route'}
-          </Text>
-          <TouchableOpacity style={{ padding: 4 }} onPress={onClose}>
-            <MaterialIcons name="close" size={24} color={textColor} />
-          </TouchableOpacity>
+      <View className="p-4">
+        {/* Header */}
+        <View className="flex-row items-center justify-between mb-6">
+          <Text className="text-xl font-semibold">Route Preferences</Text>
+          <Button variant="ghost" size="sm" onPress={onClose}>
+            <Text className="text-base text-muted-foreground">Close</Text>
+          </Button>
         </View>
 
-        <Text
-          style={[
-            Typography.bodyMedium,
-            { textAlign: 'center', marginBottom: Spacing.xxl, color: textColor + 'CC' },
-          ]}
-        >
+        {/* <Text className="text-center mb-8 text-muted-foreground">
           {mode === 'initial'
             ? 'Choose your routing provider and travel mode'
             : 'Update your routing preferences'}
-        </Text>
+        </Text> */}
 
+        {/* Provider Selector */}
         {renderProviderSelector()}
 
-        <View style={SheetStyles.section}>
-          <Text style={[SheetStyles.sectionLabel, { color: textColor + '99' }]}>Travel Mode</Text>
+        {/* Travel Mode Section */}
+        <View className="mb-6">
+          <Text
+            variant="small"
+            className="text-muted-foreground mb-3 font-semibold uppercase tracking-wide"
+          >
+            Travel Mode
+          </Text>
           {renderProfileList()}
         </View>
 
-        <View style={SheetStyles.buttonContainer}>
-          <TouchableOpacity
-            style={[ButtonStyles.secondary, { borderColor: textColor + '33' }]}
-            onPress={onClose}
-          >
-            <Text style={[Typography.bodyLarge, { color: textColor }]}>Cancel</Text>
-          </TouchableOpacity>
-          <GetDirectionsButton onPress={handleConfirm} mode={mode} style={ButtonStyles.primary} />
+        {/* Action Buttons */}
+        <View className="flex-col gap-3 mt-2 mb-4">
+          <Button variant="outline" size="xl" className="flex-1" onPress={onClose}>
+            <Text>Cancel</Text>
+          </Button>
+          <View className="flex-1">
+            <GetDirectionsButton onPress={handleConfirm} mode={mode} />
+          </View>
         </View>
       </View>
     </BaseSheet>
   );
 };
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-  },
-  providerButtons: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  profileList: {
-    maxHeight: 300,
-  },
-  profileTextContainer: {
-    flex: 1,
-  },
-  profileTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xxl,
-    gap: Spacing.sm,
-  },
-});
 
 export default RoutePreferencesSheet;

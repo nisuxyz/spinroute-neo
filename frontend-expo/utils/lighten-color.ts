@@ -49,3 +49,7 @@ export const lightenColor = (color: string, amount: number) => {
 
   return (usePound ? '#' : '') + (g | (b << 8) | (r << 16)).toString(16);
 };
+
+export const darkenColor = (color: string, amount: number) => {
+  return lightenColor(color, -amount);
+};

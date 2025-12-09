@@ -1,54 +1,54 @@
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme, ActivityIndicator } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { View, useColorScheme } from 'react-native';
 import { useAuth } from '@/hooks/use-auth';
-import SettingsCard from './SettingsCard';
-import SettingsRow from './SettingsRow';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { Label } from './ui/label';
+import { Text } from './ui/text';
+import { Skeleton } from './ui/skeleton';
 
 export default function UserProfileSection() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <SettingsCard title="Profile" icon="person">
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.tint} />
-        </View>
-      </SettingsCard>
-    );
-  }
 
   if (!user) {
     return null;
   }
 
   return (
-    <SettingsCard title="Profile" icon="person">
-      <SettingsRow label="Email" description={user.email} />
-      <SettingsRow
-        label="User ID"
-        description={
-          <Text style={[styles.valueSmall, { color: colors.icon }]} numberOfLines={1}>
-            {user.id}
-          </Text>
-        }
-        showBorder
-      />
-      {user.user_metadata?.full_name && (
-        <SettingsRow label="Name" description={user.user_metadata.full_name} showBorder />
-      )}
-    </SettingsCard>
+    <Card className="w-full max-w-sm">
+      <CardHeader className="flex-row">
+        <View className="flex-1 gap-1.5">
+          <CardTitle variant="large">Profile</CardTitle>
+        </View>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <View className="py-4 gap-4">
+            <View className="gap-2">
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-4 w-48" />
+            </View>
+            <View className="gap-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-64" />
+            </View>
+          </View>
+        ) : (
+          <View className="w-full justify-center gap-4">
+            <View className="gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Text variant="small" className="text-gray-500">
+                {user.email}
+              </Text>
+            </View>
+            <View className="gap-2">
+              <Label htmlFor="name">User ID</Label>
+              <Text variant="small" className="text-gray-500">
+                {user.id}
+              </Text>
+            </View>
+          </View>
+        )}
+      </CardContent>
+    </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  valueSmall: {
-    fontSize: 12,
-  },
-});

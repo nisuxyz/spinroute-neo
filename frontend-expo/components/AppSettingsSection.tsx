@@ -1,36 +1,30 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  useColorScheme,
-  ActivityIndicator,
-  Alert,
-  TouchableOpacity,
-  Modal,
-  Pressable,
-} from 'react-native';
-import SegmentedControl from '@react-native-segmented-control/segmented-control';
+import React, { useRef, useState } from 'react';
+import { View, Alert, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { GlassView } from 'expo-glass-effect';
-import { BorderRadius, Colors, electricPurple } from '@/constants/theme';
 import { useUserSettings } from '@/contexts/user-settings-context';
 import { useBikes } from '@/hooks/use-bikes';
 import { useRouter } from 'expo-router';
-import SettingsCard from './SettingsCard';
-import SettingsRow from './SettingsRow';
+import BaseSheet, { BaseSheetRef } from './BaseSheet';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { Label } from './ui/label';
+import { Text } from './ui/text';
+import { Skeleton } from './ui/skeleton';
+import { Switch } from './ui/switch';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
+import { Button } from './ui/button';
+import { Icon } from './icon';
 
 export default function AppSettingsSection() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { settings, loading, updateSettings } = useUserSettings();
   const { bikes, loading: bikesLoading } = useBikes();
-  const [showIntervalPicker, setShowIntervalPicker] = useState(false);
   const [tempInterval, setTempInterval] = useState<number>(5);
+  const intervalSheetRef = useRef<BaseSheetRef>(null);
 
   const handleUnitsChange = async (value: string) => {
-    const success = await updateSettings({ units: value });
+    const units = value === 'km' ? 'metric' : 'imperial';
+    const success = await updateSettings({ units });
     if (!success) {
       Alert.alert('Error', 'Failed to update units preference');
     }
@@ -38,7 +32,6 @@ export default function AppSettingsSection() {
 
   const getActiveBikeName = () => {
     if (!settings?.active_bike_id) return 'None';
-    // if (bikesLoading) return 'Loading...';
     const bike = bikes.find((b) => b.id === settings.active_bike_id);
     return bike?.name || 'None';
   };
@@ -59,187 +52,155 @@ export default function AppSettingsSection() {
 
   const openIntervalPicker = () => {
     setTempInterval(settings?.capture_interval_seconds ?? 5);
-    setShowIntervalPicker(true);
+    intervalSheetRef.current?.present();
   };
 
-  const confirmIntervalChange = () => {
-    handleCaptureIntervalChange(tempInterval);
-    setShowIntervalPicker(false);
+  const dismissIntervalPicker = () => {
+    intervalSheetRef.current?.dismiss();
   };
 
-  // Only show loading on initial load when we have no settings at all
-  if (!settings && loading) {
-    return (
-      <SettingsCard title="Preferences" icon="settings">
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.tint} />
-        </View>
-      </SettingsCard>
-    );
-  }
+  const confirmIntervalChange = async () => {
+    await handleCaptureIntervalChange(tempInterval);
+    dismissIntervalPicker();
+  };
 
   // Don't render if we still don't have settings after loading
-  if (!settings) {
+  if (!settings && !loading) {
     return null;
   }
 
   return (
     <>
-      <SettingsCard title="Preferences" icon="settings">
-        {/* Units Setting */}
-        <View style={styles.unitsRow}>
-          <View style={styles.unitsInfo}>
-            <Text style={[styles.unitsLabel, { color: colors.text }]}>Units</Text>
-            <Text style={[styles.unitsDescription, { color: colors.icon }]}>
-              Distance measurement system
-            </Text>
+      <Card className="w-full max-w-sm">
+        <CardHeader className="flex-row">
+          <View className="flex-1 gap-1.5">
+            <CardTitle variant="large">Preferences</CardTitle>
           </View>
-          <SegmentedControl
-            values={['km', 'mi']}
-            selectedIndex={settings.units === 'metric' ? 0 : 1}
-            onChange={(event) => {
-              const index = event.nativeEvent.selectedSegmentIndex;
-              handleUnitsChange(index === 0 ? 'metric' : 'imperial');
-            }}
-            style={[styles.segmentedControl, { backgroundColor: colors.icon + '40' }]}
-          />
-        </View>
-
-        {/* Active Bike Setting */}
-        <SettingsRow
-          label="Active Bike"
-          description="Default bike for recording rides"
-          value={bikesLoading ? <ActivityIndicator size="small" /> : getActiveBikeName()}
-          onPress={() => router.push('/bikes')}
-          showChevron
-          showBorder
-        />
-
-        {/* Start Recording on Launch */}
-        <SettingsRow
-          label="Auto-start Recording"
-          description="Start recording rides when app launches"
-          switchValue={settings.start_recording_on_launch}
-          onSwitchChange={handleStartRecordingToggle}
-          showBorder
-        />
-
-        {/* Capture Interval */}
-        <SettingsRow
-          label="Location Capture Interval"
-          description="How often to record location during trips"
-          value={`${settings.capture_interval_seconds ?? 5}s`}
-          onPress={openIntervalPicker}
-          showChevron
-          showBorder
-        />
-      </SettingsCard>
-
-      {/* Interval Picker Modal */}
-      <Modal
-        visible={showIntervalPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowIntervalPicker(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowIntervalPicker(false)}>
-          <Pressable>
-            <GlassView style={styles.modalContent} glassEffectStyle="regular">
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  Location Capture Interval
-                </Text>
-                <TouchableOpacity onPress={() => setShowIntervalPicker(false)}>
-                  <Text style={[styles.modalCancel, { color: colors.icon }]}>Cancel</Text>
-                </TouchableOpacity>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <View className="w-full justify-center gap-4">
+              <View className="gap-2">
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-8 w-24 rounded-md" />
               </View>
-              <Picker
-                selectedValue={tempInterval}
-                onValueChange={(value) => setTempInterval(value as number)}
-                style={[styles.modalPicker, { color: colors.text }]}
-              >
-                {Array.from({ length: 30 }, (_, i) => i + 1).map((seconds) => (
-                  <Picker.Item key={seconds} label={`${seconds} seconds`} value={seconds} />
-                ))}
-              </Picker>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.buttonIcon }]}
-                onPress={confirmIntervalChange}
-              >
-                <Text style={styles.modalButtonText}>Save</Text>
+              <View className="gap-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-48" />
+              </View>
+              <View className="gap-2">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-4 w-52" />
+              </View>
+              <View className="gap-2">
+                <Skeleton className="h-4 w-44" />
+                <Skeleton className="h-4 w-48" />
+              </View>
+            </View>
+          ) : (
+            <View className="w-full justify-center gap-8">
+              {/* Units Setting */}
+              <View className="gap-2">
+                <Label>Units</Label>
+                <Text variant="small" className="text-gray-500">
+                  Distance measurement system
+                </Text>
+                <ToggleGroup
+                  type="single"
+                  value={settings?.units === 'metric' ? 'km' : 'mi'}
+                  onValueChange={(value) => value && handleUnitsChange(value)}
+                  className="mt-1"
+                  variant="outline"
+                >
+                  <ToggleGroupItem value="km" isFirst>
+                    <Text>km</Text>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="mi" isLast>
+                    <Text>mi</Text>
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </View>
+
+              {/* Active Bike Setting */}
+              <TouchableOpacity onPress={() => router.push('/bikes')} className="gap-2">
+                <Label>Active Bike</Label>
+                <Text variant="small" className="text-gray-500">
+                  Default bike for recording rides
+                </Text>
+                <View className="flex-row items-center justify-between mt-1">
+                  {bikesLoading ? (
+                    <Skeleton className="h-4 w-20" />
+                  ) : (
+                    <Text variant="small" className="text-muted-foreground">
+                      {getActiveBikeName()}
+                    </Text>
+                  )}
+                  <Icon name="chevron-right" size={20} color="mutedForeground" />
+                </View>
               </TouchableOpacity>
-            </GlassView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+
+              {/* Start Recording on Launch */}
+              <View className="gap-2">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1 gap-1">
+                    <Label>Auto-start Recording</Label>
+                    <Text variant="small" className="text-gray-500">
+                      Start recording rides when app launches
+                    </Text>
+                  </View>
+                  <Switch
+                    checked={settings?.start_recording_on_launch ?? false}
+                    onCheckedChange={handleStartRecordingToggle}
+                  />
+                </View>
+              </View>
+
+              {/* Capture Interval */}
+              <TouchableOpacity onPress={openIntervalPicker} className="gap-2">
+                <Label>Location Capture Interval</Label>
+                <Text variant="small" className="text-gray-500">
+                  How often to record location during trips
+                </Text>
+                <View className="flex-row items-center justify-between mt-1">
+                  <Text variant="small" className="text-muted-foreground">
+                    {settings?.capture_interval_seconds ?? 5}s
+                  </Text>
+                  <Icon name="chevron-right" size={20} color="mutedForeground" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+        </CardContent>
+      </Card>
+
+      <BaseSheet
+        ref={intervalSheetRef}
+        name="captureIntervalSheet"
+        detents={['auto']}
+        grabberVisible
+      >
+        <View className="flex-row justify-between items-center p-4">
+          <Text className="text-lg font-semibold">Location Capture Interval</Text>
+          <Button variant="ghost" size="sm" onPress={dismissIntervalPicker}>
+            <Text className="text-base text-muted-foreground">Cancel</Text>
+          </Button>
+        </View>
+        <Picker
+          selectedValue={tempInterval}
+          onValueChange={(value) => setTempInterval(value as number)}
+          className="w-full"
+        >
+          {Array.from({ length: 30 }, (_, i) => i + 1).map((seconds) => (
+            <Picker.Item key={seconds} label={`${seconds} seconds`} value={seconds} />
+          ))}
+        </Picker>
+        <View className="px-4">
+          <Button size="xl" className="w-full" onPress={confirmIntervalChange}>
+            <Text>Save</Text>
+          </Button>
+        </View>
+      </BaseSheet>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  unitsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  unitsInfo: {
-    flex: 1,
-    marginRight: 16,
-    gap: 4,
-  },
-  unitsLabel: {
-    fontSize: 15,
-    fontWeight: '400',
-  },
-  unitsDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  segmentedControl: {
-    width: 120,
-    borderRadius: BorderRadius.lg,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  modalCancel: {
-    fontSize: 16,
-  },
-  modalPicker: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  modalButton: {
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

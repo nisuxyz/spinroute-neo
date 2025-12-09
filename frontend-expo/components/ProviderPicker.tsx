@@ -1,27 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-  TouchableOpacity,
-  useColorScheme,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { GlassView } from 'expo-glass-effect';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useClient } from 'react-supabase';
-import { Colors, electricPurple } from '@/constants/theme';
 import { useUserSettings } from '@/contexts/user-settings-context';
 import { useEnv } from '@/hooks/use-env';
+import BaseSheet, { BaseSheetRef } from './BaseSheet';
+import { Text } from './ui/text';
+import { Button } from './ui/button';
+import { Skeleton } from './ui/skeleton';
+import { Icon } from './icon';
+import { cn } from '@/lib/utils';
 
 interface Provider {
   name: string;
   displayName: string;
-  capabilities: {
+  capabilities?: {
     profiles: string[];
     bikeTypes?: string[];
     multiModal: boolean;
@@ -43,10 +35,9 @@ interface ProviderPickerProps {
 
 export default function ProviderPicker({ visible, currentProvider, onClose }: ProviderPickerProps) {
   const supabase = useClient();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const { settings, updateSettings } = useUserSettings();
+  const { updateSettings } = useUserSettings();
   const { ROUTING_SERVICE } = useEnv();
+  const sheetRef = useRef<BaseSheetRef>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,12 +48,19 @@ export default function ProviderPicker({ visible, currentProvider, onClose }: Pr
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (visible) {
+      sheetRef.current?.present();
+    } else {
+      sheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
   const fetchProviders = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Get auth token
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -100,226 +98,121 @@ export default function ProviderPicker({ visible, currentProvider, onClose }: Pr
     }
   };
 
+  const handleDismiss = () => {
+    onClose();
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable>
-          <GlassView style={styles.modalContent} glassEffectStyle="regular">
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Routing Provider</Text>
-              <TouchableOpacity onPress={onClose}>
-                <Text style={[styles.modalCancel, { color: colors.icon }]}>Close</Text>
-              </TouchableOpacity>
+    <BaseSheet
+      ref={sheetRef}
+      name="ProviderPickerSheet"
+      detents={[0.35, 0.85]}
+      onDismiss={handleDismiss}
+      scrollable
+      grabberVisible
+    >
+      {/* Header */}
+      <View className="flex-row justify-between items-center p-4">
+        <Text className="text-lg font-semibold">Routing Provider</Text>
+        <Button variant="ghost" size="sm" onPress={onClose}>
+          <Text className="text-base text-muted-foreground">Close</Text>
+        </Button>
+      </View>
+
+      {/* Loading State */}
+      {loading && (
+        <View className="px-4 gap-3">
+          {[1, 2, 3].map((i) => (
+            <View key={i} className="flex-row items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <View className="flex-1 gap-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-40" />
+              </View>
             </View>
+          ))}
+        </View>
+      )}
 
-            {loading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={electricPurple} />
-                <Text style={[styles.loadingText, { color: colors.icon }]}>
-                  Loading providers...
-                </Text>
-              </View>
+      {/* Error State */}
+      {error && (
+        <View className="items-center py-10 px-4">
+          <Icon name="error-outline" size={48} color="mutedForeground" />
+          <Text className="mt-3 text-center text-muted-foreground">{error}</Text>
+          <Button variant="outline" className="mt-4" onPress={fetchProviders}>
+            <Text>Retry</Text>
+          </Button>
+        </View>
+      )}
+
+      {/* Provider List */}
+      {!loading && !error && (
+        <ScrollView className="px-4 pt-4" showsVerticalScrollIndicator={false}>
+          {/* Auto option */}
+          <TouchableOpacity
+            className={cn(
+              'flex-row items-center gap-3 p-3 rounded-lg mb-2',
+              currentProvider === null ? 'bg-primary/50' : 'bg-muted/10',
             )}
+            onPress={() => handleSelectProvider(null)}
+            activeOpacity={0.7}
+          >
+            <View className="w-8 items-center">
+              <Icon name="auto-awesome" size={28} color="foreground" />
+            </View>
+            <View className="flex-1">
+              <Text className="font-semibold">Auto</Text>
+              <Text variant="small" className="text-muted-foreground">
+                Select best available provider
+              </Text>
+            </View>
+            {currentProvider === null && <Icon name="check" size={24} color="primary" />}
+          </TouchableOpacity>
 
-            {error && (
-              <View style={styles.errorContainer}>
-                <MaterialIcons name="error-outline" size={48} color={colors.icon} />
-                <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
-                <TouchableOpacity
-                  style={[styles.retryButton, { backgroundColor: colors.buttonBackground }]}
-                  onPress={fetchProviders}
-                >
-                  <Text style={[styles.retryButtonText, { color: colors.text }]}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {!loading && !error && (
-              <ScrollView style={styles.providerList} showsVerticalScrollIndicator={false}>
-                {/* Auto option */}
-                <TouchableOpacity
-                  style={[
-                    styles.providerItem,
-                    { borderBottomColor: colors.background },
-                    currentProvider === null && { backgroundColor: colors.buttonBackground },
-                  ]}
-                  onPress={() => handleSelectProvider(null)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.providerIcon}>
-                    <MaterialIcons name="auto-awesome" size={28} color={colors.text} />
-                  </View>
-                  <View style={styles.providerInfo}>
-                    <Text style={[styles.providerName, { color: colors.text }]}>Auto</Text>
-                    <Text style={[styles.providerDescription, { color: colors.icon }]}>
-                      Automatically select best available provider
-                    </Text>
-                  </View>
-                  {currentProvider === null && (
-                    <MaterialIcons name="check" size={24} color={electricPurple} />
-                  )}
-                </TouchableOpacity>
-
-                {/* Provider options */}
-                {providers.map((provider) => {
-                  const isSelected = provider.name === currentProvider;
-                  return (
-                    <TouchableOpacity
-                      key={provider.name}
-                      style={[
-                        styles.providerItem,
-                        { borderBottomColor: colors.background },
-                        isSelected && { backgroundColor: colors.buttonBackground },
-                      ]}
-                      onPress={() => handleSelectProvider(provider.name)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.providerIcon}>
-                        <MaterialIcons name="route" size={28} color={colors.text} />
-                        <View
-                          style={[
-                            styles.statusDot,
-                            {
-                              backgroundColor: provider.available ? '#4ade80' : '#ef4444',
-                            },
-                          ]}
-                        />
-                      </View>
-                      <View style={styles.providerInfo}>
-                        <View style={styles.providerNameRow}>
-                          <Text style={[styles.providerName, { color: colors.text }]}>
-                            {provider.displayName}
-                          </Text>
-                          {provider.capabilities.requiresPaidPlan && (
-                            <View style={styles.premiumBadge}>
-                              <Text style={styles.premiumBadgeText}>Premium</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={[styles.providerDescription, { color: colors.icon }]}>
-                          {provider.available ? 'Available' : 'Unavailable'}
+          {/* Provider options */}
+          {providers.map((provider) => {
+            const isSelected = provider.name === currentProvider;
+            const requiresPaidPlan = provider.capabilities?.requiresPaidPlan ?? false;
+            return (
+              <TouchableOpacity
+                key={provider.name}
+                className={cn(
+                  'flex-row items-center gap-3 p-3 rounded-lg mb-2',
+                  isSelected ? 'bg-primary/50' : 'bg-muted/10',
+                )}
+                onPress={() => handleSelectProvider(provider.name)}
+                activeOpacity={0.7}
+              >
+                <View className="w-8 items-center relative">
+                  <Icon name="route" size={28} color="foreground" />
+                  <View
+                    className={cn(
+                      'absolute -top-0.5 -right-2 w-2.5 h-2.5 rounded-full border-2 border-background',
+                      provider.available ? 'bg-green-400' : 'bg-red-500',
+                    )}
+                  />
+                </View>
+                <View className="flex-1">
+                  <View className="flex-row items-center gap-2">
+                    <Text className="font-semibold">{provider.displayName}</Text>
+                    {requiresPaidPlan && (
+                      <View className="bg-primary px-2 py-0.5 rounded">
+                        <Text className="text-[10px] font-semibold text-primary-foreground">
+                          Premium
                         </Text>
                       </View>
-                      {isSelected && (
-                        <MaterialIcons name="check" size={24} color={electricPurple} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
-          </GlassView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+                    )}
+                  </View>
+                  <Text variant="small" className="text-muted-foreground">
+                    {provider.available ? 'Available' : 'Unavailable'}
+                  </Text>
+                </View>
+                {isSelected && <Icon name="check" size={24} color="primary" />}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+    </BaseSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  modalCancel: {
-    fontSize: 16,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  errorText: {
-    marginTop: 12,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  providerList: {
-    maxHeight: 400,
-  },
-  providerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  providerIcon: {
-    width: 40,
-    alignItems: 'center',
-    marginRight: 12,
-    position: 'relative',
-  },
-  statusDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 4,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  providerInfo: {
-    flex: 1,
-  },
-  providerNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  providerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  providerDescription: {
-    fontSize: 12,
-  },
-  premiumBadge: {
-    backgroundColor: electricPurple,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  premiumBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-});

@@ -1,9 +1,11 @@
 import React, { useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView, useColorScheme } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { TrueSheet } from '@lodev09/react-native-true-sheet';
-import { Colors, electricPurple, Spacing, BorderRadius, Typography } from '@/constants/theme';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import BaseSheet, { BaseSheetRef } from './BaseSheet';
+import { Text } from './ui/text';
+import { Button } from './ui/button';
+import { Icon } from './icon';
+import { cn } from '@/lib/utils';
 
 export interface MapStyle {
   name: string;
@@ -121,9 +123,7 @@ export default function MapStylePicker({
   onSelectStyle,
 }: MapStylePickerProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const textColor = useThemeColor({}, 'text');
-  const sheetRef = useRef<TrueSheet>(null);
+  const sheetRef = useRef<BaseSheetRef>(null);
 
   // Present/dismiss sheet when visible changes
   useEffect(() => {
@@ -144,107 +144,60 @@ export default function MapStylePicker({
 
   const renderIcon = useCallback(
     (style: MapStyle, size: number = 24) => {
+      const color = colorScheme === 'dark' ? '#fff' : '#000';
       if (style.iconFamily === 'MaterialIcons') {
-        return <MaterialIcons name={style.icon as any} size={size} color={colors.text} />;
+        return <MaterialIcons name={style.icon as any} size={size} color={color} />;
       }
-      return <MaterialCommunityIcons name={style.icon as any} size={size} color={colors.text} />;
+      return <MaterialCommunityIcons name={style.icon as any} size={size} color={color} />;
     },
-    [colors.text],
+    [colorScheme],
   );
 
   return (
-    <TrueSheet
-      name="MapStylePicker"
+    <BaseSheet
       ref={sheetRef}
+      name="MapStylePicker"
       detents={[0.65, 0.95]}
-      cornerRadius={24}
-      onDidDismiss={onClose}
+      onDismiss={onClose}
       scrollable
+      grabberVisible
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text, textAlign: 'center' }]}>Map Style</Text>
-          <TouchableOpacity style={{ padding: 4 }} onPress={onClose}>
-            <MaterialIcons name="close" size={24} color={textColor} />
-          </TouchableOpacity>
-        </View>
-        <ScrollView contentContainerStyle={styles.scrollContent} nestedScrollEnabled>
-          <View style={styles.content}>
-            {MAP_STYLES.map((style) => {
-              const isSelected = style.url === currentStyle;
-              return (
-                <TouchableOpacity
-                  key={style.url}
-                  style={[
-                    styles.styleItem,
-                    { backgroundColor: colors.buttonBackground },
-                    isSelected && { borderColor: electricPurple, borderWidth: 2 },
-                  ]}
-                  onPress={() => handleSelectStyle(style.url)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.styleIcon}>{renderIcon(style, 28)}</View>
-                  <View style={styles.styleInfo}>
-                    <Text style={[styles.styleName, { color: colors.text }]}>{style.name}</Text>
-                    <Text style={[styles.styleDescription, { color: colors.icon }]}>
-                      {style.description}
-                    </Text>
-                  </View>
-                  {isSelected && <MaterialIcons name="check" size={24} color={electricPurple} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
+      {/* Header */}
+      <View className="flex-row justify-between items-center p-4">
+        <Text className="text-lg font-semibold">Map Style</Text>
+        <Button variant="ghost" size="sm" onPress={onClose}>
+          <Text className="text-base text-muted-foreground">Close</Text>
+        </Button>
       </View>
-    </TrueSheet>
+
+      {/* Style List */}
+      <ScrollView className="px-4" showsVerticalScrollIndicator={false}>
+        <View className="gap-2 pb-8">
+          {MAP_STYLES.map((style) => {
+            const isSelected = style.url === currentStyle;
+            return (
+              <TouchableOpacity
+                key={style.url}
+                className={cn(
+                  'flex-row items-center gap-3 p-3 rounded-lg',
+                  isSelected ? 'bg-primary/50' : 'bg-muted/10',
+                )}
+                onPress={() => handleSelectStyle(style.url)}
+                activeOpacity={0.7}
+              >
+                <View className="w-10 items-center">{renderIcon(style, 28)}</View>
+                <View className="flex-1">
+                  <Text className="font-semibold">{style.name}</Text>
+                  <Text variant="small" className="text-muted-foreground">
+                    {style.description}
+                  </Text>
+                </View>
+                {isSelected && <Icon name="check" size={24} color="primary" />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </BaseSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.xl,
-  },
-  scrollContent: {
-    // paddingBottom: Spacing.xl,
-  },
-  title: {
-    ...Typography.h2,
-  },
-  content: {
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-    paddingBottom: Spacing.xxxl,
-  },
-  styleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.xs,
-  },
-  styleIcon: {
-    width: 40,
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  styleInfo: {
-    flex: 1,
-  },
-  styleName: {
-    ...Typography.bodyLarge,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  styleDescription: {
-    ...Typography.bodySmall,
-  },
-});

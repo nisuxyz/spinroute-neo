@@ -1,10 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Spacing, Typography, BorderRadius, CardStyles } from '@/constants/theme';
-import { useThemeColor } from '@/hooks/use-theme-color';
 import BaseSheet, { BaseSheetRef } from './BaseSheet';
 import GetDirectionsButton from './GetDirectionsButton';
+import { Text } from './ui/text';
+import { Button } from './ui/button';
+import { Icon } from './icon';
 
 /**
  * Location data interface matching the design document
@@ -51,8 +52,6 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
   isLoadingDirections = false,
 }) => {
   const sheetRef = useRef<BaseSheetRef>(null);
-  const textColor = useThemeColor({}, 'text');
-  const buttonIcon = useThemeColor({}, 'buttonIcon');
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Preserve the last known location data to prevent race conditions during dismissal
@@ -96,7 +95,7 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
   /**
    * Get appropriate icon for location type
    */
-  const getIconForFeatureType = (type: string): any => {
+  const getIconForFeatureType = (type: string): keyof typeof MaterialIcons.glyphMap => {
     switch (type) {
       case 'poi':
         return 'place';
@@ -135,119 +134,97 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
     >
       {preservedLocation && (
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
           scrollEnabled={isExpanded}
         >
           {!isExpanded ? (
             // Collapsed view - Shows location name and address
-            <View style={styles.collapsedContent}>
-              <View style={[styles.iconCircle, { backgroundColor: buttonIcon }]}>
-                <MaterialIcons
+            <View className="flex-row items-center gap-3 p-4">
+              <View className="w-12 h-12 rounded-full bg-primary items-center justify-center">
+                <Icon
                   name={getIconForFeatureType(preservedLocation.type)}
                   size={24}
-                  color="white"
+                  color="primaryForeground"
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[Typography.h3, { marginBottom: 4, color: textColor }]}
-                  numberOfLines={1}
-                >
+              <View className="flex-1">
+                <Text className="font-semibold text-base mb-1" numberOfLines={1}>
                   {preservedLocation.name}
                 </Text>
-                <Text style={[{ fontSize: 13, color: textColor + 'CC' }]} numberOfLines={1}>
+                <Text variant="small" className="text-muted-foreground" numberOfLines={1}>
                   {preservedLocation.display_name}
                 </Text>
               </View>
-              {onGetDirections && !isLoadingDirections && (
-                <TouchableOpacity style={{ padding: 4, marginRight: 4 }} onPress={onGetDirections}>
-                  <MaterialIcons name="directions" size={20} color={textColor} />
+              {onGetDirections && (
+                <TouchableOpacity
+                  className="p-1 mr-1"
+                  onPress={onGetDirections}
+                  disabled={isLoadingDirections}
+                >
+                  <Icon
+                    name={isLoadingDirections ? 'hourglass-empty' : 'directions'}
+                    size={20}
+                    color="foreground"
+                  />
                 </TouchableOpacity>
               )}
-              {onGetDirections && isLoadingDirections && (
-                <TouchableOpacity style={{ padding: 4, marginRight: 4 }} disabled>
-                  <MaterialIcons name="hourglass-empty" size={20} color={textColor} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={{ padding: 4 }} onPress={handleClosePress}>
-                <MaterialIcons name="close" size={20} color={textColor} />
+              <TouchableOpacity className="p-1" onPress={handleClosePress}>
+                <Icon name="close" size={20} color="foreground" />
               </TouchableOpacity>
             </View>
           ) : (
             // Expanded view - Shows full location details
-            <View style={{ padding: Spacing.lg }}>
-              <View style={styles.expandedHeader}>
-                <Text style={[Typography.h2, { color: textColor }]}>Location Details</Text>
-                <TouchableOpacity style={{ padding: 4 }} onPress={handleClosePress}>
-                  <MaterialIcons name="close" size={24} color={textColor} />
-                </TouchableOpacity>
+            <View className="p-4">
+              {/* Header */}
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-xl font-semibold">Location Details</Text>
+                <Button variant="ghost" size="sm" onPress={handleClosePress}>
+                  <Text className="text-base text-muted-foreground">Close</Text>
+                </Button>
               </View>
 
-              <View style={{ alignItems: 'center', marginBottom: Spacing.xxl }}>
-                <View style={[styles.expandedIconCircle, { backgroundColor: buttonIcon }]}>
-                  <MaterialIcons
+              {/* Location Icon */}
+              <View className="items-center mb-8">
+                <View className="w-24 h-24 rounded-full bg-primary items-center justify-center">
+                  <Icon
                     name={getIconForFeatureType(preservedLocation.type)}
                     size={48}
-                    color="white"
+                    color="primaryForeground"
                   />
                 </View>
               </View>
 
-              <Text
-                style={[
-                  Typography.displayLarge,
-                  { marginBottom: Spacing.sm, textAlign: 'center', color: textColor },
-                ]}
-              >
-                {preservedLocation.name}
-              </Text>
-              <Text
-                style={[
-                  Typography.bodyLarge,
-                  {
-                    textAlign: 'center',
-                    marginBottom: Spacing.xxxl,
-                    lineHeight: 24,
-                    color: textColor + 'CC',
-                  },
-                ]}
-              >
+              {/* Location Name & Address */}
+              <Text className="text-2xl font-bold text-center mb-2">{preservedLocation.name}</Text>
+              <Text className="text-center text-muted-foreground mb-8">
                 {preservedLocation.display_name}
               </Text>
 
               {/* Location Details */}
-              <View style={{ gap: Spacing.lg }}>
-                <View
-                  style={[
-                    CardStyles.detailRow,
-                    { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                  ]}
-                >
-                  <MaterialIcons name="place" size={20} color={textColor + 'CC'} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}>
+              <View className="gap-4">
+                {/* Coordinates */}
+                <View className="flex-row items-start gap-4">
+                  <Icon name="place" size={20} color="mutedForeground" />
+                  <View className="flex-1">
+                    <Text variant="small" className="text-muted-foreground mb-1">
                       Coordinates
                     </Text>
-                    <Text style={[Typography.bodyLarge, { color: textColor }]}>
+                    <Text>
                       {preservedLocation.lat.toFixed(6)}, {preservedLocation.lon.toFixed(6)}
                     </Text>
                   </View>
                 </View>
 
-                <View
-                  style={[
-                    CardStyles.detailRow,
-                    { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.lg },
-                  ]}
-                >
-                  <MaterialIcons name="category" size={20} color={textColor + 'CC'} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Typography.label, { marginBottom: 4, color: textColor + '99' }]}>
+                {/* Type */}
+                <View className="flex-row items-start gap-4">
+                  <Icon name="category" size={20} color="mutedForeground" />
+                  <View className="flex-1">
+                    <Text variant="small" className="text-muted-foreground mb-1">
                       Type
                     </Text>
-                    <Text style={[Typography.bodyLarge, { color: textColor }]}>
+                    <Text>
                       {preservedLocation.type.charAt(0).toUpperCase() +
                         preservedLocation.type.slice(1)}
                     </Text>
@@ -255,12 +232,11 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
                 </View>
               </View>
 
+              {/* Get Directions Button */}
               {onGetDirections && (
-                <GetDirectionsButton
-                  onPress={onGetDirections}
-                  isLoading={isLoadingDirections}
-                  style={{ marginTop: Spacing.xxl, marginBottom: Spacing.xxl }}
-                />
+                <View className="mt-8 mb-8">
+                  <GetDirectionsButton onPress={onGetDirections} isLoading={isLoadingDirections} />
+                </View>
               )}
             </View>
           )}
@@ -269,37 +245,5 @@ const LocationSheet: React.FC<LocationSheetProps> = ({
     </BaseSheet>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-  },
-  collapsedContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.xxl,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  expandedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xxl,
-  },
-  expandedIconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 
 export default LocationSheet;

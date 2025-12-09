@@ -1,73 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-  TouchableOpacity,
-  useColorScheme,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { GlassView } from 'expo-glass-effect';
-import { useClient } from 'react-supabase';
-import { Colors, electricPurple } from '@/constants/theme';
 import { useUserSettings } from '@/contexts/user-settings-context';
-import { useEnv } from '@/hooks/use-env';
+import {
+  useProviderProfiles,
+  groupProfilesByCategory,
+  ProfileCategory,
+} from '@/hooks/use-provider-profiles';
+import BaseSheet, { BaseSheetRef } from './BaseSheet';
+import { Text } from './ui/text';
+import { Button } from './ui/button';
+import { Skeleton } from './ui/skeleton';
+import { Icon } from './icon';
+import { cn } from '@/lib/utils';
 
-interface Provider {
-  name: string;
-  displayName: string;
-  capabilities: {
-    profiles: string[];
-    bikeTypes?: string[];
-    multiModal: boolean;
-    requiresPaidPlan: boolean;
-  };
-  available: boolean;
-}
-
-interface ProvidersResponse {
-  providers: Provider[];
-  defaultProvider: string;
-}
-
-interface ProfileOption {
-  value: string;
-  label: string;
-  description: string;
-  icon: keyof typeof MaterialIcons.glyphMap;
-}
-
-const PROFILE_OPTIONS: ProfileOption[] = [
-  {
-    value: 'walking',
-    label: 'Walking',
-    description: 'Pedestrian routes',
-    icon: 'directions-walk',
-  },
-  {
-    value: 'cycling',
-    label: 'Cycling',
-    description: 'Bike-friendly routes',
-    icon: 'directions-bike',
-  },
-  {
-    value: 'driving',
-    label: 'Driving',
-    description: 'Car routes',
-    icon: 'directions-car',
-  },
-  {
-    value: 'public-transport',
-    label: 'Public Transport',
-    description: 'Transit routes',
-    icon: 'directions-transit',
-  },
-];
+// Map profile categories to icons
+const CATEGORY_ICONS: Record<ProfileCategory, keyof typeof MaterialIcons.glyphMap> = {
+  [ProfileCategory.CYCLING]: 'directions-bike',
+  [ProfileCategory.WALKING]: 'directions-walk',
+  [ProfileCategory.DRIVING]: 'directions-car',
+  [ProfileCategory.OTHER]: 'more-horiz',
+};
 
 interface ProfilePickerProps {
   visible: boolean;
@@ -82,81 +35,23 @@ export default function ProfilePicker({
   currentProvider,
   onClose,
 }: ProfilePickerProps) {
-  const supabase = useClient();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const { settings, updateSettings } = useUserSettings();
-  const { ROUTING_SERVICE } = useEnv();
-  const [availableProfiles, setAvailableProfiles] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { updateSettings } = useUserSettings();
+  const sheetRef = useRef<BaseSheetRef>(null);
+
+  // Use the provider profiles hook
+  const { profiles, defaultProfile, loading, error, refetch } =
+    useProviderProfiles(currentProvider);
 
   useEffect(() => {
     if (visible) {
-      fetchProviderCapabilities();
+      sheetRef.current?.present();
+    } else {
+      sheetRef.current?.dismiss();
     }
-  }, [visible, currentProvider]);
+  }, [visible]);
 
-  const fetchProviderCapabilities = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Get auth token
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`${ROUTING_SERVICE}/api/routing/providers`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch providers: ${response.statusText}`);
-      }
-
-      const data: ProvidersResponse = await response.json();
-
-      // If a specific provider is selected, use its capabilities
-      // Otherwise, get union of all available provider capabilities
-      if (currentProvider) {
-        const provider = data.providers.find((p) => p.name === currentProvider);
-        if (provider) {
-          setAvailableProfiles(provider.capabilities.profiles);
-        } else {
-          // Provider not found, show all profiles
-          const allProfiles = new Set<string>();
-          data.providers.forEach((p) => {
-            p.capabilities.profiles.forEach((profile) => allProfiles.add(profile));
-          });
-          setAvailableProfiles(Array.from(allProfiles));
-        }
-      } else {
-        // No specific provider, show union of all profiles
-        const allProfiles = new Set<string>();
-        data.providers.forEach((p) => {
-          p.capabilities.profiles.forEach((profile) => allProfiles.add(profile));
-        });
-        setAvailableProfiles(Array.from(allProfiles));
-      }
-    } catch (err) {
-      console.error('Error fetching provider capabilities:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch capabilities');
-      // Fallback to showing all profiles
-      setAvailableProfiles(PROFILE_OPTIONS.map((p) => p.value));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelectProfile = async (profileValue: string) => {
-    const success = await updateSettings({ preferred_routing_profile: profileValue });
+  const handleSelectProfile = async (profileId: string) => {
+    const success = await updateSettings({ preferred_routing_profile: profileId });
     if (success) {
       onClose();
     } else {
@@ -164,163 +59,105 @@ export default function ProfilePicker({
     }
   };
 
-  const filteredProfiles = PROFILE_OPTIONS.filter((profile) =>
-    availableProfiles.includes(profile.value),
+  const handleDismiss = () => {
+    onClose();
+  };
+
+  // Group profiles by category for better organization
+  const groupedProfiles = groupProfilesByCategory(profiles);
+  const categories = Object.values(ProfileCategory).filter(
+    (cat) => groupedProfiles[cat].length > 0,
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable>
-          <GlassView style={styles.modalContent} glassEffectStyle="regular">
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Routing Profile</Text>
-              <TouchableOpacity onPress={onClose}>
-                <Text style={[styles.modalCancel, { color: colors.icon }]}>Close</Text>
-              </TouchableOpacity>
+    <BaseSheet
+      ref={sheetRef}
+      name="ProfilePickerSheet"
+      detents={[0.5, 0.85]}
+      onDismiss={handleDismiss}
+      scrollable
+      grabberVisible
+    >
+      {/* Header */}
+      <View className="flex-row justify-between items-center p-4">
+        <Text className="text-lg font-semibold">Routing Profile</Text>
+        <Button variant="ghost" size="sm" onPress={onClose}>
+          <Text className="text-base text-muted-foreground">Close</Text>
+        </Button>
+      </View>
+
+      {/* Loading State */}
+      {loading && (
+        <View className="px-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} className="flex-row items-center gap-3 p-3 rounded-lg bg-muted/10">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <View className="flex-1 gap-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-32" />
+              </View>
             </View>
+          ))}
+        </View>
+      )}
 
-            {loading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={electricPurple} />
-                <Text style={[styles.loadingText, { color: colors.icon }]}>
-                  Loading profiles...
-                </Text>
-              </View>
-            )}
+      {/* Error State */}
+      {error && (
+        <View className="items-center py-10 px-4">
+          <Icon name="error-outline" size={48} color="mutedForeground" />
+          <Text className="mt-3 text-center text-muted-foreground">{error}</Text>
+          <Button variant="outline" className="mt-4" onPress={refetch}>
+            <Text>Retry</Text>
+          </Button>
+        </View>
+      )}
 
-            {error && (
-              <View style={styles.errorContainer}>
-                <MaterialIcons name="error-outline" size={48} color={colors.icon} />
-                <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
-                <TouchableOpacity
-                  style={[styles.retryButton, { backgroundColor: colors.buttonBackground }]}
-                  onPress={fetchProviderCapabilities}
-                >
-                  <Text style={[styles.retryButtonText, { color: colors.text }]}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+      {/* Profile List */}
+      {!loading && !error && (
+        <ScrollView className="px-4" showsVerticalScrollIndicator={false}>
+          {categories.map((category) => (
+            <View key={category} className="mb-4">
+              {/* Category Header */}
+              <Text className="text-sm font-medium text-muted-foreground mb-2 capitalize">
+                {category}
+              </Text>
 
-            {!loading && !error && (
-              <ScrollView style={styles.profileList} showsVerticalScrollIndicator={false}>
-                {filteredProfiles.map((profile) => {
-                  const isSelected = profile.value === (currentProfile || 'cycling');
-                  return (
-                    <TouchableOpacity
-                      key={profile.value}
-                      style={[
-                        styles.profileItem,
-                        { borderBottomColor: colors.background },
-                        isSelected && { backgroundColor: colors.buttonBackground },
-                      ]}
-                      onPress={() => handleSelectProfile(profile.value)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.profileIcon}>
-                        <MaterialIcons name={profile.icon} size={28} color={colors.text} />
-                      </View>
-                      <View style={styles.profileInfo}>
-                        <Text style={[styles.profileName, { color: colors.text }]}>
-                          {profile.label}
-                        </Text>
-                        <Text style={[styles.profileDescription, { color: colors.icon }]}>
+              {/* Profiles in Category */}
+              {groupedProfiles[category].map((profile) => {
+                const isSelected = profile.id === (currentProfile || defaultProfile);
+                return (
+                  <TouchableOpacity
+                    key={profile.id}
+                    className={cn(
+                      'flex-row items-center gap-3 p-3 rounded-lg mb-2',
+                      isSelected ? 'bg-primary/50' : 'bg-muted/10',
+                    )}
+                    onPress={() => handleSelectProfile(profile.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View className="w-8 items-center">
+                      <Icon
+                        name={CATEGORY_ICONS[category] || 'more-horiz'}
+                        size={28}
+                        color="foreground"
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-semibold">{profile.title}</Text>
+                      {profile.description && (
+                        <Text variant="small" className="text-muted-foreground">
                           {profile.description}
                         </Text>
-                      </View>
-                      {isSelected && (
-                        <MaterialIcons name="check" size={24} color={electricPurple} />
                       )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
-          </GlassView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+                    </View>
+                    {isSelected && <Icon name="check" size={24} color="primary" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </BaseSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  modalCancel: {
-    fontSize: 16,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  errorText: {
-    marginTop: 12,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  profileList: {
-    maxHeight: 400,
-  },
-  profileItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  profileIcon: {
-    width: 40,
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  profileDescription: {
-    fontSize: 12,
-  },
-});
